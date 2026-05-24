@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside th:fragment="sidebar" class="admin-sidebar">
+  <div class="sidebar-brand">
+    <strong>LEVEL COMMERCE</strong>
+    <span>Painel administrativo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <a th:href="@{/admin}" th:classappend="${activePage == 'dashboard'} ? 'ativo' : ''">
+      Dashboard
+    </a>
+    <a th:href="@{/admin/produtos}" th:classappend="${activePage == 'produtos'} ? 'ativo' : ''">
+      Produtos
+    </a>
+    <a th:href="@{/admin/categorias}" th:classappend="${activePage == 'categorias'} ? 'ativo' : ''">
+      Categorias
+    </a>
+    <a th:href="@{/admin/pedidos}" th:classappend="${activePage == 'pedidos'} ? 'ativo' : ''">
+      Pedidos
+    </a>
+    <hr class="sidebar-divider">
+    <a th:href="@{/}">Ver storefront</a>
+    <form th:action="@{/auth/logout}" method="post" class="sidebar-logout">
+      <button type="submit">Encerrar sessão</button>
+    </form>
+  </nav>
+</aside>
+</body>
+</html>

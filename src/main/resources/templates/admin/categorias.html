@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Categorias — Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='categorias'"></div>
+
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1>Categorias</h1>
+        </div>
+
+        <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
+
+        <div class="categorias-admin-layout">
+
+            <div class="form-card" style="height:fit-content;">
+                <h3>Nova categoria</h3>
+                <form th:action="@{/admin/categorias/salvar}" th:object="${categoria}" method="post">
+                    <div class="form-group">
+                        <label>Nome *</label>
+                        <input type="text" th:field="*{nome}" placeholder="Ex: Eletrônicos">
+                        <span class="erro" th:if="${#fields.hasErrors('nome')}" th:errors="*{nome}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Descrição</label>
+                        <input type="text" th:field="*{descricao}" placeholder="Descrição opcional">
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">
+                        Salvar categoria
+                    </button>
+                </form>
+            </div>
+
+            <div>
+                <table class="admin-table">
+                    <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>Descrição</th>
+                        <th>Produtos</th>
+                        <th></th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="cat : ${categorias}">
+                        <td th:text="${cat.nome}"></td>
+                        <td th:text="${cat.descricao != null ? cat.descricao : '—'}"></td>
+                        <td th:text="${cat.produtos != null ? cat.produtos.size() : 0}"></td>
+                        <td>
+                            <form th:action="@{/admin/categorias/{id}/deletar(id=${cat.id})}"
+                                  method="post"
+                                  onsubmit="return confirm('Remover categoria?')">
+                                <button type="submit" class="btn-link danger">Remover</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

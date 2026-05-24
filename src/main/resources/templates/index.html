@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>MinhaLoja</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container">
+
+    <section class="hero">
+        <div class="hero-eyebrow">E-commerce pronto para crescer</div>
+        <h1>Sua vitrine local com estrutura de loja profissional</h1>
+        <p>Catalogo organizado, checkout mais completo e base preparada para evoluir para producao.</p>
+        <div class="hero-actions">
+            <a th:href="@{/produtos}" class="btn btn-primary"
+               style="width:auto;padding:12px 32px;display:inline-block;text-decoration:none;">
+                Explorar catalogo
+            </a>
+            <a th:href="@{/carrinho}" class="btn btn-secondary"
+               style="width:auto;padding:12px 24px;display:inline-block;text-decoration:none;">
+                Ver carrinho
+            </a>
+        </div>
+    </section>
+
+    <section class="categorias-section">
+        <div class="section-head">
+            <h2>Categorias</h2>
+            <a th:href="@{/produtos}">Ver tudo</a>
+        </div>
+        <div class="categorias-grid">
+            <a th:each="cat : ${categorias}"
+               th:href="@{/produtos(categoriaId=${cat.id})}"
+               th:text="${cat.nome}"
+               class="categoria-card">Categoria</a>
+        </div>
+    </section>
+
+    <section class="produtos-section">
+        <div class="section-head">
+            <h2>Destaques da semana</h2>
+            <span class="section-copy">Produtos com mais apelo comercial para a home.</span>
+        </div>
+        <div class="produtos-grid">
+            <div th:each="produto : ${produtos}" class="produto-card">
+                <a th:href="@{/produtos/{id}(id=${produto.id})}">
+                    <div class="produto-badges">
+                        <span class="badge badge-featured" th:if="${produto.destaque}">Destaque</span>
+                    </div>
+                    <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
+                         th:alt="${produto.nome}"
+                         class="produto-img">
+                    <div class="produto-info">
+                        <span class="produto-marca" th:text="${produto.marca != null ? produto.marca : 'MinhaLoja'}"></span>
+                        <h3 th:text="${produto.nome}">Nome</h3>
+                        <p class="produto-resumo"
+                           th:text="${produto.descricaoCurta != null ? produto.descricaoCurta : 'Produto selecionado para sua vitrine.'}"></p>
+                        <span class="produto-categoria"
+                              th:text="${produto.categoria != null ? produto.categoria.nome : ''}">
+                        </span>
+                        <p class="produto-preco"
+                           th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}">
+                            R$ 0,00
+                        </p>
+                    </div>
+                </a>
+                <button class="btn btn-primary btn-add"
+                        th:attr="data-id=${produto.id}">
+                    + Carrinho
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="produtos-section">
+        <div class="section-head">
+            <h2>Novidades</h2>
+            <span class="section-copy">Itens mais recentes para renovar a loja com frequencia.</span>
+        </div>
+        <div class="produtos-grid produtos-grid-compact">
+            <div th:each="produto : ${novidades}" class="produto-card produto-card-compact">
+                <a th:href="@{/produtos/{id}(id=${produto.id})}">
+                    <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
+                         th:alt="${produto.nome}"
+                         class="produto-img">
+                    <div class="produto-info">
+                        <span class="produto-marca" th:text="${produto.marca != null ? produto.marca : 'Nova colecao'}"></span>
+                        <h3 th:text="${produto.nome}">Nome</h3>
+                        <p class="produto-preco"
+                           th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}">
+                            R$ 0,00
+                        </p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer class="footer">
+    <p>MinhaLoja local-first, pronta para evoluir para staging e producao.</p>
+</footer>
+
+<script th:src="@{/js/carrinho.js}"></script>
+</body>
+</html>

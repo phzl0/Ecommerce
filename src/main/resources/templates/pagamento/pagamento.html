@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Pagamento</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container" style="max-width:760px;margin-top:2rem;">
+    <h2>Finalizar pagamento</h2>
+
+    <div class="checkout-layout">
+        <div class="form-card">
+            <h3 th:text="${pedido.numero}">Pedido</h3>
+            <p class="pedido-copy">Revise o pedido antes de seguir para o gateway.</p>
+
+            <div th:each="item : ${pedido.itens}"
+                 class="resumo-item" style="margin-bottom:8px;">
+                <span th:text="${item.produto.nome + ' x ' + item.quantidade}"></span>
+                <span th:text="'R$ ' + ${#numbers.formatDecimal(item.subtotal,1,'POINT',2,'COMMA')}"></span>
+            </div>
+
+            <hr style="margin:12px 0;">
+
+            <div class="resumo-linha">
+                <span>Subtotal</span>
+                <strong th:text="'R$ ' + ${#numbers.formatDecimal(pedido.subtotal,1,'POINT',2,'COMMA')}"></strong>
+            </div>
+            <div class="resumo-linha">
+                <span>Frete</span>
+                <strong th:text="${pedido.frete.compareTo(T(java.math.BigDecimal).ZERO) == 0 ? 'Gratis' : 'R$ ' + #numbers.formatDecimal(pedido.frete,1,'POINT',2,'COMMA')}"></strong>
+            </div>
+            <div class="resumo-total">
+                <span>Total</span>
+                <strong th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total,1,'POINT',2,'COMMA')}"
+                        style="color:#6c63ff;font-size:1.2rem;"></strong>
+            </div>
+
+            <form th:action="@{/pagamento/iniciar/{id}(id=${pedido.id})}"
+                  method="post" style="margin-top:1.5rem;">
+                <button type="submit" class="btn btn-primary"
+                        style="width:100%;padding:14px;font-size:1rem;">
+                    Pagar com Mercado Pago
+                </button>
+            </form>
+
+            <div style="display:flex;justify-content:center;gap:16px;
+                        margin-top:12px;font-size:12px;color:#999;">
+                <span>Cartao</span>
+                <span>Boleto</span>
+                <span>PIX</span>
+            </div>
+
+            <a th:href="@{/pedidos/{id}(id=${pedido.id})}"
+               style="display:block;text-align:center;margin-top:1rem;
+                      font-size:0.875rem;">
+                Pagar depois
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+
+<nav th:fragment="navbar" class="navbar">
+    <div class="nav-brand">
+        <a th:href="@{/}">MinhaLoja</a>
+    </div>
+    <div class="nav-search">
+        <form th:action="@{/produtos}" method="get">
+            <input type="text" name="busca" placeholder="Buscar produtos..." class="search-input">
+            <button type="submit" class="btn-search">Buscar</button>
+        </form>
+    </div>
+    <div class="nav-links">
+        <a th:href="@{/produtos}">Produtos</a>
+        <a th:href="@{/carrinho}" class="nav-cart">
+            Carrinho
+            <span class="cart-count" id="cartCount">0</span>
+        </a>
+        <span sec:authorize="isAnonymous()">
+            <a th:href="@{/auth/login}">Entrar</a>
+        </span>
+        <span sec:authorize="isAuthenticated()">
+            <span sec:authorize="hasRole('ADMIN')">
+                <a th:href="@{/admin}">Admin</a>
+            </span>
+            <form th:action="@{/auth/logout}" method="post" style="display:inline;">
+                <button type="submit"
+                        style="background:none;border:none;color:#6c63ff;cursor:pointer;
+                               font-size:0.9rem;padding:0;font-family:inherit;">
+                    Sair
+                </button>
+            </form>
+        </span>
+    </div>
+</nav>
+</body>
+</html>

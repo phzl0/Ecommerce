@@ -1,0 +1,92 @@
+# ===============================
+# BUILD
+# ===============================
+target/
+build/
+*.class
+*.jar
+*.war
+
+# ===============================
+# MAVEN
+# ===============================
+.mvn/wrapper/maven-wrapper.jar
+
+# ===============================
+# LOGS
+# ===============================
+*.log
+logs/
+
+# ===============================
+# ENV / SECRETS
+# ===============================
+.env
+.env.*
+application-local.properties
+application-secret.properties
+*.pem
+*.key
+*.p12
+*.jks
+
+# ===============================
+# IDE - IntelliJ
+# ===============================
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# ===============================
+# IDE - Eclipse / STS
+# ===============================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# ===============================
+# IDE - VS Code
+# ===============================
+.vscode/
+
+# ===============================
+# NetBeans
+# ===============================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# ===============================
+# IntelliJ local files
+# ===============================
+/shelf/
+/workspace.xml
+/httpRequests/
+/queries/
+/dataSources/
+/dataSources.local.xml
+
+# ===============================
+# OS FILES
+# ===============================
+.DS_Store
+Thumbs.db
+
+# ===============================
+# TEMP FILES
+# ===============================
+*.tmp
+*.swp
+*~
+
+# ===============================
+# SPRING BOOT
+# ===============================
+HELP.md

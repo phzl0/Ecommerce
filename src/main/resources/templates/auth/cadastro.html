@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="auth-container">
+    <h2>Criar Conta</h2>
+
+    <div th:if="${param.sucesso}" class="alert alert-sucesso">
+        Cadastro realizado! Faça login.
+    </div>
+
+    <form th:action="@{/auth/cadastro}" th:object="${usuario}" method="post">
+
+        <div class="form-group">
+            <label>Nome completo</label>
+            <input type="text" th:field="*{nome}" placeholder="Seu nome completo">
+            <span class="erro"
+                  th:if="${#fields.hasErrors('nome')}"
+                  th:errors="*{nome}"></span>
+        </div>
+
+        <div class="form-group">
+            <label>E-mail</label>
+            <input type="email" th:field="*{email}" placeholder="seu@email.com">
+            <span class="erro"
+                  th:if="${#fields.hasErrors('email')}"
+                  th:errors="*{email}"></span>
+        </div>
+
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" th:field="*{senha}" placeholder="Mínimo 6 caracteres">
+            <span class="erro"
+                  th:if="${#fields.hasErrors('senha')}"
+                  th:errors="*{senha}"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Criar conta</button>
+    </form>
+
+    <p>Já tem conta? <a th:href="@{/auth/login}">Entrar</a></p>
+</div>
+</body>
+</html>

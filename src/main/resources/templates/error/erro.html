@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Erro</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container">
+    <div class="erro-page">
+        <h1 class="erro-codigo" th:text="${codigo}">500</h1>
+        <p class="erro-msg" th:text="${mensagem}">Algo deu errado.</p>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:2rem;">
+            <a th:href="@{/}" class="btn btn-primary" style="width:auto;padding:10px 24px;">
+                Ir para início
+            </a>
+            <button onclick="history.back()"
+                    class="btn" style="width:auto;padding:10px 20px;background:#f5f5f5;color:#333;">
+                Voltar
+            </button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

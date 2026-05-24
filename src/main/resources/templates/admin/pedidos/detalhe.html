@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedido — Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='pedidos'"></div>
+
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1 th:text="'Pedido #' + ${pedido.id}">Pedido</h1>
+            <a th:href="@{/admin/pedidos}" class="btn-link">← Voltar</a>
+        </div>
+
+        <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
+
+        <div class="pedido-admin-layout">
+
+            <div>
+                <div class="form-card" style="margin-bottom:1rem;">
+                    <h3>Dados do pedido</h3>
+                    <div class="pedido-meta">
+                        <p><strong>Cliente:</strong> <span th:text="${pedido.usuario.nome}"></span></p>
+                        <p><strong>E-mail:</strong>  <span th:text="${pedido.usuario.email}"></span></p>
+                        <p><strong>Data:</strong>
+                            <span th:text="${#temporals.format(pedido.dataPedido, 'dd/MM/yyyy HH:mm')}"></span>
+                        </p>
+                        <p><strong>Endereço:</strong> <span th:text="${pedido.enderecoEntrega}"></span></p>
+                    </div>
+                </div>
+
+                <table class="admin-table">
+                    <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Qtd</th>
+                        <th>Preço unit.</th>
+                        <th>Subtotal</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="item : ${pedido.itens}">
+                        <td th:text="${item.produto.nome}"></td>
+                        <td th:text="${item.quantidade}"></td>
+                        <td th:text="'R$ ' + ${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}"></td>
+                        <td th:text="'R$ ' + ${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}"></td>
+                    </tr>
+                    </tbody>
+                    <tfoot>
+                    <tr>
+                        <td colspan="3"><strong>Total</strong></td>
+                        <td>
+                            <strong th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></strong>
+                        </td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <aside class="form-card" style="height:fit-content;">
+                <h3>Atualizar status</h3>
+                <form th:action="@{/admin/pedidos/{id}/status(id=${pedido.id})}" method="post">
+                    <div class="form-group">
+                        <label>Status atual</label>
+                        <select name="status">
+                            <option th:each="s : ${statusOpcoes}"
+                                    th:value="${s}"
+                                    th:text="${s}"
+                                    th:selected="${pedido.status == s}">
+                            </option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width:100%;">
+                        Atualizar
+                    </button>
+                </form>
+            </aside>
+        </div>
+    </main>
+</div>
+</body>
+</html>

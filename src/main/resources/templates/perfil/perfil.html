@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Meu Perfil</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container" style="margin-top:2rem;max-width:900px;">
+
+    <div th:if="${msg}"  class="alert alert-sucesso" th:text="${msg}"></div>
+    <div th:if="${erro}" class="alert alert-erro"    th:text="${erro}"></div>
+
+    <div class="perfil-layout">
+
+        <!-- Dados pessoais -->
+        <div class="form-card">
+            <div class="perfil-avatar">
+                <div class="avatar-circle"
+                     th:text="${#strings.toUpperCase(#strings.substring(usuario.nome,0,1))}">
+                    U
+                </div>
+                <div>
+                    <h2 th:text="${usuario.nome}">Nome</h2>
+                    <p th:text="${usuario.email}" style="color:#999;font-size:0.875rem;"></p>
+                </div>
+            </div>
+
+            <hr style="margin:1.25rem 0;border-color:#f0f0f0;">
+
+            <h3 style="margin-bottom:1rem;font-size:1rem;">Editar dados</h3>
+            <form th:action="@{/perfil/atualizar}" method="post">
+                <div class="form-group">
+                    <label>Nome completo</label>
+                    <input type="text" name="nome"
+                           th:value="${usuario.nome}" required>
+                </div>
+                <div class="form-group">
+                    <label>Nova senha <span style="color:#999;font-size:0.8rem;">(deixe em branco para manter)</span></label>
+                    <input type="password" name="senha"
+                           placeholder="Nova senha (mínimo 6 caracteres)">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    Salvar alterações
+                </button>
+            </form>
+        </div>
+
+        <!-- Resumo de pedidos -->
+        <div>
+            <div class="metric" style="margin-bottom:1rem;">
+                <div class="metric-label">Total de pedidos</div>
+                <div class="metric-value" th:text="${totalPedidos}">0</div>
+            </div>
+
+            <div class="form-card">
+                <h3 style="margin-bottom:1rem;font-size:1rem;">
+                    Últimos pedidos
+                </h3>
+                <p th:if="${pedidos.isEmpty()}"
+                   style="color:#999;font-size:0.875rem;">
+                    Nenhum pedido ainda.
+                </p>
+                <div th:each="pedido : ${pedidos}"
+                     th:if="${pedidoStat.index < 5}"
+                     th:with="pedidoStat=${pedidoStat}"
+                     class="pedido-card"
+                     style="margin-bottom:8px;">
+                    <div class="pedido-header">
+                        <span th:text="'#' + ${pedido.id}"
+                              style="font-weight:500;"></span>
+                        <span class="status-badge"
+                              th:text="${pedido.status}"
+                              th:classappend="'status-' + ${pedido.status.name().toLowerCase()}">
+                        </span>
+                    </div>
+                    <div class="pedido-body">
+                        <span th:text="${#temporals.format(pedido.dataPedido,'dd/MM/yyyy')}"
+                              style="font-size:0.8rem;color:#aaa;"></span>
+                        <strong th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total,1,'POINT',2,'COMMA')}"
+                                class="pedido-total"></strong>
+                        <a th:href="@{/pedidos/{id}(id=${pedido.id})}"
+                           class="btn-ver">Ver →</a>
+                    </div>
+                </div>
+                <a th:href="@{/pedidos}"
+                   style="font-size:0.875rem;color:#6c63ff;display:block;margin-top:8px;">
+                    Ver todos os pedidos →
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

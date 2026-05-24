@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Produto - Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='produtos'"></div>
+
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1 th:text="${produto.id == null} ? 'Novo produto' : 'Editar produto'">Produto</h1>
+            <a th:href="@{/admin/produtos}" class="btn-link">Voltar</a>
+        </div>
+
+        <div class="form-card">
+            <form th:action="@{/admin/produtos/salvar}" th:object="${produto}"
+                  method="post" enctype="multipart/form-data">
+
+                <input type="hidden" th:field="*{id}">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Nome *</label>
+                        <input type="text" th:field="*{nome}" placeholder="Nome do produto">
+                        <span class="erro" th:if="${#fields.hasErrors('nome')}" th:errors="*{nome}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>SKU</label>
+                        <input type="text" th:field="*{sku}" placeholder="Gerado automaticamente se vazio">
+                        <span class="erro" th:if="${#fields.hasErrors('sku')}" th:errors="*{sku}"></span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Marca</label>
+                        <input type="text" th:field="*{marca}" placeholder="Marca ou linha">
+                        <span class="erro" th:if="${#fields.hasErrors('marca')}" th:errors="*{marca}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select name="categoriaId">
+                            <option value="">Sem categoria</option>
+                            <option th:each="cat : ${categorias}"
+                                    th:value="${cat.id}"
+                                    th:text="${cat.nome}"
+                                    th:selected="${produto.categoria != null and produto.categoria.id == cat.id}">
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Preco *</label>
+                        <input type="number" th:field="*{preco}" step="0.01" min="0.01" placeholder="0,00">
+                        <span class="erro" th:if="${#fields.hasErrors('preco')}" th:errors="*{preco}"></span>
+                    </div>
+                    <div class="form-group">
+                        <label>Estoque *</label>
+                        <input type="number" th:field="*{estoque}" min="0" placeholder="0">
+                        <span class="erro" th:if="${#fields.hasErrors('estoque')}" th:errors="*{estoque}"></span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Descricao curta</label>
+                    <input type="text" th:field="*{descricaoCurta}"
+                           placeholder="Frase curta para cards e vitrines">
+                    <span class="erro" th:if="${#fields.hasErrors('descricaoCurta')}" th:errors="*{descricaoCurta}"></span>
+                </div>
+
+                <div class="form-group checkbox-inline">
+                    <label>
+                        <input type="checkbox" th:field="*{destaque}">
+                        Exibir como destaque na home
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Descricao</label>
+                    <textarea th:field="*{descricao}" rows="5"
+                              placeholder="Descreva o produto com mais detalhes"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Imagem do produto</label>
+                    <input type="file" name="imagem" accept="image/*">
+                    <div th:if="${produto.imagemUrl != null}" style="margin-top:8px;">
+                        <img th:src="${produto.imagemUrl}"
+                             style="width:80px;height:80px;object-fit:cover;border-radius:6px;">
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:12px;margin-top:1rem;">
+                    <button type="submit" class="btn btn-primary" style="width:auto;padding:10px 28px;">
+                        Salvar produto
+                    </button>
+                    <a th:href="@{/admin/produtos}"
+                       class="btn" style="width:auto;padding:10px 20px;background:#f5f5f5;color:#333;">
+                        Cancelar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+</body>
+</html>

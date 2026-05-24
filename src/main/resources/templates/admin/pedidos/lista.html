@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Pedidos — Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='pedidos'"></div>
+
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1>Pedidos</h1>
+        </div>
+
+        <table class="admin-table">
+            <thead>
+            <tr>
+                <th>#</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Data</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="pedido : ${pedidos}">
+                <td th:text="'#' + ${pedido.id}"></td>
+                <td th:text="${pedido.usuario.nome}"></td>
+                <td th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></td>
+                <td>
+                        <span class="status-badge"
+                              th:text="${pedido.status}"
+                              th:classappend="'status-' + ${pedido.status.name().toLowerCase()}">
+                        </span>
+                </td>
+                <td th:text="${#temporals.format(pedido.dataPedido, 'dd/MM/yyyy HH:mm')}"></td>
+                <td>
+                    <a th:href="@{/admin/pedidos/{id}(id=${pedido.id})}" class="btn-link">
+                        Detalhes →
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </main>
+</div>
+</body>
+</html>

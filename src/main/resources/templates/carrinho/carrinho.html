@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Carrinho</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container" style="margin-top:2rem;">
+    <h2>Seu carrinho</h2>
+
+    <div th:if="${itens.isEmpty()}" class="carrinho-vazio">
+        <p>Seu carrinho esta vazio.</p>
+        <a th:href="@{/produtos}" class="btn btn-primary" style="width:auto;padding:10px 24px;">
+            Ver produtos
+        </a>
+    </div>
+
+    <div th:if="${!itens.isEmpty()}" class="carrinho-layout">
+        <div class="carrinho-itens">
+            <div th:each="item : ${itens}" class="carrinho-item">
+                <img th:src="${item.imagemUrl != null ? item.imagemUrl : '/images/sem-foto.png'}"
+                     th:alt="${item.nome}" class="carrinho-item-img">
+                <div class="carrinho-item-info">
+                    <h4 th:text="${item.nome}">Nome</h4>
+                    <p th:text="'R$ ' + ${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}"
+                       class="item-preco-unit"></p>
+                </div>
+                <form th:action="@{/carrinho/atualizar}" method="post" class="qtd-form">
+                    <input type="hidden" name="produtoId" th:value="${item.produtoId}">
+                    <div class="quantidade-control">
+                        <button type="submit" name="quantidade"
+                                th:value="${item.quantidade - 1}">-</button>
+                        <span th:text="${item.quantidade}">1</span>
+                        <button type="submit" name="quantidade"
+                                th:value="${item.quantidade + 1}">+</button>
+                    </div>
+                </form>
+                <p class="item-subtotal"
+                   th:text="'R$ ' + ${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}"></p>
+                <form th:action="@{/carrinho/remover}" method="post">
+                    <input type="hidden" name="produtoId" th:value="${item.produtoId}">
+                    <button type="submit" class="btn-remover">x</button>
+                </form>
+            </div>
+        </div>
+
+        <aside class="carrinho-resumo">
+            <h3>Resumo</h3>
+            <p class="frete-helper" th:if="${faltaFreteGratis.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                Faltam
+                <strong th:text="'R$ ' + ${#numbers.formatDecimal(faltaFreteGratis, 1, 'POINT', 2, 'COMMA')}"></strong>
+                para frete gratis.
+            </p>
+            <p class="frete-helper frete-gratis" th:if="${faltaFreteGratis.compareTo(T(java.math.BigDecimal).ZERO) == 0}">
+                Seu pedido ja atingiu frete gratis.
+            </p>
+            <div class="resumo-linha">
+                <span>Subtotal</span>
+                <strong th:text="'R$ ' + ${#numbers.formatDecimal(subtotal, 1, 'POINT', 2, 'COMMA')}"></strong>
+            </div>
+            <div class="resumo-linha">
+                <span>Frete</span>
+                <strong th:text="${frete.compareTo(T(java.math.BigDecimal).ZERO) == 0 ? 'Gratis' : 'R$ ' + #numbers.formatDecimal(frete, 1, 'POINT', 2, 'COMMA')}"></strong>
+            </div>
+            <div class="resumo-linha">
+                <span>Desconto</span>
+                <strong th:text="'R$ ' + ${#numbers.formatDecimal(desconto, 1, 'POINT', 2, 'COMMA')}"></strong>
+            </div>
+            <hr>
+            <div class="resumo-total">
+                <span>Total</span>
+                <strong th:text="'R$ ' + ${#numbers.formatDecimal(total, 1, 'POINT', 2, 'COMMA')}"></strong>
+            </div>
+            <a th:href="@{/carrinho/checkout}" class="btn btn-primary"
+               style="width:100%;display:block;text-align:center;padding:12px;margin-top:1rem;text-decoration:none;">
+                Finalizar compra
+            </a>
+            <a th:href="@{/produtos}" style="display:block;text-align:center;margin-top:10px;font-size:0.875rem;">
+                Continuar comprando
+            </a>
+        </aside>
+    </div>
+</div>
+</body>
+</html>

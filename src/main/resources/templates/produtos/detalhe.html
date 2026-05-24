@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <th:block th:with="title=${produto.nome}">
+        <title th:text="${title}">Produto</title>
+    </th:block>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container">
+
+    <div class="detalhe-layout">
+        <div class="detalhe-img">
+            <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
+                 th:alt="${produto.nome}">
+        </div>
+
+        <div class="detalhe-info">
+            <div class="produto-badges">
+                <span class="badge badge-featured" th:if="${produto.destaque}">Destaque</span>
+                <span class="badge badge-outline" th:text="${produto.sku != null ? produto.sku : 'SKU sob consulta'}"></span>
+            </div>
+            <span class="produto-categoria"
+                  th:text="${produto.categoria != null ? produto.categoria.nome : 'Sem categoria'}"></span>
+            <span class="produto-marca detalhe-marca"
+                  th:text="${produto.marca != null ? produto.marca : 'Marca propria'}"></span>
+            <h1 th:text="${produto.nome}">Nome do Produto</h1>
+            <p class="detalhe-preco"
+               th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}">
+                R$ 0,00
+            </p>
+            <p class="detalhe-desc"
+               th:text="${produto.descricaoCurta != null ? produto.descricaoCurta : produto.descricao}"></p>
+            <p class="detalhe-estoque"
+               th:text="${produto.estoque > 0 ? produto.estoque + ' unidades disponiveis' : 'Fora de estoque'}"
+               th:classappend="${produto.estoque > 0} ? 'em-estoque' : 'sem-estoque'"></p>
+
+            <div class="detalhe-acoes" th:if="${produto.estoque > 0}">
+                <div class="quantidade-control">
+                    <button onclick="alterarQtd(-1)" type="button">-</button>
+                    <input type="number" id="quantidade" value="1" min="1"
+                           th:max="${produto.estoque}">
+                    <button onclick="alterarQtd(1)" type="button">+</button>
+                </div>
+                <button class="btn btn-primary btn-add"
+                        th:data-id="${produto.id}"
+                        onclick="adicionarComQtd()">
+                    Adicionar ao carrinho
+                </button>
+            </div>
+
+            <div class="produto-descricao-longa" th:if="${produto.descricao != null and !#strings.isEmpty(produto.descricao)}">
+                <h3>Descricao completa</h3>
+                <p th:text="${produto.descricao}">Descricao</p>
+            </div>
+        </div>
+    </div>
+
+    <section class="relacionados" th:if="${!relacionados.isEmpty()}">
+        <h2>Voce tambem pode gostar</h2>
+        <div class="produtos-grid">
+            <div th:each="rel : ${relacionados}"
+                 th:if="${rel.id != produto.id}"
+                 class="produto-card">
+                <a th:href="@{/produtos/{id}(id=${rel.id})}">
+                    <img th:src="${rel.imagemUrl != null ? rel.imagemUrl : '/images/sem-foto.png'}"
+                         th:alt="${rel.nome}" class="produto-img">
+                    <div class="produto-info">
+                        <span class="produto-marca" th:text="${rel.marca != null ? rel.marca : 'MinhaLoja'}"></span>
+                        <h3 th:text="${rel.nome}">Nome</h3>
+                        <p class="produto-preco"
+                           th:text="'R$ ' + ${#numbers.formatDecimal(rel.preco, 1, 'POINT', 2, 'COMMA')}">
+                        </p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="avaliacoes-section" style="margin:3rem 0;">
+        <h2>Avaliacoes dos clientes
+            <span style="font-size:1rem;font-weight:400;color:#999;">
+            (<span th:text="${totalAvaliacoes}">0</span>)
+        </span>
+        </h2>
+
+        <div class="media-avaliacao" th:if="${totalAvaliacoes > 0}">
+            <span class="media-numero" th:text="${mediaAvaliacao}">0</span>
+            <div class="estrelas-display"
+                 th:with="nota=${mediaAvaliacao}">
+            <span th:each="i : ${#numbers.sequence(1,5)}"
+                  th:text="${i <= nota} ? '*' : 'o'"
+                  style="color:#f59f00;font-size:1.3rem;"></span>
+            </div>
+        </div>
+
+        <div th:each="av : ${avaliacoes}" class="avaliacao-card">
+            <div class="avaliacao-header">
+                <strong th:text="${av.usuario.nome}">Nome</strong>
+                <span class="estrelas-display">
+                <span th:each="i : ${#numbers.sequence(1,5)}"
+                      th:text="${i <= av.nota} ? '*' : 'o'"
+                      style="color:#f59f00;"></span>
+            </span>
+                <span th:text="${#temporals.format(av.criadoEm,'dd/MM/yyyy')}"
+                      style="font-size:0.8rem;color:#aaa;margin-left:auto;"></span>
+            </div>
+            <p th:text="${av.comentario}"
+               style="margin:6px 0 0;color:#555;font-size:0.9rem;"></p>
+        </div>
+    </section>
+
+</div>
+
+<script th:src="@{/js/carrinho.js}"></script>
+<script>
+    function alterarQtd(delta) {
+        const input = document.getElementById('quantidade');
+        const novoVal = Math.max(1, parseInt(input.value) + delta);
+        input.value = novoVal;
+    }
+    function adicionarComQtd() {
+        const btn = document.querySelector('.btn-add');
+        const qtd = parseInt(document.getElementById('quantidade').value);
+        adicionarAoCarrinho(btn.dataset.id, qtd);
+    }
+</script>
+</body>
+</html>

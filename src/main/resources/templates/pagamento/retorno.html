@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Pagamento</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container" style="max-width:600px;margin-top:3rem;text-align:center;">
+
+    <!-- Sucesso -->
+    <div th:if="${status == 'sucesso'}">
+        <div class="retorno-icon" style="color:#27ae60;">✓</div>
+        <h2 style="color:#27ae60;margin:1rem 0;">Pagamento aprovado!</h2>
+        <p style="color:#666;">
+            Seu pedido foi confirmado e está sendo preparado.
+        </p>
+        <div th:if="${pedido != null}" style="margin:1.5rem 0;">
+            <p style="font-size:0.875rem;color:#999;">Pedido</p>
+            <p style="font-size:1.5rem;font-weight:700;"
+               th:text="'#' + ${pedido.id}"></p>
+        </div>
+        <a th:href="${pedido != null} ? @{/pedidos/{id}(id=${pedido.id})} : @{/pedidos}"
+           class="btn btn-primary"
+           style="width:auto;padding:12px 32px;display:inline-block;
+                  text-decoration:none;margin-top:1rem;">
+            Ver meu pedido
+        </a>
+    </div>
+
+    <!-- Falha -->
+    <div th:if="${status == 'falha'}">
+        <div class="retorno-icon" style="color:#e74c3c;">✕</div>
+        <h2 style="color:#e74c3c;margin:1rem 0;">Pagamento recusado</h2>
+        <p style="color:#666;">
+            Não foi possível processar o pagamento.
+            Verifique os dados e tente novamente.
+        </p>
+        <div style="display:flex;gap:12px;justify-content:center;margin-top:1.5rem;">
+            <a th:href="@{/pedidos}"
+               class="btn btn-primary"
+               style="width:auto;padding:12px 24px;text-decoration:none;">
+                Meus pedidos
+            </a>
+            <a th:href="@{/produtos}"
+               class="btn"
+               style="width:auto;padding:12px 24px;background:#f5f5f5;
+                      color:#333;text-decoration:none;">
+                Continuar comprando
+            </a>
+        </div>
+    </div>
+
+    <!-- Pendente -->
+    <div th:if="${status == 'pendente'}">
+        <div class="retorno-icon" style="color:#f59f00;">⏳</div>
+        <h2 style="color:#f59f00;margin:1rem 0;">Pagamento pendente</h2>
+        <p style="color:#666;">
+            Seu pagamento está sendo processado.
+            Você receberá uma confirmação por e-mail em breve.
+        </p>
+        <a th:href="@{/pedidos}"
+           class="btn btn-primary"
+           style="width:auto;padding:12px 32px;display:inline-block;
+                  text-decoration:none;margin-top:1.5rem;">
+            Acompanhar pedido
+        </a>
+    </div>
+
+</div>
+</body>
+</html>

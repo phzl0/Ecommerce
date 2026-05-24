@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container" style="margin-top:2rem;max-width:900px;">
+
+    <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
+
+    <div class="pedido-detalhe-header">
+        <div>
+            <h2 th:text="${pedido.numero}">Pedido</h2>
+            <p class="pedido-copy">Acompanhe os dados comerciais e de entrega do pedido.</p>
+        </div>
+        <span class="status-badge"
+              th:text="${pedido.status}"
+              th:classappend="'status-' + ${pedido.status.name().toLowerCase()}"></span>
+    </div>
+
+    <div class="pedido-meta pedido-meta-grid">
+        <div>
+            <p><strong>Data:</strong>
+                <span th:text="${#temporals.format(pedido.dataPedido, 'dd/MM/yyyy HH:mm')}"></span></p>
+            <p><strong>Destinatario:</strong>
+                <span th:text="${pedido.nomeDestinatario}"></span></p>
+            <p><strong>Telefone:</strong>
+                <span th:text="${pedido.telefoneContato}"></span></p>
+        </div>
+        <div>
+            <p><strong>Endereco:</strong>
+                <span th:text="${pedido.enderecoEntrega}"></span></p>
+            <p th:if="${pedido.observacoes != null and !#strings.isEmpty(pedido.observacoes)}"><strong>Observacoes:</strong>
+                <span th:text="${pedido.observacoes}"></span></p>
+        </div>
+    </div>
+
+    <table class="pedido-tabela">
+        <thead>
+        <tr>
+            <th>Produto</th>
+            <th>Qtd</th>
+            <th>Preco unit.</th>
+            <th>Subtotal</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${pedido.itens}">
+            <td th:text="${item.produto.nome}"></td>
+            <td th:text="${item.quantidade}"></td>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}"></td>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}"></td>
+        </tr>
+        </tbody>
+        <tfoot>
+        <tr>
+            <td colspan="3">Subtotal</td>
+            <td th:text="'R$ ' + ${#numbers.formatDecimal(pedido.subtotal, 1, 'POINT', 2, 'COMMA')}"></td>
+        </tr>
+        <tr>
+            <td colspan="3">Frete</td>
+            <td th:text="${pedido.frete.compareTo(T(java.math.BigDecimal).ZERO) == 0 ? 'Gratis' : 'R$ ' + #numbers.formatDecimal(pedido.frete, 1, 'POINT', 2, 'COMMA')}"></td>
+        </tr>
+        <tr>
+            <td colspan="3"><strong>Total</strong></td>
+            <td><strong th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></strong></td>
+        </tr>
+        </tfoot>
+    </table>
+
+    <div style="margin-top:1.5rem;display:flex;gap:12px;">
+        <a th:href="@{/pedidos}" class="btn btn-primary" style="width:auto;padding:10px 20px;">
+            Meus pedidos
+        </a>
+        <a th:href="@{/produtos}" class="btn" style="width:auto;padding:10px 20px;background:#f5f5f5;color:#333;">
+            Continuar comprando
+        </a>
+    </div>
+</div>
+</body>
+</html>

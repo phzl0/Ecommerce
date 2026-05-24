@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Produtos</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="container">
+    <div class="catalogo-layout">
+
+        <aside class="sidebar">
+            <h3>Categorias</h3>
+            <ul class="cat-list">
+                <li><a th:href="@{/produtos}"
+                       th:classappend="${categoriaAtiva == null and busca == null} ? 'ativo' : ''">
+                    Todas</a></li>
+                <li th:each="cat : ${categorias}">
+                    <a th:href="@{/produtos(categoriaId=${cat.id})}"
+                       th:text="${cat.nome}"
+                       th:classappend="${categoriaAtiva == cat.id} ? 'ativo' : ''">Cat</a>
+                </li>
+            </ul>
+
+            <form th:action="@{/produtos}" method="get" class="catalogo-filtros">
+                <input type="hidden" name="busca" th:value="${busca}">
+                <input type="hidden" name="categoriaId" th:value="${categoriaAtiva}">
+                <div class="form-group">
+                    <label>Preco minimo</label>
+                    <input type="number" name="precoMin" step="0.01" min="0" th:value="${precoMin}">
+                </div>
+                <div class="form-group">
+                    <label>Preco maximo</label>
+                    <input type="number" name="precoMax" step="0.01" min="0" th:value="${precoMax}">
+                </div>
+                <div class="form-group">
+                    <label>Ordenar por</label>
+                    <select name="ordenacao">
+                        <option value="relevancia" th:selected="${ordenacao == 'relevancia'}">Relevancia</option>
+                        <option value="preco-asc" th:selected="${ordenacao == 'preco-asc'}">Menor preco</option>
+                        <option value="preco-desc" th:selected="${ordenacao == 'preco-desc'}">Maior preco</option>
+                        <option value="recentes" th:selected="${ordenacao == 'recentes'}">Mais recentes</option>
+                        <option value="nome-desc" th:selected="${ordenacao == 'nome-desc'}">Nome Z-A</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+            </form>
+        </aside>
+
+        <main class="catalogo-main">
+            <div class="catalogo-header">
+                <div>
+                    <h2 th:if="${busca != null and !#strings.isEmpty(busca)}">Resultados para "<span th:text="${busca}"></span>"</h2>
+                    <h2 th:if="${busca == null or #strings.isEmpty(busca)}">Catalogo</h2>
+                    <p class="catalogo-copy">Selecione produtos com filtros mais proximos de uma operacao real.</p>
+                </div>
+                <span th:text="${produtos.size()} + ' produtos encontrados'" class="count-label"></span>
+            </div>
+
+            <div class="produtos-grid" th:if="${!produtos.isEmpty()}">
+                <div th:each="produto : ${produtos}" class="produto-card">
+                    <a th:href="@{/produtos/{id}(id=${produto.id})}">
+                        <div class="produto-badges">
+                            <span class="badge badge-featured" th:if="${produto.destaque}">Destaque</span>
+                        </div>
+                        <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
+                             th:alt="${produto.nome}" class="produto-img">
+                        <div class="produto-info">
+                            <span class="produto-marca" th:text="${produto.marca != null ? produto.marca : 'MinhaLoja'}"></span>
+                            <h3 th:text="${produto.nome}">Nome</h3>
+                            <p class="produto-resumo"
+                               th:text="${produto.descricaoCurta != null ? produto.descricaoCurta : 'Produto pronto para compor seu mix comercial.'}"></p>
+                            <span class="produto-categoria"
+                                  th:text="${produto.categoria != null ? produto.categoria.nome : ''}"></span>
+                            <p class="produto-preco"
+                               th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}">
+                                R$ 0,00
+                            </p>
+                        </div>
+                    </a>
+                    <button class="btn btn-primary btn-add"
+                            th:data-id="${produto.id}">+ Carrinho</button>
+                </div>
+            </div>
+
+            <p th:if="${produtos.isEmpty()}" class="sem-resultados">
+                Nenhum produto encontrado com os filtros atuais.
+            </p>
+        </main>
+
+    </div>
+</div>
+
+<script th:src="@{/js/carrinho.js}"></script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Produtos - Admin</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='produtos'"></div>
+
+    <main class="admin-main">
+        <div class="admin-header">
+            <h1>Produtos</h1>
+            <a th:href="@{/admin/produtos/novo}" class="btn btn-primary" style="width:auto;padding:9px 20px;">
+                + Novo produto
+            </a>
+        </div>
+
+        <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
+
+        <table class="admin-table">
+            <thead>
+            <tr>
+                <th>Imagem</th>
+                <th>Produto</th>
+                <th>SKU</th>
+                <th>Categoria</th>
+                <th>Preco</th>
+                <th>Estoque</th>
+                <th>Status</th>
+                <th>Acoes</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="produto : ${produtos}">
+                <td>
+                    <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
+                         style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                </td>
+                <td>
+                    <strong th:text="${produto.nome}"></strong>
+                    <div class="table-subtext" th:text="${produto.marca != null ? produto.marca : 'Sem marca'}"></div>
+                </td>
+                <td th:text="${produto.sku != null ? produto.sku : '-'}"></td>
+                <td th:text="${produto.categoria != null ? produto.categoria.nome : '-'}"></td>
+                <td th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}"></td>
+                <td>
+                    <span th:text="${produto.estoque}"
+                          th:classappend="${produto.estoque == 0} ? 'text-danger' : ''"></span>
+                </td>
+                <td>
+                    <span class="status-badge status-confirmado" th:if="${produto.destaque}">Destaque</span>
+                    <span class="status-badge status-pendente" th:if="${!produto.destaque}">Padrao</span>
+                </td>
+                <td class="acoes">
+                    <a th:href="@{/admin/produtos/{id}/editar(id=${produto.id})}" class="btn-link">
+                        Editar
+                    </a>
+                    <form th:action="@{/admin/produtos/{id}/deletar(id=${produto.id})}" method="post"
+                          onsubmit="return confirm('Remover produto?')">
+                        <button type="submit" class="btn-link danger">Remover</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </main>
+</div>
+</body>
+</html>
