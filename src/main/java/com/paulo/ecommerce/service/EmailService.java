@@ -4,6 +4,7 @@ import com.paulo.ecommerce.model.Pedido;
 import com.paulo.ecommerce.model.Usuario;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -13,17 +14,14 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailService {
 
-    private final JavaMailSender mailSender;
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
 
-    @Value("${app.mail.remetente}")
+    @Value("${app.mail.remetente:no-reply@localhost}")
     private String remetente;
 
-    @Value("${app.url}")
+    @Value("${app.url:http://localhost:8080}")
     private String appUrl;
-
-    public EmailService(JavaMailSender mailSender) {
-        this.mailSender = mailSender;
-    }
 
     @Async
     public void enviarBoasVindas(Usuario usuario) {
@@ -159,15 +157,23 @@ public class EmailService {
     }
 
     private void enviar(String destinatario, String assunto, String corpo) {
+        if (mailSender == null) {
+            System.out.println("Email desativado - JavaMailSender não configurado");
+            return;
+        }
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper =
                     new MimeMessageHelper(message, true, "UTF-8");
+
             helper.setFrom(remetente);
             helper.setTo(destinatario);
             helper.setSubject(assunto);
             helper.setText(corpo, true);
+
             mailSender.send(message);
+
         } catch (MessagingException e) {
             System.err.println("Erro ao enviar e-mail: " + e.getMessage());
         }
