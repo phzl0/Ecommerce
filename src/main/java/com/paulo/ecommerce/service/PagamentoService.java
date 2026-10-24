@@ -25,6 +25,9 @@ public class PagamentoService {
     @Value("${app.url:http://localhost:8080}")
     private String appUrl;
 
+    @Value("${app.payments.enabled:false}")
+    private boolean paymentsEnabled;
+
     public PagamentoService(PagamentoRepository pagamentoRepository,
                             PedidoService pedidoService,
                             EmailService emailService,
@@ -37,6 +40,9 @@ public class PagamentoService {
 
     @Transactional
     public String criarPreferencia(Long pedidoId) throws MPException, MPApiException {
+        if (!paymentsEnabled) {
+            throw new IllegalStateException("Pagamentos desativados neste ambiente.");
+        }
         Pedido pedido = pedidoService.buscarPorId(pedidoId);
 
         Pagamento pagamento = pagamentoRepository
