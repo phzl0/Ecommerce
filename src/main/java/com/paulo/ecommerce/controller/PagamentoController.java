@@ -39,7 +39,7 @@ public class PagamentoController {
     public String sucesso(@RequestParam(required = false) String preference_id) {
         Long pedidoId = null;
         if (preference_id != null) {
-            pagamentoService.atualizarStatusManual(preference_id, "approved");
+            // Nunca confirmar pagamento a partir de parâmetros de retorno do navegador.
             try {
                 var pagamento =
                         pagamentoService.buscarPorPedido(
@@ -55,7 +55,7 @@ public class PagamentoController {
     public String falha(@RequestParam(required = false) String preference_id) {
         Long pedidoId = null;
         if (preference_id != null) {
-            pagamentoService.atualizarStatusManual(preference_id, "failure");
+            // O resultado definitivo vem da API do provedor, não deste redirecionamento.
             try {
                 pedidoId = pagamentoService.buscarPorPreferenceId(preference_id)
                         .getPedido().getId();
@@ -68,7 +68,7 @@ public class PagamentoController {
     public String pendente(@RequestParam(required = false) String preference_id) {
         Long pedidoId = null;
         if (preference_id != null) {
-            pagamentoService.atualizarStatusManual(preference_id, "pending");
+            // Apenas apresenta o retorno; não altera o estado financeiro.
             try {
                 pedidoId = pagamentoService.buscarPorPreferenceId(preference_id)
                         .getPedido().getId();
