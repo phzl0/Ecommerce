@@ -27,14 +27,20 @@ public class DataInitializer {
         return args -> {
             passeService.garantirPasseAtual();
 
-            if (!usuarioRepository.existsByEmail("admin@loja.com")) {
+            // Cria o administrador inicial somente quando credenciais forem definidas
+            // explicitamente no ambiente. Nunca use senhas fixas no código-fonte.
+            String adminEmail = System.getenv("ADMIN_EMAIL");
+            String adminPassword = System.getenv("ADMIN_PASSWORD");
+            if (adminEmail != null && !adminEmail.isBlank()
+                    && adminPassword != null && adminPassword.length() >= 12
+                    && !usuarioRepository.existsByEmail(adminEmail)) {
                 Usuario admin = new Usuario();
                 admin.setNome("Administrador");
-                admin.setEmail("admin@loja.com");
-                admin.setSenha(passwordEncoder.encode("admin123"));
+                admin.setEmail(adminEmail.trim());
+                admin.setSenha(passwordEncoder.encode(adminPassword));
                 admin.setRole(Usuario.Role.ADMIN);
                 usuarioRepository.save(admin);
-                System.out.println(">>> Admin criado: admin@loja.com / admin123");
+                System.out.println("Administrador inicial criado a partir das variáveis de ambiente.");
             }
 
             List<Categoria> categorias = List.of(
