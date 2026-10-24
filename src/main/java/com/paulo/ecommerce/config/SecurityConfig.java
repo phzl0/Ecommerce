@@ -38,6 +38,7 @@ public class SecurityConfig {
         http
                 // ── CSRF ──────────────────────────────────────
                 .csrf(csrf -> csrf
+                        .ignoringRequestMatchers("/pagamento/webhook")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(requestHandler)
                 )
@@ -87,7 +88,7 @@ public class SecurityConfig {
                         .passwordParameter("senha")
                         .successHandler((request, response, authentication) -> {
                             String returnUrl = request.getParameter("returnUrl");
-                            if (returnUrl != null && returnUrl.startsWith("/")) {
+                            if (returnUrl != null && returnUrl.startsWith("/") && !returnUrl.startsWith("//") && !returnUrl.startsWith("/\\\\")) {
                                 response.sendRedirect(returnUrl);
                                 return;
                             }
@@ -96,7 +97,7 @@ public class SecurityConfig {
                         .failureHandler((request, response, exception) -> {
                             String returnUrl = request.getParameter("returnUrl");
                             String redirect = "/login?erro=true";
-                            if (returnUrl != null && returnUrl.startsWith("/")) {
+                            if (returnUrl != null && returnUrl.startsWith("/") && !returnUrl.startsWith("//") && !returnUrl.startsWith("/\\\\")) {
                                 redirect += "&returnUrl=" + java.net.URLEncoder.encode(
                                         returnUrl,
                                         java.nio.charset.StandardCharsets.UTF_8
