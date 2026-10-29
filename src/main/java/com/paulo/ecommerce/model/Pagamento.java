@@ -7,60 +7,120 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "pagamentos")
 public class Pagamento extends BaseEntity {
-    @Column(length=2048) private String checkoutUrl;
-    public String getCheckoutUrl(){return checkoutUrl;}
-    public void setCheckoutUrl(String value){checkoutUrl=value;}
+  @Column(length = 2048)
+  private String checkoutUrl;
 
+  public String getCheckoutUrl() {
+    return checkoutUrl;
+  }
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  public void setCheckoutUrl(String value) {
+    checkoutUrl = value;
+  }
 
-    @OneToOne
-    @JoinColumn(name = "pedido_id", nullable = false)
-    private Pedido pedido;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "mp_payment_id")
-    private String mpPaymentId;
+  @OneToOne
+  @JoinColumn(name = "pedido_id", nullable = false)
+  private Pedido pedido;
 
-    @Column(name = "mp_preference_id")
-    private String mpPreferenceId;
+  @Column(name = "mp_payment_id")
+  private String mpPaymentId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private StatusPagamento status = StatusPagamento.PENDENTE;
+  @Column(name = "mp_preference_id")
+  private String mpPreferenceId;
 
-    @Enumerated(EnumType.STRING)
-    private MetodoPagamento metodo;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private StatusPagamento status = StatusPagamento.PENDENTE;
 
-    @Column(precision = 10, scale = 2)
-    private BigDecimal valor;
+  @Enumerated(EnumType.STRING)
+  private MetodoPagamento metodo;
 
-    private LocalDateTime pagoEm;
+  @Column(precision = 10, scale = 2)
+  private BigDecimal valor;
 
-    public enum StatusPagamento {
-        PENDENTE, APROVADO, RECUSADO, CANCELADO, REEMBOLSADO
-    }
+  private LocalDateTime pagoEm;
 
-    public enum MetodoPagamento {
-        PIX, BOLETO, CARTAO_CREDITO, CARTAO_DEBITO
-    }
+  public enum StatusPagamento {
+    PENDENTE,
+    APROVADO,
+    RECUSADO,
+    CANCELADO,
+    REEMBOLSADO
+  }
 
-    // Getters e Setters
-    public Long getId()                          { return id; }
-    public void setId(Long id)                   { this.id = id; }
-    public Pedido getPedido()                    { return pedido; }
-    public void setPedido(Pedido pedido)         { this.pedido = pedido; }
-    public String getMpPaymentId()               { return mpPaymentId; }
-    public void setMpPaymentId(String id)        { this.mpPaymentId = id; }
-    public String getMpPreferenceId()            { return mpPreferenceId; }
-    public void setMpPreferenceId(String id)     { this.mpPreferenceId = id; }
-    public StatusPagamento getStatus()           { return status; }
-    public void setStatus(StatusPagamento s)     { this.status = s; }
-    public MetodoPagamento getMetodo()           { return metodo; }
-    public void setMetodo(MetodoPagamento m)     { this.metodo = m; }
-    public BigDecimal getValor()                 { return valor; }
-    public void setValor(BigDecimal valor)       { this.valor = valor; }
-    public LocalDateTime getPagoEm()             { return pagoEm; }
-    public void setPagoEm(LocalDateTime pagoEm) { this.pagoEm = pagoEm; }
+  public enum MetodoPagamento {
+    PIX,
+    BOLETO,
+    CARTAO_CREDITO,
+    CARTAO_DEBITO
+  }
+
+  // Getters e Setters
+  public Long getId() {
+    return id;
+  }
+
+  public void setId(Long id) {
+    this.id = id;
+  }
+
+  public Pedido getPedido() {
+    return pedido;
+  }
+
+  public void setPedido(Pedido pedido) {
+    this.pedido = pedido;
+  }
+
+  public String getMpPaymentId() {
+    return mpPaymentId;
+  }
+
+  public void setMpPaymentId(String id) {
+    this.mpPaymentId = id;
+  }
+
+  public String getMpPreferenceId() {
+    return mpPreferenceId;
+  }
+
+  public void setMpPreferenceId(String id) {
+    this.mpPreferenceId = id;
+  }
+
+  public StatusPagamento getStatus() {
+    return status;
+  }
+
+  public void setStatus(StatusPagamento s) {
+    this.status = s;
+  }
+
+  public MetodoPagamento getMetodo() {
+    return metodo;
+  }
+
+  public void setMetodo(MetodoPagamento m) {
+    this.metodo = m;
+  }
+
+  public BigDecimal getValor() {
+    return valor;
+  }
+
+  public void setValor(BigDecimal valor) {
+    this.valor = valor;
+  }
+
+  public LocalDateTime getPagoEm() {
+    return pagoEm;
+  }
+
+  public void setPagoEm(LocalDateTime pagoEm) {
+    this.pagoEm = pagoEm;
+  }
 }

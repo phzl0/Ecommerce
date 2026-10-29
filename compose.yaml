@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Execute scripts/init_env.py}
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
-      test: [CMD-SHELL, 'pg_isready -U ecommerce -d ecommerce']
+      test: [CMD-SHELL, "pg_isready -U ecommerce -d ecommerce"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -21,12 +21,12 @@ services:
       DB_USER: ecommerce
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_PROFILES_ACTIVE: local
-      COOKIE_SECURE: 'false'
+      COOKIE_SECURE: "false"
       APP_URL: http://localhost:8080
       APP_STORAGE_DIR: /app/storage
       APP_PAYMENTS_ENABLED: ${APP_PAYMENTS_ENABLED:-false}
       APP_PAYMENTS_LIVE_MODE: ${APP_PAYMENTS_LIVE_MODE:-false}
-    ports: ['127.0.0.1:8080:8080']
+    ports: ["127.0.0.1:8080:8080"]
     volumes: [product_storage:/app/storage]
     depends_on:
       db:

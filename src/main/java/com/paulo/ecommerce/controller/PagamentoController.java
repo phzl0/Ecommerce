@@ -10,101 +10,108 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/pagamento")
 public class PagamentoController {
 
-    private final com.paulo.ecommerce.service.WebhookSignature signature;
-    private final PagamentoService pagamentoService;
-    private final com.paulo.ecommerce.service.PedidoService pedidoService;
+  private final com.paulo.ecommerce.service.WebhookSignature signature;
+  private final PagamentoService pagamentoService;
+  private final com.paulo.ecommerce.service.PedidoService pedidoService;
 
-    public PagamentoController(PagamentoService pagamentoService, com.paulo.ecommerce.service.PedidoService pedidoService, com.paulo.ecommerce.service.WebhookSignature signature) {
-        this.signature = signature;
-        this.pedidoService = pedidoService;
-        this.pagamentoService = pagamentoService;
-    }
+  public PagamentoController(
+      PagamentoService pagamentoService,
+      com.paulo.ecommerce.service.PedidoService pedidoService,
+      com.paulo.ecommerce.service.WebhookSignature signature) {
+    this.signature = signature;
+    this.pedidoService = pedidoService;
+    this.pagamentoService = pagamentoService;
+  }
 
-    @GetMapping("/pedido/{pedidoId}")
-    public String paginaPagamento(@PathVariable Long pedidoId) {
-        return "redirect:/pedidos/" + pedidoId + "?openPayment=true";
-    }
+  @GetMapping("/pedido/{pedidoId}")
+  public String paginaPagamento(@PathVariable Long pedidoId) {
+    return "redirect:/pedidos/" + pedidoId + "?openPayment=true";
+  }
 
-    @PostMapping("/iniciar/{pedidoId}")
-    public String iniciarPagamento(@PathVariable Long pedidoId,
-                                   RedirectAttributes redirectAttributes, java.security.Principal principal) {
-        pedidoService.buscarPorIdDoUsuario(pedidoId, principal.getName());
-        try {
-            String checkoutUrl =
-                    pagamentoService.criarPreferencia(pedidoId);
-            return "redirect:" + checkoutUrl;
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("erro",
-                    "Erro ao iniciar pagamento. Tente novamente.");
-            return "redirect:/pedidos/" + pedidoId + "?paymentError=true";
-        }
+  @PostMapping("/iniciar/{pedidoId}")
+  public String iniciarPagamento(
+      @PathVariable Long pedidoId,
+      RedirectAttributes redirectAttributes,
+      java.security.Principal principal) {
+    pedidoService.buscarPorIdDoUsuario(pedidoId, principal.getName());
+    try {
+      String checkoutUrl = pagamentoService.criarPreferencia(pedidoId);
+      return "redirect:" + checkoutUrl;
+    } catch (Exception e) {
+      redirectAttributes.addFlashAttribute("erro", "Erro ao iniciar pagamento. Tente novamente.");
+      return "redirect:/pedidos/" + pedidoId + "?paymentError=true";
     }
+  }
 
-    @GetMapping("/sucesso")
-    public String sucesso(@RequestParam(required = false) String preference_id) {
-        Long pedidoId = null;
-        if (preference_id != null) {
-            // Nunca confirmar pagamento a partir de parâmetros de retorno do navegador.
-            try {
-                var pagamento =
-                        pagamentoService.buscarPorPedido(
-                                pagamentoService.buscarPorPreferenceId(preference_id)
-                                        .getPedido().getId());
-                pedidoId = pagamento.getPedido().getId();
-            } catch (Exception ignored) {}
-        }
-        return buildPaymentRedirect("sucesso", preference_id, pedidoId);
+  @GetMapping("/sucesso")
+  public String sucesso(@RequestParam(required = false) String preference_id) {
+    Long pedidoId = null;
+    if (preference_id != null) {
+      // Nunca confirmar pagamento a partir de parâmetros de retorno do navegador.
+      try {
+        var pagamento =
+            pagamentoService.buscarPorPedido(
+                pagamentoService.buscarPorPreferenceId(preference_id).getPedido().getId());
+        pedidoId = pagamento.getPedido().getId();
+      } catch (Exception ignored) {
+      }
     }
+    return buildPaymentRedirect("sucesso", preference_id, pedidoId);
+  }
 
-    @GetMapping("/falha")
-    public String falha(@RequestParam(required = false) String preference_id) {
-        Long pedidoId = null;
-        if (preference_id != null) {
-            // O resultado definitivo vem da API do provedor, não deste redirecionamento.
-            try {
-                pedidoId = pagamentoService.buscarPorPreferenceId(preference_id)
-                        .getPedido().getId();
-            } catch (Exception ignored) {}
-        }
-        return buildPaymentRedirect("falha", preference_id, pedidoId);
+  @GetMapping("/falha")
+  public String falha(@RequestParam(required = false) String preference_id) {
+    Long pedidoId = null;
+    if (preference_id != null) {
+      // O resultado definitivo vem da API do provedor, não deste redirecionamento.
+      try {
+        pedidoId = pagamentoService.buscarPorPreferenceId(preference_id).getPedido().getId();
+      } catch (Exception ignored) {
+      }
     }
+    return buildPaymentRedirect("falha", preference_id, pedidoId);
+  }
 
-    @GetMapping("/pendente")
-    public String pendente(@RequestParam(required = false) String preference_id) {
-        Long pedidoId = null;
-        if (preference_id != null) {
-            // Apenas apresenta o retorno; não altera o estado financeiro.
-            try {
-                pedidoId = pagamentoService.buscarPorPreferenceId(preference_id)
-                        .getPedido().getId();
-            } catch (Exception ignored) {}
-        }
-        return buildPaymentRedirect("pendente", preference_id, pedidoId);
+  @GetMapping("/pendente")
+  public String pendente(@RequestParam(required = false) String preference_id) {
+    Long pedidoId = null;
+    if (preference_id != null) {
+      // Apenas apresenta o retorno; não altera o estado financeiro.
+      try {
+        pedidoId = pagamentoService.buscarPorPreferenceId(preference_id).getPedido().getId();
+      } catch (Exception ignored) {
+      }
     }
+    return buildPaymentRedirect("pendente", preference_id, pedidoId);
+  }
 
-    // Webhook do Mercado Pago — deve ser POST público
-    @PostMapping("/webhook")
-    @ResponseBody
-    public ResponseEntity<Void> webhook(
-        @RequestParam(required = false) String type,
-        @RequestParam(name = "data.id", required = false) String dataId,
-        @RequestHeader(name = "x-signature", required = false) String signed,
-        @RequestHeader(name = "x-request-id", required = false) String requestId) {
-        if (!signature.valid(signed, requestId, dataId)) return ResponseEntity.status(401).build();
-        if (!"payment".equals(type)) return ResponseEntity.noContent().build();
-        try { pagamentoService.processarWebhook(dataId, type); return ResponseEntity.ok().build(); }
-        catch (RuntimeException error) { return ResponseEntity.status(503).build(); }
+  // Webhook do Mercado Pago — deve ser POST público
+  @PostMapping("/webhook")
+  @ResponseBody
+  public ResponseEntity<Void> webhook(
+      @RequestParam(required = false) String type,
+      @RequestParam(name = "data.id", required = false) String dataId,
+      @RequestHeader(name = "x-signature", required = false) String signed,
+      @RequestHeader(name = "x-request-id", required = false) String requestId) {
+    if (!signature.valid(signed, requestId, dataId)) return ResponseEntity.status(401).build();
+    if (!"payment".equals(type)) return ResponseEntity.noContent().build();
+    try {
+      pagamentoService.processarWebhook(dataId, type);
+      return ResponseEntity.ok().build();
+    } catch (RuntimeException error) {
+      return ResponseEntity.status(503).build();
     }
+  }
 
-    private String buildPaymentRedirect(String status, String preferenceId, Long pedidoId) {
-        StringBuilder redirect = new StringBuilder("redirect:/pagamento/retorno?status=")
-                .append(status);
-        if (preferenceId != null && !preferenceId.isBlank()) {
-            redirect.append("&preferenceId=").append(preferenceId);
-        }
-        if (pedidoId != null) {
-            redirect.append("&pedidoId=").append(pedidoId);
-        }
-        return redirect.toString();
+  private String buildPaymentRedirect(String status, String preferenceId, Long pedidoId) {
+    StringBuilder redirect =
+        new StringBuilder("redirect:/pagamento/retorno?status=").append(status);
+    if (preferenceId != null && !preferenceId.isBlank()) {
+      redirect.append("&preferenceId=").append(preferenceId);
     }
+    if (pedidoId != null) {
+      redirect.append("&pedidoId=").append(pedidoId);
+    }
+    return redirect.toString();
+  }
 }

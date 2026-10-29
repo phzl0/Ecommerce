@@ -10,10 +10,11 @@ import org.springframework.scheduling.annotation.EnableAsync;
 @SpringBootApplication
 public class EcommerceApplication {
 
-	public static void main(String[] args) {
-		java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone(java.time.ZoneId.of(System.getenv().getOrDefault("APP_TIMEZONE", "America/Sao_Paulo"))));
-        SpringApplication.run(EcommerceApplication.class, args);
-	}
-
+  public static void main(String[] args) {
+    java.util.TimeZone.setDefault(
+        java.util.TimeZone.getTimeZone(
+            java.time.ZoneId.of(
+                System.getenv().getOrDefault("APP_TIMEZONE", "America/Sao_Paulo"))));
+    SpringApplication.run(EcommerceApplication.class, args);
+  }
 }
-

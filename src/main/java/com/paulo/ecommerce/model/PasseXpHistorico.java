@@ -14,93 +14,101 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "passe_xp_historico",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "temporada_id", "origem_tipo", "referencia"}))
+@Table(
+    name = "passe_xp_historico",
+    uniqueConstraints =
+        @UniqueConstraint(
+            columnNames = {"usuario_id", "temporada_id", "origem_tipo", "referencia"}))
 public class PasseXpHistorico extends BaseEntity {
-    @Column(nullable=false, columnDefinition="boolean default false")
-    private boolean estornado;
-    public boolean isEstornado() { return estornado; }
-    public void setEstornado(boolean value) { estornado = value; }
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private boolean estornado;
 
+  public boolean isEstornado() {
+    return estornado;
+  }
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  public void setEstornado(boolean value) {
+    estornado = value;
+  }
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "usuario_id", nullable = false)
-    private Usuario usuario;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "temporada_id", nullable = false)
-    private PasseTemporada temporada;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "usuario_id", nullable = false)
+  private Usuario usuario;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "origem_tipo", nullable = false, length = 20)
-    private PasseOrigemXpTipo origemTipo;
+  @ManyToOne(fetch = FetchType.LAZY, optional = false)
+  @JoinColumn(name = "temporada_id", nullable = false)
+  private PasseTemporada temporada;
 
-    @Column(nullable = false, length = 160)
-    private String referencia;
+  @Enumerated(EnumType.STRING)
+  @Column(name = "origem_tipo", nullable = false, length = 20)
+  private PasseOrigemXpTipo origemTipo;
 
-    @Column(nullable = false)
-    private Integer xpGanho;
+  @Column(nullable = false, length = 160)
+  private String referencia;
 
-    @Column(nullable = false, length = 255)
-    private String descricao;
+  @Column(nullable = false)
+  private Integer xpGanho;
 
-    public Long getId() {
-        return id;
-    }
+  @Column(nullable = false, length = 255)
+  private String descricao;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+  public Long getId() {
+    return id;
+  }
 
-    public Usuario getUsuario() {
-        return usuario;
-    }
+  public void setId(Long id) {
+    this.id = id;
+  }
 
-    public void setUsuario(Usuario usuario) {
-        this.usuario = usuario;
-    }
+  public Usuario getUsuario() {
+    return usuario;
+  }
 
-    public PasseTemporada getTemporada() {
-        return temporada;
-    }
+  public void setUsuario(Usuario usuario) {
+    this.usuario = usuario;
+  }
 
-    public void setTemporada(PasseTemporada temporada) {
-        this.temporada = temporada;
-    }
+  public PasseTemporada getTemporada() {
+    return temporada;
+  }
 
-    public PasseOrigemXpTipo getOrigemTipo() {
-        return origemTipo;
-    }
+  public void setTemporada(PasseTemporada temporada) {
+    this.temporada = temporada;
+  }
 
-    public void setOrigemTipo(PasseOrigemXpTipo origemTipo) {
-        this.origemTipo = origemTipo;
-    }
+  public PasseOrigemXpTipo getOrigemTipo() {
+    return origemTipo;
+  }
 
-    public String getReferencia() {
-        return referencia;
-    }
+  public void setOrigemTipo(PasseOrigemXpTipo origemTipo) {
+    this.origemTipo = origemTipo;
+  }
 
-    public void setReferencia(String referencia) {
-        this.referencia = referencia;
-    }
+  public String getReferencia() {
+    return referencia;
+  }
 
-    public Integer getXpGanho() {
-        return xpGanho;
-    }
+  public void setReferencia(String referencia) {
+    this.referencia = referencia;
+  }
 
-    public void setXpGanho(Integer xpGanho) {
-        this.xpGanho = xpGanho;
-    }
+  public Integer getXpGanho() {
+    return xpGanho;
+  }
 
-    public String getDescricao() {
-        return descricao;
-    }
+  public void setXpGanho(Integer xpGanho) {
+    this.xpGanho = xpGanho;
+  }
 
-    public void setDescricao(String descricao) {
-        this.descricao = descricao;
-    }
+  public String getDescricao() {
+    return descricao;
+  }
+
+  public void setDescricao(String descricao) {
+    this.descricao = descricao;
+  }
 }

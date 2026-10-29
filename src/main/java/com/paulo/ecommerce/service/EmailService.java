@@ -14,19 +14,20 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailService {
 
-    @Autowired(required = false)
-    private JavaMailSender mailSender;
+  @Autowired(required = false)
+  private JavaMailSender mailSender;
 
-    @Value("${app.mail.remetente:no-reply@localhost}")
-    private String remetente;
+  @Value("${app.mail.remetente:no-reply@localhost}")
+  private String remetente;
 
-    @Value("${app.url:http://localhost:8080}")
-    private String appUrl;
+  @Value("${app.url:http://localhost:8080}")
+  private String appUrl;
 
-    @Async
-    public void enviarBoasVindas(Usuario usuario) {
-        String assunto = "Bem-vindo a MinhaLoja!";
-        String corpo = """
+  @Async
+  public void enviarBoasVindas(Usuario usuario) {
+    String assunto = "Bem-vindo a MinhaLoja!";
+    String corpo =
+        """
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
               <h2 style="color:#6c63ff;">Ola, %s!</h2>
               <p>Sua conta foi criada com sucesso.</p>
@@ -41,18 +42,23 @@ public class EmailService {
                 MinhaLoja - obrigado por se cadastrar!
               </p>
             </div>
-            """.formatted(usuario.getNome(), appUrl);
+            """
+            .formatted(usuario.getNome(), appUrl);
 
-        enviar(usuario.getEmail(), assunto, corpo);
-    }
+    enviar(usuario.getEmail(), assunto, corpo);
+  }
 
-    @Async
-    public void enviarConfirmacaoPedido(Pedido pedido) {
-        String assunto = "Pedido " + pedido.getNumero() + " recebido";
+  @Async
+  public void enviarConfirmacaoPedido(Pedido pedido) {
+    String assunto = "Pedido " + pedido.getNumero() + " recebido";
 
-        StringBuilder itensHtml = new StringBuilder();
-        pedido.getItens().forEach(item ->
-                itensHtml.append("""
+    StringBuilder itensHtml = new StringBuilder();
+    pedido
+        .getItens()
+        .forEach(
+            item ->
+                itensHtml.append(
+                    """
                 <tr>
                   <td style="padding:8px;border-bottom:1px solid #eee;">%s</td>
                   <td style="padding:8px;border-bottom:1px solid #eee;
@@ -60,15 +66,14 @@ public class EmailService {
                   <td style="padding:8px;border-bottom:1px solid #eee;
                              text-align:right;">R$ %.2f</td>
                 </tr>
-                """.formatted(
-                                item.getProduto().getNome(),
-                                item.getQuantidade(),
-                                item.getSubtotal()
-                        )
-                )
-        );
+                """
+                        .formatted(
+                            item.getProduto().getNome(),
+                            item.getQuantidade(),
+                            item.getSubtotal())));
 
-        String corpo = """
+    String corpo =
+        """
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
               <h2 style="color:#6c63ff;">Pedido recebido — aguardando pagamento</h2>
               <p>Ola, <strong>%s</strong>! Seu pedido foi recebido.</p>
@@ -111,23 +116,24 @@ public class EmailService {
                 Acompanhar pedido
               </a>
             </div>
-            """.formatted(
+            """
+            .formatted(
                 pedido.getUsuario().getNome(),
                 pedido.getNumero(),
                 itensHtml.toString(),
                 pedido.getTotal(),
                 pedido.getEnderecoEntrega(),
                 appUrl,
-                pedido.getId()
-        );
+                pedido.getId());
 
-        enviar(pedido.getUsuario().getEmail(), assunto, corpo);
-    }
+    enviar(pedido.getUsuario().getEmail(), assunto, corpo);
+  }
 
-    @Async
-    public void enviarAtualizacaoStatus(Pedido pedido) {
-        String assunto = "Pedido " + pedido.getNumero() + " - Status atualizado";
-        String corpo = """
+  @Async
+  public void enviarAtualizacaoStatus(Pedido pedido) {
+    String assunto = "Pedido " + pedido.getNumero() + " - Status atualizado";
+    String corpo =
+        """
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
               <h2 style="color:#6c63ff;">Status do seu pedido atualizado</h2>
               <p>Ola, <strong>%s</strong>!</p>
@@ -145,37 +151,36 @@ public class EmailService {
                 Ver pedido
               </a>
             </div>
-            """.formatted(
+            """
+            .formatted(
                 pedido.getUsuario().getNome(),
                 pedido.getNumero(),
                 pedido.getStatus(),
                 appUrl,
-                pedido.getId()
-        );
+                pedido.getId());
 
-        enviar(pedido.getUsuario().getEmail(), assunto, corpo);
+    enviar(pedido.getUsuario().getEmail(), assunto, corpo);
+  }
+
+  private void enviar(String destinatario, String assunto, String corpo) {
+    if (mailSender == null) {
+      System.out.println("Email desativado - JavaMailSender não configurado");
+      return;
     }
 
-    private void enviar(String destinatario, String assunto, String corpo) {
-        if (mailSender == null) {
-            System.out.println("Email desativado - JavaMailSender não configurado");
-            return;
-        }
+    try {
+      MimeMessage message = mailSender.createMimeMessage();
+      MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper =
-                    new MimeMessageHelper(message, true, "UTF-8");
+      helper.setFrom(remetente);
+      helper.setTo(destinatario);
+      helper.setSubject(assunto);
+      helper.setText(corpo, true);
 
-            helper.setFrom(remetente);
-            helper.setTo(destinatario);
-            helper.setSubject(assunto);
-            helper.setText(corpo, true);
+      mailSender.send(message);
 
-            mailSender.send(message);
-
-        } catch (MessagingException e) {
-            System.err.println("Erro ao enviar e-mail: " + e.getMessage());
-        }
+    } catch (MessagingException e) {
+      System.err.println("Erro ao enviar e-mail: " + e.getMessage());
     }
+  }
 }
