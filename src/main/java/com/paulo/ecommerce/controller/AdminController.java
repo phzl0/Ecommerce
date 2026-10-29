@@ -15,6 +15,8 @@ import java.nio.file.*;
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
+    @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.service.ProductImageStorage imageStorage;
+    @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.service.PagamentoService payments;
 
     private final AdminService    adminService;
     private final ProdutoService  produtoService;
@@ -84,11 +86,7 @@ public class AdminController {
         }
 
         if (imagem != null && !imagem.isEmpty()) {
-            String nomeArquivo = System.currentTimeMillis() + "_" + imagem.getOriginalFilename();
-            Path destino = Paths.get("src/main/resources/static/images/produtos/" + nomeArquivo);
-            Files.createDirectories(destino.getParent());
-            Files.copy(imagem.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
-            produto.setImagemUrl("/images/produtos/" + nomeArquivo);
+            produto.setImagemUrl(imageStorage.save(imagem));
         }
 
         produtoService.salvar(produto);
@@ -138,6 +136,14 @@ public class AdminController {
         model.addAttribute("pedidos", pedidoService.listarTodos());
         model.addAttribute("status", Pedido.Status.values());
         return "admin/pedidos/lista";
+    }
+
+    @PostMapping("/pagamentos/conciliar")
+    public String reconcile(@RequestParam String paymentId,RedirectAttributes flash) {
+        if(!paymentId.matches("[0-9]{1,20}"))throw new IllegalArgumentException("ID de pagamento inválido.");
+        try {payments.processarWebhook(paymentId,"payment");flash.addFlashAttribute("msg","Pagamento consultado e conciliado com o provedor.");}
+        catch(RuntimeException error){flash.addFlashAttribute("erro","Não foi possível conciliar. Confira conta, valor, ambiente e configuração no provedor.");}
+        return "redirect:/admin/pedidos";
     }
 
     @GetMapping("/pedidos/{id}")

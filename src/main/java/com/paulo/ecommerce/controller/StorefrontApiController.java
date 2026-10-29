@@ -52,7 +52,7 @@ public class StorefrontApiController {
 
     @PostMapping("/products/{id}/reviews")
     public StoreProductDetailResponse avaliar(@PathVariable Long id,
-                                              @RequestBody StoreReviewRequest request,
+                                              @jakarta.validation.Valid @RequestBody StoreReviewRequest request,
                                               @AuthenticationPrincipal UserDetails userDetails) {
         avaliacaoService.avaliar(id, userDetails.getUsername(), request.nota(), request.comentario());
         return storefrontService.carregarProduto(id);

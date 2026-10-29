@@ -70,7 +70,7 @@ public class SecurityConfig {
                         .requestMatchers("/", "/produtos", "/produtos/**",
                                 "/categorias/**", "/catalogo", "/produto/**", "/sacola", "/conta", "/checkout", "/login", "/cadastro", "/pagamento/retorno", "/passe", "/passe/missoes").permitAll()
                         .requestMatchers("/auth/**", "/css/**",
-                                "/js/**", "/images/**", "/app/**", "/index.html").permitAll()
+                                "/js/**", "/images/**", "/media/products/**", "/app/**", "/index.html").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/store/products/*/reviews").hasAnyRole("CLIENTE", "ADMIN")
                         .requestMatchers("/api/cep/**", "/api/store/**", "/api/auth/me").permitAll()
                         .requestMatchers("/api/checkout/**").hasAnyRole("CLIENTE", "ADMIN")

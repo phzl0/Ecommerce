@@ -40,10 +40,40 @@ jobs:
           TEST_DB_USER: test_user
           TEST_DB_PASSWORD: disposable-test-password
           TEST_DB_DRIVER: org.postgresql.Driver
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --ignore-scripts
+      - name: Install Chromium
+        run: |
+          sudo mkdir -p "$RUNNER_TEMP/apt-disabled"
+          for source in /etc/apt/sources.list.d/*; do
+            if [ -f "$source" ] && grep -q 'packages.microsoft.com' "$source"; then sudo mv "$source" "$RUNNER_TEMP/apt-disabled/"; fi
+          done
+          npx playwright install --with-deps chromium
+      - name: Start disposable application
+        run: |
+          java -jar target/ecommerce-0.0.1-SNAPSHOT.jar > /tmp/ecommerce-browser.log 2>&1 &
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://localhost:8080/api/auth/me >/dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/ecommerce-browser.log
+          exit 1
+        env:
+          DB_URL: jdbc:postgresql://localhost:5432/ecommerce_test
+          DB_USER: test_user
+          DB_PASSWORD: disposable-test-password
+          ADMIN_EMAIL: admin@example.test
+          ADMIN_PASSWORD: disposable-admin-password
+          DEMO_DATA_ENABLED: 'true'
+          APP_PAYMENTS_ENABLED: 'false'
+      - run: npm run test:e2e
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: postgres-schema-and-tests
           path: |
-            target/schema.sql
+            test-results/
+            /tmp/ecommerce-browser.log
             target/surefire-reports/*.txt

@@ -48,7 +48,7 @@ public class EmailService {
 
     @Async
     public void enviarConfirmacaoPedido(Pedido pedido) {
-        String assunto = "Pedido " + pedido.getNumero() + " confirmado!";
+        String assunto = "Pedido " + pedido.getNumero() + " recebido";
 
         StringBuilder itensHtml = new StringBuilder();
         pedido.getItens().forEach(item ->
@@ -70,7 +70,7 @@ public class EmailService {
 
         String corpo = """
             <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-              <h2 style="color:#6c63ff;">Pedido confirmado!</h2>
+              <h2 style="color:#6c63ff;">Pedido recebido — aguardando pagamento</h2>
               <p>Ola, <strong>%s</strong>! Seu pedido foi recebido.</p>
 
               <div style="background:#f9f9f9;border-radius:8px;padding:16px;margin:16px 0;">

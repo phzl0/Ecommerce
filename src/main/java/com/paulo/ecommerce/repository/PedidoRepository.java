@@ -26,7 +26,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     @Query("""
         SELECT COALESCE(SUM(p.total), 0)
         FROM Pedido p
-        WHERE p.status != 'CANCELADO'
+        WHERE p.status != 'CANCELADO' AND p.pagamento.status = 'APROVADO'
         AND p.dataPedido >= :inicio
         """)
     BigDecimal receitaDesde(@Param("inicio") LocalDateTime inicio);

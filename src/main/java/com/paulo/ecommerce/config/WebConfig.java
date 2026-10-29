@@ -7,9 +7,11 @@ import java.util.concurrent.TimeUnit;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+    @org.springframework.beans.factory.annotation.Value("${app.storage-dir:./storage}") private String storage;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        registry.addResourceHandler("/media/products/**").addResourceLocations(java.nio.file.Paths.get(storage,"products").toAbsolutePath().toUri().toString()+"/");
         // CSS e JS — cache de 7 dias no navegador
         registry.addResourceHandler("/css/**", "/js/**")
                 .addResourceLocations(

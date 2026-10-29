@@ -7,6 +7,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "pagamentos")
 public class Pagamento extends BaseEntity {
+    @Column(length=2048) private String checkoutUrl;
+    public String getCheckoutUrl(){return checkoutUrl;}
+    public void setCheckoutUrl(String value){checkoutUrl=value;}
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

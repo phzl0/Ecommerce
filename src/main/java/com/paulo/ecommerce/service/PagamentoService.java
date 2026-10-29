@@ -49,6 +49,7 @@ public class PagamentoService {
         }
         if (accessToken.isBlank() || collectorId.isBlank()) throw new IllegalStateException("Configure as credenciais e a conta recebedora do pagamento.");
         Pedido pedido = pedidoService.bloquearPedido(pedidoId);
+        if (pedido.getDataPedido().isBefore(LocalDateTime.now().minusHours(24))) throw new IllegalStateException("A reserva deste pedido expirou. Faça um novo pedido.");
         if (pedido.getStatus() != Pedido.Status.PENDENTE) throw new IllegalStateException("Este pedido não está disponível para pagamento.");
 
         Pagamento pagamento = pagamentoRepository
@@ -56,6 +57,7 @@ public class PagamentoService {
                 .orElse(new Pagamento());
 
         if (pagamento.getStatus() == StatusPagamento.APROVADO || pagamento.getStatus() == StatusPagamento.REEMBOLSADO) throw new IllegalStateException("Este pagamento já foi concluído.");
+        if(pagamento.getCheckoutUrl()!=null && pagamento.getMpPreferenceId()!=null) return pagamento.getCheckoutUrl();
         pagamento.setPedido(pedido);
         pagamento.setValor(pedido.getTotal());
         pagamento.setStatus(StatusPagamento.PENDENTE);
@@ -85,7 +87,7 @@ public class PagamentoService {
                 .items(itens)
                 .shipments(PreferenceShipmentsRequest.builder().mode("not_specified").cost(pedido.getFrete()).build())
                 .expires(true)
-                .expirationDateTo(java.time.OffsetDateTime.now().plusHours(24))
+                .expirationDateTo(pedido.getDataPedido().atZone(java.time.ZoneId.systemDefault()).plusHours(24).toOffsetDateTime())
                 .payer(payer)
                 .backUrls(backUrls)
                 .autoReturn("approved")
@@ -97,6 +99,7 @@ public class PagamentoService {
         PreferenceClient client = new PreferenceClient();
         Preference preference = criarNoProvedor(preferenceRequest);
 
+        pagamento.setCheckoutUrl(liveMode ? preference.getInitPoint() : preference.getSandboxInitPoint());
         pagamento.setMpPreferenceId(preference.getId());
         pagamentoRepository.save(pagamento);
 
@@ -128,7 +131,8 @@ public class PagamentoService {
             switch (mp.getStatus()) {
                 case "approved" -> {
                     if (pagamento.getStatus() == StatusPagamento.APROVADO) return;
-                    if (pedido.getStatus() != Pedido.Status.PENDENTE) throw new IllegalStateException("Pagamento recebido após encerramento do pedido; requer conciliação.");
+                    if (pedido.getDataPedido().isBefore(LocalDateTime.now().minusHours(24))) throw new IllegalStateException("A reserva deste pedido expirou. Faça um novo pedido.");
+        if (pedido.getStatus() != Pedido.Status.PENDENTE) throw new IllegalStateException("Pagamento recebido após encerramento do pedido; requer conciliação.");
                     pagamento.setMpPaymentId(paymentId);
                     pagamento.setStatus(StatusPagamento.APROVADO);
                     pagamento.setPagoEm(LocalDateTime.now());

@@ -10,6 +10,7 @@ import java.util.List;
 @Service
 public class AvaliacaoService {
 
+    @org.springframework.beans.factory.annotation.Autowired private PedidoRepository pedidos;
     private final AvaliacaoRepository avaliacaoRepository;
     private final ProdutoRepository   produtoRepository;
     private final UsuarioRepository   usuarioRepository;
@@ -36,6 +37,10 @@ public class AvaliacaoService {
                 .orElseThrow(() ->
                         new RecursoNaoEncontradoException("Produto", produtoId));
 
+        if (nota==null || nota<1 || nota>5 || (comentario!=null && comentario.length()>500)) throw new IllegalArgumentException("Avaliação inválida.");
+        boolean comprado=pedidos.findByUsuarioIdOrderByDataPedidoDesc(usuario.getId()).stream().anyMatch(p -> p.getStatus()!=Pedido.Status.CANCELADO && p.getPagamento()!=null && p.getPagamento().getStatus()==Pagamento.StatusPagamento.APROVADO && p.getItens().stream().anyMatch(i -> i.getProduto().getId().equals(produtoId)));
+        if (!comprado) throw new IllegalArgumentException("Avaliações são permitidas para produtos de compras aprovadas desta conta.");
+        boolean primeira=!avaliacaoRepository.existsByUsuarioIdAndProdutoId(usuario.getId(),produtoId);
         // Atualiza se já avaliou, cria se não
         Avaliacao avaliacao = avaliacaoRepository
                 .findByUsuarioIdAndProdutoId(usuario.getId(), produtoId)
@@ -47,7 +52,7 @@ public class AvaliacaoService {
        avaliacao.setComentario(comentario);
 
         Avaliacao salva = avaliacaoRepository.save(avaliacao);
-        passeService.registrarAcao(emailUsuario, PasseAcaoTipo.REVIEW_SUBMITTED, 1, "review-" + produtoId);
+        if (primeira) passeService.registrarAcao(emailUsuario, PasseAcaoTipo.REVIEW_SUBMITTED, 1, "review-" + produtoId);
         return salva;
     }
 
