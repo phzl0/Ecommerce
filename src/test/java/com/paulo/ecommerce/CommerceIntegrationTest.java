@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest @AutoConfigureMockMvc @Transactional
 class CommerceIntegrationTest {
  @Autowired MockMvc mvc; @Autowired UsuarioRepository users; @Autowired ProdutoRepository products;
- @Autowired PedidoRepository orders; @Autowired PasseService passes; @Autowired PasseProgressoUsuarioRepository progress;
+ @Autowired PedidoRepository orders; @Autowired com.paulo.ecommerce.service.PedidoService orderService; @Autowired PasseService passes; @Autowired PasseProgressoUsuarioRepository progress;
  private Usuario account(){var u=new Usuario();u.setNome("Cliente teste");u.setEmail("checkout@example.test");u.setSenha("hashed-test-password");return users.saveAndFlush(u);}
  private Produto product(){var p=new Produto();p.setNome("Produto teste");p.setPreco(new BigDecimal("100.00"));p.setEstoque(5);return products.saveAndFlush(p);}
  @Test void checkoutIsIdempotentAndUsesDatabasePrices() throws Exception {
@@ -48,5 +48,25 @@ class CommerceIntegrationTest {
   var order=new Pedido();order.setUsuario(u);order.setNumero("COUPON-TEST");order.setTotal(new BigDecimal("100"));order.setSubtotal(new BigDecimal("100"));order=orders.saveAndFlush(order);
   assertEquals(0,new BigDecimal("10").compareTo(passes.usarCupom(u,claim.codigo(),order)));
   final Pedido otherOrder=order;assertThrows(IllegalArgumentException.class,()->passes.usarCupom(u,claim.codigo(),otherOrder));
+ }
+ @Test void purchaseXpIsIdempotentAndRefundReversesPurchaseMissions() {
+  var u=account();var p=product();var order=new Pedido();order.setUsuario(u);order.setNumero("REFUND-TEST");order.setSubtotal(new BigDecimal("500"));order.setTotal(new BigDecimal("500"));order.setStatus(Pedido.Status.CONFIRMADO);
+  var item=new ItemPedido();item.setPedido(order);item.setProduto(p);item.setQuantidade(5);item.setPrecoUnitario(new BigDecimal("100"));order.setItens(java.util.List.of(item));
+  var payment=new Pagamento();payment.setPedido(order);payment.setStatus(Pagamento.StatusPagamento.APROVADO);payment.setPagoEm(java.time.LocalDateTime.now());order.setPagamento(payment);order=orders.saveAndFlush(order);
+  passes.registrarXpCompraAprovada(u.getEmail(),order.getId(),order.getSubtotal());int xp=passes.carregarDashboard(u.getEmail()).xpTotal();assertTrue(xp>0);
+  passes.registrarXpCompraAprovada(u.getEmail(),order.getId(),order.getSubtotal());assertEquals(xp,passes.carregarDashboard(u.getEmail()).xpTotal());
+  payment.setStatus(Pagamento.StatusPagamento.REEMBOLSADO);order.setStatus(Pedido.Status.CANCELADO);orders.saveAndFlush(order);
+  passes.estornarCompra(u.getEmail(),order.getId());assertEquals(0,passes.carregarDashboard(u.getEmail()).xpTotal());
+ }
+ @Test void expiredReservationReturnsStockOnlyOnce() {
+  var u=account();var p=product();p.setEstoque(3);products.saveAndFlush(p);
+  var order=new Pedido();order.setUsuario(u);order.setNumero("EXPIRED-TEST");order.setSubtotal(new BigDecimal("200"));order.setTotal(new BigDecimal("200"));order.setDataPedido(java.time.LocalDateTime.now().minusHours(25));
+  var item=new ItemPedido();item.setPedido(order);item.setProduto(p);item.setQuantidade(2);item.setPrecoUnitario(new BigDecimal("100"));order.setItens(java.util.List.of(item));order=orders.saveAndFlush(order);
+  orderService.expirarReserva(order.getId());orderService.expirarReserva(order.getId());assertEquals(5,products.findById(p.getId()).orElseThrow().getEstoque());assertEquals(Pedido.Status.CANCELADO,orders.findById(order.getId()).orElseThrow().getStatus());
+ }
+ @Test void finalRewardRequiresRealApprovedSpendEvenWithEnoughXp() {
+  var u=account();var dashboard=passes.carregarDashboard(u.getEmail());var state=progress.findAll().stream().filter(p->p.getUsuario().getId().equals(u.getId())).findFirst().orElseThrow();state.setXpTotal(dashboard.totalNiveis()*dashboard.xpPorNivel());progress.saveAndFlush(state);
+  var reward=dashboard.niveis().stream().filter(n->n.nivel()==dashboard.totalNiveis()).findFirst().orElseThrow();
+  assertThrows(IllegalStateException.class,()->passes.reclamarRecompensa(u.getEmail(),reward.recompensaId()));
  }
 }

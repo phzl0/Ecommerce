@@ -5,6 +5,8 @@ import java.util.List;
 public record PasseDashboardResponse(
         boolean premiumAtivo,
         java.math.BigDecimal precoPremium,
+        java.math.BigDecimal gastoAprovado,
+        java.math.BigDecimal gastoMinimoFinal,
         String temporadaNome,
         String temporadaPeriodo,
         int xpTotal,

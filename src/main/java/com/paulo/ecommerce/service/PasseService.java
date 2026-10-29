@@ -52,6 +52,11 @@ public class PasseService {
     @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PasseEventoRepository eventoRepository;
     @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoRepository pedidoRepository;
     @org.springframework.beans.factory.annotation.Value("${app.pass.premium-price:197.00}") private BigDecimal precoPremium;
+    @org.springframework.beans.factory.annotation.Value("${app.pass.total-levels:30}") private int niveisNovasTemporadas;
+    @org.springframework.beans.factory.annotation.Value("${app.pass.xp-per-level:100}") private int xpNivelNovasTemporadas;
+    @org.springframework.beans.factory.annotation.Value("${app.pass.required-spend:1200.00}") private BigDecimal gastoMinimoFinal;
+    @org.springframework.beans.factory.annotation.Value("${app.pass.coupon-value:10.00}") private BigDecimal valorCupom;
+    @org.springframework.beans.factory.annotation.Value("${app.pass.coupon-minimum:100.00}") private BigDecimal minimoCupom;
     private final PasseTemporadaRepository temporadaRepository;
     private final PasseRecompensaNivelRepository recompensaRepository;
     private final PasseMissaoTemplateRepository missaoTemplateRepository;
@@ -108,8 +113,9 @@ public class PasseService {
         Map<Long, PasseMissaoProgresso> progressoMap = carregarProgressoMissao(usuario, temporada, templates);
 
         boolean premiumAtivoAgora=premiumAtivo(usuario,temporada);
+        BigDecimal gastoMes=gastoNaTemporada(usuario,temporada);
         int xpPorNivel = temporada.getXpPorNivel();
-        int xpNoNivelAtual = progressoUsuario.getXpTotal() % xpPorNivel;
+        int xpNoNivelAtual = progressoUsuario.getXpTotal() >= temporada.getTotalNiveis()*xpPorNivel ? xpPorNivel : progressoUsuario.getXpTotal() % xpPorNivel;
         int xpParaProximoNivel = progressoUsuario.getNivelAtual() >= temporada.getTotalNiveis()
                 ? 0
                 : xpPorNivel - xpNoNivelAtual;
@@ -138,7 +144,7 @@ public class PasseService {
                             resgatado ? recompensa.getCodigo() : null,
                             desbloqueado,
                             resgatado,
-                            desbloqueado && !resgatado && (gratuita(recompensa.getNivel()) || premiumAtivoAgora),
+                            desbloqueado && !resgatado && (gratuita(recompensa.getNivel()) || premiumAtivoAgora) && (recompensa.getNivel()<temporada.getTotalNiveis() || gastoMes.compareTo(gastoMinimoFinal)>=0),
                             progressoPercentual
                     );
                 })
@@ -158,7 +164,7 @@ public class PasseService {
                 .toList();
 
         return new PasseDashboardResponse(
-                premiumAtivo(usuario,temporada), precoPremium,
+                premiumAtivoAgora, precoPremium, gastoMes, gastoMinimoFinal,
                 temporada.getNome(),
                 temporada.getInicioEm().format(DateTimeFormatter.ofPattern("dd/MM")) + " a " +
                         temporada.getFimEm().format(DateTimeFormatter.ofPattern("dd/MM")),
@@ -290,6 +296,7 @@ public class PasseService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Recompensa", recompensaId));
 
         if (!recompensa.getTemporada().getId().equals(temporada.getId())) throw new IllegalArgumentException("Esta recompensa não pertence à temporada atual.");
+        if (recompensa.getNivel().equals(temporada.getTotalNiveis()) && gastoNaTemporada(usuario,temporada).compareTo(gastoMinimoFinal)<0) throw new IllegalStateException("A recompensa final exige o gasto mínimo em produtos aprovados nesta temporada.");
         if (!gratuita(recompensa.getNivel()) && !premiumAtivo(usuario,temporada)) throw new IllegalStateException("Esta recompensa exige passe premium ativo.");
         int xpNecessario = recompensa.getNivel() * temporada.getXpPorNivel();
         PasseProgressoUsuario progresso = obterOuCriarProgresso(usuario, temporada);
@@ -300,6 +307,10 @@ public class PasseService {
         PasseRecompensaResgate resgate = recompensaResgateRepository.findByUsuarioIdAndRecompensaId(usuario.getId(), recompensaId)
                 .orElseGet(() -> { var novo=new PasseRecompensaResgate();novo.setUsuario(usuario);novo.setTemporada(temporada);novo.setRecompensa(recompensa);return novo; });
         if (resgate.getCodigoEntrega()==null) resgate.setCodigoEntrega("LC-"+java.util.UUID.randomUUID().toString().replace("-","").toUpperCase(java.util.Locale.ROOT));
+        if ("Cupom".equals(recompensa.getTipoDigital()) && resgate.getValorCupom()==null) {
+            if(valorCupom==null || valorCupom.signum()<=0 || minimoCupom==null || minimoCupom.compareTo(valorCupom)<0) throw new IllegalStateException("Configuração de cupom inválida.");
+            resgate.setValorCupom(valorCupom);resgate.setMinimoCupom(minimoCupom);
+        }
         recompensaResgateRepository.save(resgate);
         return new PasseClaimResponse(resgate.getCodigoEntrega(), recompensa.getTitulo(), recompensa.getDescricao());
     }
@@ -309,15 +320,20 @@ public class PasseService {
         Usuario usuario=buscarUsuario(email);
         return recompensaResgateRepository.findByUsuarioId(usuario.getId()).stream().map(r -> {
             Map<String,Object> item=new java.util.LinkedHashMap<>();item.put("id",r.getRecompensa().getId());item.put("titulo",r.getRecompensa().getTitulo());item.put("tipo",r.getRecompensa().getTipoDigital());
+            item.put("valor",r.getValorCupom());item.put("minimo",r.getMinimoCupom());item.put("validade",r.getTemporada().getFimEm().plusDays(30).toString());
             item.put("codigo",r.getCodigoEntrega()==null ? "Resgate anterior" : r.getCodigoEntrega());
             item.put("usado",r.getPedidoUtilizado()!=null && r.getPedidoUtilizado().getStatus()!=com.paulo.ecommerce.model.Pedido.Status.CANCELADO);
             item.put("ativo",beneficioAtivo(usuario,r));return item;
         }).toList();
     }
 
+    private BigDecimal gastoNaTemporada(Usuario usuario,PasseTemporada temporada) {
+        return pedidoRepository.gastoAprovado(usuario.getId(),temporada.getInicioEm().atStartOfDay(),temporada.getFimEm().plusDays(1).atStartOfDay());
+    }
+
     private boolean beneficioAtivo(Usuario usuario,PasseRecompensaResgate resgate) {
         var progresso=progressoUsuarioRepository.findByUsuarioIdAndTemporadaId(usuario.getId(),resgate.getTemporada().getId());
-        return !LocalDate.now().isAfter(resgate.getTemporada().getFimEm().plusDays(30)) && progresso.isPresent() && progresso.get().getXpTotal()>=resgate.getRecompensa().getNivel()*resgate.getTemporada().getXpPorNivel() && (gratuita(resgate.getRecompensa().getNivel()) || premiumAtivo(usuario,resgate.getTemporada()));
+        return (!resgate.getRecompensa().getNivel().equals(resgate.getTemporada().getTotalNiveis()) || gastoNaTemporada(usuario,resgate.getTemporada()).compareTo(gastoMinimoFinal)>=0) && !LocalDate.now().isAfter(resgate.getTemporada().getFimEm().plusDays(30)) && progresso.isPresent() && progresso.get().getXpTotal()>=resgate.getRecompensa().getNivel()*resgate.getTemporada().getXpPorNivel() && (gratuita(resgate.getRecompensa().getNivel()) || premiumAtivo(usuario,resgate.getTemporada()));
     }
 
     @Transactional
@@ -325,8 +341,9 @@ public class PasseService {
         var resgate=recompensaResgateRepository.findByUsuarioIdAndCodigoEntrega(usuario.getId(),codigo.trim().toUpperCase(java.util.Locale.ROOT)).orElseThrow(() -> new IllegalArgumentException("Cupom não encontrado nesta conta."));
         if (!"Cupom".equals(resgate.getRecompensa().getTipoDigital()) || !beneficioAtivo(usuario,resgate)) throw new IllegalArgumentException("Cupom indisponível ou expirado.");
         if (resgate.getPedidoUtilizado()!=null && resgate.getPedidoUtilizado().getStatus()!=com.paulo.ecommerce.model.Pedido.Status.CANCELADO) throw new IllegalArgumentException("Cupom já utilizado ou reservado em outro pedido.");
-        if (pedido.getSubtotal().compareTo(new BigDecimal("100"))<0) throw new IllegalArgumentException("Cupom válido para produtos a partir de R$ 100.");
-        resgate.setPedidoUtilizado(pedido);recompensaResgateRepository.save(resgate);return new BigDecimal("10.00");
+        if (resgate.getValorCupom()==null || resgate.getMinimoCupom()==null) throw new IllegalStateException("Resgate o cupom novamente para emitir as condições.");
+        if (pedido.getSubtotal().compareTo(resgate.getMinimoCupom())<0) throw new IllegalArgumentException("Pedido abaixo do valor mínimo do cupom.");
+        resgate.setPedidoUtilizado(pedido);recompensaResgateRepository.save(resgate);return resgate.getValorCupom();
     }
 
     @Transactional
@@ -504,8 +521,9 @@ public class PasseService {
         temporada.setSlug("passe-" + yearMonth.getYear() + "-" + String.format("%02d", yearMonth.getMonthValue()));
         String mesNome = yearMonth.getMonth().getDisplayName(TextStyle.FULL, LOCALE_PT_BR);
         temporada.setNome("Passe " + capitalize(mesNome) + " " + yearMonth.getYear());
-        temporada.setTotalNiveis(30);
-        temporada.setXpPorNivel(100);
+        if(niveisNovasTemporadas<1 || niveisNovasTemporadas>100 || xpNivelNovasTemporadas<1 || xpNivelNovasTemporadas>10000) throw new IllegalStateException("Configuração de níveis inválida.");
+        temporada.setTotalNiveis(niveisNovasTemporadas);
+        temporada.setXpPorNivel(xpNivelNovasTemporadas);
         temporada.setAtiva(Boolean.TRUE);
         temporada.setInicioEm(yearMonth.atDay(1));
         temporada.setFimEm(yearMonth.atEndOfMonth());

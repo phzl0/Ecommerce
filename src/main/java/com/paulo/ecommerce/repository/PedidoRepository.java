@@ -10,6 +10,8 @@ import java.util.List;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
     java.util.Optional<Pedido> findByUsuarioIdAndCheckoutKey(Long usuarioId,String checkoutKey);
+    @Query("select coalesce(sum(p.subtotal-p.desconto),0) from Pedido p where p.usuario.id=:usuario and p.temporadaPasseId is null and p.status <> 'CANCELADO' and p.pagamento.status='APROVADO' and p.pagamento.pagoEm >= :inicio and p.pagamento.pagoEm < :fim")
+    BigDecimal gastoAprovado(@Param("usuario") Long usuario,@Param("inicio") LocalDateTime inicio,@Param("fim") LocalDateTime fim);
     List<Pedido> findByUsuarioIdAndTemporadaPasseId(Long usuarioId, Long temporadaPasseId);
     List<Pedido> findTop100ByStatusAndDataPedidoBeforeOrderByIdAsc(Pedido.Status status, LocalDateTime limite);
 

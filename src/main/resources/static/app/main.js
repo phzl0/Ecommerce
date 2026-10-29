@@ -1353,6 +1353,7 @@ function OrderDetailPage({ orderId, route }) {
                         <div className="lc-order-card-grid">
                             <div><small>Subtotal</small><strong>${currency(order.subtotal)}</strong></div>
                             <div><small>Frete</small><strong>${currency(order.frete)}</strong></div>
+                            ${order.desconto > 0 ? html`<div><small>Desconto</small><strong>${currency(order.desconto)}</strong></div>` : null}
                             <div><small>Total</small><strong>${currency(order.total)}</strong></div>
                         </div>
                     </div>
@@ -1523,13 +1524,14 @@ function PassPage() {
     return html`
         <main className="lc-page">
             <section className="lc-pass-shell">
-                <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais: R$ 10 em produtos a partir de R$ 100, uso único. Benefícios válidos até 30 dias após a temporada.</p>
-                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : ["Tema","Avatar","Badge"].includes(r.tipo) ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar benefício</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
+                <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais de uso único. Confira o desconto e o mínimo de compra em cada benefício.</p>
+                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<span><code>${r.usado ? "Utilizado / reservado" : r.codigo}</code> · ${currency(r.valor)} em produtos a partir de ${currency(r.minimo)} · até ${r.validade}</span>` : ["Tema","Avatar","Badge"].includes(r.tipo) ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar benefício</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
                 <div className="lc-pass-topbar">
                     <div>
                         <span className="lc-kicker">PASSE MENSAL</span>
                         <h2>${dashboard.temporadaNome}</h2>
                         <p>${dashboard.temporadaPeriodo} · acompanhe niveis, XP e recompensas como em um passe de jogo.</p>
+                        <p>Recompensa final: ${currency(dashboard.gastoAprovado)} de ${currency(dashboard.gastoMinimoFinal)} em produtos aprovados. Frete e premium não entram.</p>
                     </div>
                     <${AppLink} href="/passe/missoes" className="lc-btn lc-btn-primary">Ver missoes<//>
                 </div>
@@ -1663,8 +1665,8 @@ function PassMissionsPage() {
     return html`
         <main className="lc-page">
             <section className="lc-pass-shell">
-                <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais: R$ 10 em produtos a partir de R$ 100, uso único. Benefícios válidos até 30 dias após a temporada.</p>
-                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : ["Tema","Avatar","Badge"].includes(r.tipo) ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar benefício</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
+                <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais de uso único. Confira o desconto e o mínimo de compra em cada benefício.</p>
+                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<span><code>${r.usado ? "Utilizado / reservado" : r.codigo}</code> · ${currency(r.valor)} em produtos a partir de ${currency(r.minimo)} · até ${r.validade}</span>` : ["Tema","Avatar","Badge"].includes(r.tipo) ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar benefício</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
                 <div className="lc-section-header">
                     <div>
                         <h2>Missoes do passe</h2>

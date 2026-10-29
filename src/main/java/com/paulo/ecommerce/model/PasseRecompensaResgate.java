@@ -14,6 +14,12 @@ import jakarta.persistence.UniqueConstraint;
 @Table(name = "passe_recompensa_resgates",
         uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "recompensa_id"}))
 public class PasseRecompensaResgate extends BaseEntity {
+    @jakarta.persistence.Column(precision=10,scale=2) private java.math.BigDecimal valorCupom;
+    @jakarta.persistence.Column(precision=10,scale=2) private java.math.BigDecimal minimoCupom;
+    public java.math.BigDecimal getValorCupom(){return valorCupom;}
+    public void setValorCupom(java.math.BigDecimal value){valorCupom=value;}
+    public java.math.BigDecimal getMinimoCupom(){return minimoCupom;}
+    public void setMinimoCupom(java.math.BigDecimal value){minimoCupom=value;}
     @jakarta.persistence.Column(unique=true,length=60) private String codigoEntrega;
     @ManyToOne(fetch=FetchType.LAZY) private com.paulo.ecommerce.model.Pedido pedidoUtilizado;
     public String getCodigoEntrega(){return codigoEntrega;}
