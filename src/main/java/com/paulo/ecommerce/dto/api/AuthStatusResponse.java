@@ -5,6 +5,8 @@ public record AuthStatusResponse(
         String nome,
         String email,
         String tema,
+        Long avatarPasse,
+        Long badgePasse,
         String role
 ) {
 }

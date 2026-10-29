@@ -8,6 +8,12 @@ import jakarta.validation.constraints.Size;
 @Entity
 @Table(name = "usuarios")
 public class Usuario extends BaseEntity{
+    private Long avatarPasse;
+    private Long badgePasse;
+    public Long getAvatarPasse(){return avatarPasse;}
+    public void setAvatarPasse(Long id){avatarPasse=id;}
+    public Long getBadgePasse(){return badgePasse;}
+    public void setBadgePasse(Long id){badgePasse=id;}
     private String temaPasse;
     public String getTemaPasse(){return temaPasse;}
     public void setTemaPasse(String value){temaPasse=value;}

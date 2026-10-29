@@ -35,8 +35,8 @@ public class PasseApiController {
     @GetMapping("/rewards")
     public java.util.List<java.util.Map<String,Object>> rewards(@AuthenticationPrincipal UserDetails user) { return passeService.colecao(user.getUsername()); }
     @GetMapping("/rewards/{id}/download")
-    public org.springframework.http.ResponseEntity<byte[]> download(@PathVariable Long id,@AuthenticationPrincipal UserDetails user) {
-        return org.springframework.http.ResponseEntity.ok().header("Content-Disposition","attachment; filename=level-beneficio-"+id+".svg").contentType(org.springframework.http.MediaType.valueOf("image/svg+xml")).body(passeService.baixarBeneficio(user.getUsername(),id));
+    public org.springframework.http.ResponseEntity<byte[]> download(@PathVariable Long id,@org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean inline,@AuthenticationPrincipal UserDetails user) {
+        return org.springframework.http.ResponseEntity.ok().header("Content-Disposition",(inline ? "inline" : "attachment")+"; filename=level-beneficio-"+id+".svg").contentType(org.springframework.http.MediaType.valueOf("image/svg+xml")).body(passeService.baixarBeneficio(user.getUsername(),id));
     }
 
     @PostMapping("/premium")

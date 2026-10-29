@@ -42,6 +42,10 @@ public class PagamentoService {
         this.passeService = passeService;
     }
 
+    public java.util.Map<String,Boolean> configuracaoPublica() {
+        return java.util.Map.of("enabled", paymentsEnabled && accessToken!=null && !accessToken.isBlank() && collectorId!=null && !collectorId.isBlank(), "liveMode", liveMode);
+    }
+
     @Transactional
     public String criarPreferencia(Long pedidoId) throws MPException, MPApiException {
         if (!paymentsEnabled) {

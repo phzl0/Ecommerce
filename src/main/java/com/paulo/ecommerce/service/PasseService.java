@@ -216,7 +216,7 @@ public class PasseService {
             }
 
             int incremento = Math.max(valor, 0);
-            int novoProgresso = Math.min(template.getMetaValor(), progresso.getProgressoAtual() + incremento);
+            int novoProgresso = (int) Math.min(template.getMetaValor(), (long) progresso.getProgressoAtual() + incremento);
             progresso.setProgressoAtual(novoProgresso);
 
             if (novoProgresso >= template.getMetaValor()) {
@@ -263,7 +263,7 @@ public class PasseService {
                 PasseMissaoTemplate template = progresso.getTemplate();
                 if (template.getAcaoTipo() != PasseAcaoTipo.PURCHASE_APPROVED && template.getAcaoTipo() != PasseAcaoTipo.SPEND_APPROVED_CENTS) continue;
                 var elegiveis = pedidos.stream().filter(p -> p.getPagamento().getPagoEm()!=null && !p.getPagamento().getPagoEm().isBefore(progresso.getPeriodoInicio()) && p.getPagamento().getPagoEm().isBefore(progresso.getPeriodoFim())).toList();
-                int valor = template.getAcaoTipo() == PasseAcaoTipo.PURCHASE_APPROVED ? elegiveis.size() : elegiveis.stream().map(p -> p.getSubtotal().subtract(p.getDesconto()).multiply(new BigDecimal("100"))).reduce(BigDecimal.ZERO,BigDecimal::add).intValueExact();
+                int valor = template.getAcaoTipo() == PasseAcaoTipo.PURCHASE_APPROVED ? elegiveis.size() : elegiveis.stream().map(p -> p.getSubtotal().subtract(p.getDesconto()).multiply(new BigDecimal("100"))).reduce(BigDecimal.ZERO,BigDecimal::add).min(BigDecimal.valueOf(template.getMetaValor())).intValueExact();
                 progresso.setProgressoAtual(Math.min(template.getMetaValor(),valor));
                 boolean completa = valor >= template.getMetaValor(); progresso.setConcluida(completa); progresso.setRecompensaEntregue(completa);
                 String ref = "MISSION-"+template.getCodigo()+"-"+progresso.getPeriodoInicio();
@@ -275,7 +275,7 @@ public class PasseService {
     }
 
     private void recalcularXp(Usuario usuario,PasseTemporada temporada) {
-        int total = xpHistoricoRepository.findByUsuarioIdAndTemporadaId(usuario.getId(),temporada.getId()).stream().filter(h -> !h.isEstornado()).mapToInt(PasseXpHistorico::getXpGanho).sum();
+        int total = (int) Math.min(Integer.MAX_VALUE, xpHistoricoRepository.findByUsuarioIdAndTemporadaId(usuario.getId(),temporada.getId()).stream().filter(h -> !h.isEstornado()).mapToLong(PasseXpHistorico::getXpGanho).sum());
         PasseProgressoUsuario progresso = obterOuCriarProgresso(usuario,temporada);
         progresso.setXpTotal(Math.max(0,Math.min(total,temporada.getTotalNiveis()*temporada.getXpPorNivel())));
         progresso.setNivelAtual(Math.max(1,Math.min(temporada.getTotalNiveis(),progresso.getXpTotal()/temporada.getXpPorNivel())));
@@ -345,8 +345,14 @@ public class PasseService {
     public void aplicarTema(String email,Long recompensaId) {
         Usuario usuario=buscarUsuario(email);
         var resgate=recompensaResgateRepository.findByUsuarioIdAndRecompensaId(usuario.getId(),recompensaId).orElseThrow(() -> new IllegalArgumentException("Resgate o tema primeiro."));
-        if(!beneficioAtivo(usuario,resgate) || !"Tema".equals(resgate.getRecompensa().getTipoDigital())) throw new IllegalArgumentException("Tema indisponível.");
-        usuario.setTemaPasse("azul");usuarioRepository.save(usuario);
+        if(!beneficioAtivo(usuario,resgate)) throw new IllegalArgumentException("Benefício indisponível.");
+        switch(resgate.getRecompensa().getTipoDigital()) {
+            case "Tema" -> usuario.setTemaPasse("azul");
+            case "Avatar" -> usuario.setAvatarPasse(recompensaId);
+            case "Badge" -> usuario.setBadgePasse(recompensaId);
+            default -> throw new IllegalArgumentException("Este benefício deve ser baixado ou usado no checkout.");
+        }
+        usuarioRepository.save(usuario);
     }
 
     private boolean gratuita(int nivel) { return nivel % 3 == 0 || nivel == 1 || nivel % 5 == 0; }

@@ -15,14 +15,14 @@ test('catalog, private pass, checkout without live charges and profile',async({p
  expect(catalog.produtos.length).toBeGreaterThan(0);
  const product=catalog.produtos.find(p=>p.nome==='Garrafa Thermal Elite')||catalog.produtos[0];
  await page.goto('/produto/'+product.id);
- await page.getByRole('button',{name:'Comprar agora',exact:true}).click();
+ await page.locator('.lc-detail-actions').getByRole('button',{name:'Comprar agora',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Endereco de entrega'})).toBeVisible();
  for(const [label,value] of [['Nome completo','Cliente navegador'],['Telefone','11999999999'],['CEP','01001000'],['Endereco','Rua teste'],['Numero','10'],['Bairro','Centro'],['Cidade','São Paulo'],['Estado','SP']]){
    const input=page.getByLabel(label,{exact:true});
    if(await input.count())await input.fill(value);
  }
  await page.screenshot({path:'test-results/checkout-desktop.png',fullPage:true});
- await page.getByRole('button',{name:'Ir para pagamento',exact:true}).click();
+ await page.getByRole('button',{name:/Ir para pagamento|Criar pedido de demonstração/}).click();
  await expect(page).toHaveURL(/\/pedidos\/\d+/);
  await expect(page.getByText(/Pagamentos desativados neste ambiente/)).toBeVisible();
  await page.getByRole('button',{name:'Cancelar pedido',exact:true}).click();

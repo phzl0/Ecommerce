@@ -141,6 +141,7 @@ public class PedidoService {
         }
 
         subtotal = itens.stream().map(i -> i.getPrecoUnitario().multiply(java.math.BigDecimal.valueOf(i.getQuantidade()))).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        if(subtotal.compareTo(new java.math.BigDecimal("9999999.99"))>0)throw new IllegalArgumentException("O valor deste pedido excede o limite suportado.");
         pedido.setSubtotal(subtotal);
         pedido.setFrete(calcularFrete(subtotal));
         pedido.setTotal(subtotal.add(pedido.getFrete()));

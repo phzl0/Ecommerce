@@ -81,6 +81,7 @@ function loadCheckoutDraft() {
 
 function clearCheckoutDraft() {
     localStorage.removeItem(CHECKOUT_KEY);
+    localStorage.removeItem("level-commerce-checkout-request");
 }
 
 function useLocalCart() {
@@ -995,6 +996,8 @@ function CartPage({ items, updateQuantity, removeItem }) {
 }
 
 function CheckoutPage({ items, auth, clearCart }) {
+    const [paymentConfig,setPaymentConfig]=useState(null);
+    useEffect(()=>{if(auth.authenticated)getJson("/api/checkout/config").then(setPaymentConfig).catch(()=>{});},[auth.authenticated]);
     const [form, setForm] = useState(loadCheckoutDraft());
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState("");
@@ -1011,8 +1014,13 @@ function CheckoutPage({ items, auth, clearCart }) {
         setSubmitting(true);
         setMessage("");
         try {
+            const fingerprint=JSON.stringify({form,items:items.map(i=>({id:i.id,quantity:i.quantity}))});
+            const previous=readStorage("level-commerce-checkout-request",{});
+            if(previous.fingerprint!==fingerprint)checkoutRequestId.current=window.crypto.randomUUID();
+            const requestId=previous.fingerprint===fingerprint ? previous.id : checkoutRequestId.current;
+            localStorage.setItem("level-commerce-checkout-request",JSON.stringify({fingerprint,id:requestId}));
             const response = await postJson("/api/checkout/orders", {
-                idempotencyKey: checkoutRequestId.current,
+                idempotencyKey: requestId,
                 nome: form.nome,
                 telefone: form.telefone,
                 cep: form.cep,
@@ -1077,6 +1085,7 @@ function CheckoutPage({ items, auth, clearCart }) {
                         <label>Cupom da sua coleção<input value=${form.cupom || ""} maxLength="60" onChange=${e=>setForm({...form,cupom:e.target.value})} placeholder="LC-..." /></label>
                         <p className="lc-checkout-note">O desconto é validado no servidor e aparece no total final do pedido.</p>
                         <h3>Forma de pagamento</h3>
+                        ${paymentConfig && !paymentConfig.enabled ? html`<p role="status" className="lc-checkout-note">Modo demonstração: nenhuma cobrança será feita. O pedido será salvo como pendente para testar a jornada.</p>` : null}
                         <div className="lc-payment-options">
                             ${[
                                 ["pix", "Pix"],
@@ -1114,7 +1123,7 @@ function CheckoutPage({ items, auth, clearCart }) {
                     <strong className="lc-summary-total">${currency(total)}</strong>
                     ${message ? html`<p className="lc-checkout-note">${message}</p>` : null}
                     ${auth.authenticated
-                        ? html`<button className="lc-btn lc-btn-primary" onClick=${submitCheckout} disabled=${submitting || items.length === 0}>${submitting ? "Enviando..." : "Ir para pagamento"}</button>`
+                        ? html`<button className="lc-btn lc-btn-primary" onClick=${submitCheckout} disabled=${submitting || items.length === 0}>${submitting ? "Enviando..." : paymentConfig && !paymentConfig.enabled ? "Criar pedido de demonstração" : "Ir para pagamento"}</button>`
                         : html`<${AppLink} href=${buildLoginUrl("/checkout")} className="lc-btn lc-btn-primary">Entrar para pagar<//>`}
                 </aside>
             </section>
@@ -1172,6 +1181,8 @@ function ProfilePage({ auth, onAuthRefresh }) {
                 <div className="lc-section-header">
                     <div>
                         <h2>Meu perfil</h2>
+                            ${auth.avatarPasse ? html`<img src=${`/api/pass/rewards/${auth.avatarPasse}/download?inline=true`} alt="Avatar resgatado" style=${{width:"96px",height:"96px",objectFit:"cover",borderRadius:"50%"}} />` : null}
+                            ${auth.badgePasse ? html`<img src=${`/api/pass/rewards/${auth.badgePasse}/download?inline=true`} alt="Conquista resgatada" style=${{width:"96px",height:"60px",objectFit:"cover"}} />` : null}
                         <p>Gerencie os dados da sua conta e mantenha a jornada de compra pronta para o proximo pedido.</p>
                     </div>
                     <${AppLink} href="/pedidos">Ver pedidos<//>
@@ -1513,7 +1524,7 @@ function PassPage() {
         <main className="lc-page">
             <section className="lc-pass-shell">
                 <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais: R$ 10 em produtos a partir de R$ 100, uso único. Benefícios válidos até 30 dias após a temporada.</p>
-                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : r.tipo === "Tema" ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar tema</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
+                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : ["Tema","Avatar","Badge"].includes(r.tipo) ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar benefício</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
                 <div className="lc-pass-topbar">
                     <div>
                         <span className="lc-kicker">PASSE MENSAL</span>
@@ -1653,7 +1664,7 @@ function PassMissionsPage() {
         <main className="lc-page">
             <section className="lc-pass-shell">
                 <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais: R$ 10 em produtos a partir de R$ 100, uso único. Benefícios válidos até 30 dias após a temporada.</p>
-                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : r.tipo === "Tema" ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar tema</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
+                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : ["Tema","Avatar","Badge"].includes(r.tipo) ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar benefício</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
                 <div className="lc-section-header">
                     <div>
                         <h2>Missoes do passe</h2>

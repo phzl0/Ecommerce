@@ -27,6 +27,9 @@ public class CheckoutApiController {
         this.pagamentoService = pagamentoService;
     }
 
+    @org.springframework.web.bind.annotation.GetMapping("/config")
+    public java.util.Map<String,Boolean> config(){return pagamentoService.configuracaoPublica();}
+
     @PostMapping("/orders")
     public CheckoutResponse criarPedido(@Valid @RequestBody CheckoutRequest request,
                                         @AuthenticationPrincipal UserDetails userDetails) {
