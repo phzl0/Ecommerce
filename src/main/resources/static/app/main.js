@@ -309,7 +309,7 @@ function benefitItems() {
     },
     {
       title: "Fluxo continuo",
-      copy: "Login com returnUrl para voltar ao checkout, aos pedidos ou ao perfil.",
+      copy: "Retome a compra e acompanhe pedidos e benefícios pela sua conta.",
     },
   ];
 }

@@ -1366,3 +1366,23 @@ body[data-tema="azul"] {
   min-width: 0;
   max-width: 100%;
 }
+
+@media (max-width: 640px) {
+  .lc-pass-topbar,
+  .lc-section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .lc-pass-topbar > div,
+  .lc-section-header > div {
+    width: 100%;
+    min-width: 0;
+  }
+  .lc-pass-topbar > .lc-btn {
+    align-self: flex-start;
+  }
+  .lc-pass-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
