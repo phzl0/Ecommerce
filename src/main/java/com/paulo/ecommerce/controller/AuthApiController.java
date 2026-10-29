@@ -12,24 +12,26 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthApiController {
 
-    private final UsuarioService usuarioService;
+  private final UsuarioService usuarioService;
 
-    public AuthApiController(UsuarioService usuarioService) {
-        this.usuarioService = usuarioService;
+  public AuthApiController(UsuarioService usuarioService) {
+    this.usuarioService = usuarioService;
+  }
+
+  @GetMapping("/me")
+  public AuthStatusResponse me(@AuthenticationPrincipal UserDetails userDetails) {
+    if (userDetails == null) {
+      return new AuthStatusResponse(false, null, null, null, null, null, null);
     }
 
-    @GetMapping("/me")
-    public AuthStatusResponse me(@AuthenticationPrincipal UserDetails userDetails) {
-        if (userDetails == null) {
-            return new AuthStatusResponse(false, null, null, null);
-        }
-
-        var usuario = usuarioService.buscarPorEmail(userDetails.getUsername());
-        return new AuthStatusResponse(
-                true,
-                usuario.getNome(),
-                usuario.getEmail(),
-                usuario.getRole().name()
-        );
-    }
+    var usuario = usuarioService.buscarPorEmail(userDetails.getUsername());
+    return new AuthStatusResponse(
+        true,
+        usuario.getNome(),
+        usuario.getEmail(),
+        usuario.getTemaPasse(),
+        usuario.getAvatarPasse(),
+        usuario.getBadgePasse(),
+        usuario.getRole().name());
+  }
 }

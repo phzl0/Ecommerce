@@ -48,5 +48,6 @@
         </table>
     </main>
 </div>
+<section class="container"><h3>Conciliar pagamento</h3><p>Informe o ID obtido no painel do Mercado Pago. Esta ação consulta o provedor; não aprova pagamentos manualmente.</p><form th:action="@{/admin/pagamentos/conciliar}" method="post"><input name="paymentId" pattern="[0-9]{1,20}" required placeholder="ID do pagamento"><button type="submit">Consultar provedor</button></form></section>
 </body>
 </html>

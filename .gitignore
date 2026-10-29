@@ -90,3 +90,11 @@ Thumbs.db
 # SPRING BOOT
 # ===============================
 HELP.md
+
+# Local app data and browser verification
+storage/
+node_modules/
+test-results/
+playwright-report/
+__pycache__/
+
