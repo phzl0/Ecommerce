@@ -4,6 +4,7 @@ public record AuthStatusResponse(
         boolean authenticated,
         String nome,
         String email,
+        String tema,
         String role
 ) {
 }

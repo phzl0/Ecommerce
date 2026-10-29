@@ -23,41 +23,34 @@ public class AdminService {
         this.usuarioRepository = usuarioRepository;
     }
 
-    @Cacheable("metricas")
     public long totalPedidos() {
         return pedidoRepository.count();
     }
 
-    @Cacheable("metricas")
     public long totalProdutos() {
         return produtoRepository.count();
     }
 
-    @Cacheable("metricas")
     public long totalClientes() {
         return usuarioRepository.count();
     }
 
     // Substitua os métodos de métricas
 
-    @Cacheable(value = "metricas", key = "'receita-total'")
     public BigDecimal receitaTotal() {
         return pedidoRepository.receitaDesde(
                 LocalDateTime.of(2000, 1, 1, 0, 0));
     }
 
-    @Cacheable(value = "metricas", key = "'pedidos-recentes'")
     public List<Pedido> pedidosRecentes() {
         return pedidoRepository.findPedidosRecentes(
                 LocalDateTime.now().minusDays(30));
     }
 
-    @Cacheable(value = "metricas", key = "'sem-estoque'")
     public long produtosSemEstoque() {
         return produtoRepository.countSemEstoque();
     }
 
-    @Cacheable(value = "metricas", key = "'pendentes'")
     public long pedidosPendentes() {
         return pedidoRepository.countByStatus(Pedido.Status.PENDENTE);
     }

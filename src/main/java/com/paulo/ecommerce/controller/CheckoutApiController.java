@@ -31,6 +31,7 @@ public class CheckoutApiController {
     public CheckoutResponse criarPedido(@Valid @RequestBody CheckoutRequest request,
                                         @AuthenticationPrincipal UserDetails userDetails) {
         CheckoutForm form = new CheckoutForm();
+        form.setCupom(request.getCupom());
         form.setNomeDestinatario(request.getNome());
         form.setTelefoneContato(request.getTelefone());
         form.setCep(request.getCep());

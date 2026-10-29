@@ -70,6 +70,7 @@ public class PagamentoService {
                         .build())
                 .toList();
 
+        if (pedido.getDesconto().signum()>0) itens=List.of(PreferenceItemRequest.builder().title("Produtos do pedido "+pedido.getNumero()).quantity(1).unitPrice(pedido.getSubtotal().subtract(pedido.getDesconto())).currencyId("BRL").build());
         PreferenceBackUrlsRequest backUrls = PreferenceBackUrlsRequest.builder()
                 .success(appUrl + "/pagamento/sucesso")
                 .failure(appUrl + "/pagamento/falha")
@@ -132,7 +133,7 @@ public class PagamentoService {
                     pagamento.setStatus(StatusPagamento.APROVADO);
                     pagamento.setPagoEm(LocalDateTime.now());
                     pedidoService.atualizarStatus(pedidoId, Pedido.Status.CONFIRMADO);
-                    if (pedido.getTemporadaPasseId() == null) passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(), pedidoId, pedido.getSubtotal());
+                    if (pedido.getTemporadaPasseId() == null) passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(), pedidoId, pedido.getSubtotal().subtract(pedido.getDesconto()));
                 }
                 case "refunded", "charged_back" -> {
                     if (pagamento.getStatus() == StatusPagamento.REEMBOLSADO) return;

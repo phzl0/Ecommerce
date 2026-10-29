@@ -30,6 +30,15 @@ public class PasseApiController {
         return passeService.carregarDashboard(userDetails.getUsername());
     }
 
+    @PostMapping("/rewards/{id}/apply")
+    public void apply(@PathVariable Long id,@AuthenticationPrincipal UserDetails user){passeService.aplicarTema(user.getUsername(),id);}
+    @GetMapping("/rewards")
+    public java.util.List<java.util.Map<String,Object>> rewards(@AuthenticationPrincipal UserDetails user) { return passeService.colecao(user.getUsername()); }
+    @GetMapping("/rewards/{id}/download")
+    public org.springframework.http.ResponseEntity<byte[]> download(@PathVariable Long id,@AuthenticationPrincipal UserDetails user) {
+        return org.springframework.http.ResponseEntity.ok().header("Content-Disposition","attachment; filename=level-beneficio-"+id+".svg").contentType(org.springframework.http.MediaType.valueOf("image/svg+xml")).body(passeService.baixarBeneficio(user.getUsername(),id));
+    }
+
     @PostMapping("/premium")
     public com.paulo.ecommerce.dto.api.PaymentRedirectResponse premium(@AuthenticationPrincipal UserDetails user) {
         Long id=passeService.criarPedidoPremium(user.getUsername());

@@ -107,6 +107,7 @@ public class PasseService {
                 .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId());
         Map<Long, PasseMissaoProgresso> progressoMap = carregarProgressoMissao(usuario, temporada, templates);
 
+        boolean premiumAtivoAgora=premiumAtivo(usuario,temporada);
         int xpPorNivel = temporada.getXpPorNivel();
         int xpNoNivelAtual = progressoUsuario.getXpTotal() % xpPorNivel;
         int xpParaProximoNivel = progressoUsuario.getNivelAtual() >= temporada.getTotalNiveis()
@@ -137,7 +138,7 @@ public class PasseService {
                             resgatado ? recompensa.getCodigo() : null,
                             desbloqueado,
                             resgatado,
-                            desbloqueado && !resgatado && (gratuita(recompensa.getNivel()) || premiumAtivo(usuario,temporada)),
+                            desbloqueado && !resgatado && (gratuita(recompensa.getNivel()) || premiumAtivoAgora),
                             progressoPercentual
                     );
                 })
@@ -262,7 +263,7 @@ public class PasseService {
                 PasseMissaoTemplate template = progresso.getTemplate();
                 if (template.getAcaoTipo() != PasseAcaoTipo.PURCHASE_APPROVED && template.getAcaoTipo() != PasseAcaoTipo.SPEND_APPROVED_CENTS) continue;
                 var elegiveis = pedidos.stream().filter(p -> p.getPagamento().getPagoEm()!=null && !p.getPagamento().getPagoEm().isBefore(progresso.getPeriodoInicio()) && p.getPagamento().getPagoEm().isBefore(progresso.getPeriodoFim())).toList();
-                int valor = template.getAcaoTipo() == PasseAcaoTipo.PURCHASE_APPROVED ? elegiveis.size() : elegiveis.stream().map(p -> p.getSubtotal().multiply(new BigDecimal("100"))).reduce(BigDecimal.ZERO,BigDecimal::add).intValueExact();
+                int valor = template.getAcaoTipo() == PasseAcaoTipo.PURCHASE_APPROVED ? elegiveis.size() : elegiveis.stream().map(p -> p.getSubtotal().subtract(p.getDesconto()).multiply(new BigDecimal("100"))).reduce(BigDecimal.ZERO,BigDecimal::add).intValueExact();
                 progresso.setProgressoAtual(Math.min(template.getMetaValor(),valor));
                 boolean completa = valor >= template.getMetaValor(); progresso.setConcluida(completa); progresso.setRecompensaEntregue(completa);
                 String ref = "MISSION-"+template.getCodigo()+"-"+progresso.getPeriodoInicio();
@@ -296,20 +297,56 @@ public class PasseService {
             throw new IllegalStateException("Recompensa bloqueada.");
         }
 
-        recompensaResgateRepository.findByUsuarioIdAndRecompensaId(usuario.getId(), recompensaId)
-                .orElseGet(() -> {
-                    PasseRecompensaResgate resgate = new PasseRecompensaResgate();
-                    resgate.setUsuario(usuario);
-                    resgate.setTemporada(temporada);
-                    resgate.setRecompensa(recompensa);
-                    return recompensaResgateRepository.save(resgate);
-                });
+        PasseRecompensaResgate resgate = recompensaResgateRepository.findByUsuarioIdAndRecompensaId(usuario.getId(), recompensaId)
+                .orElseGet(() -> { var novo=new PasseRecompensaResgate();novo.setUsuario(usuario);novo.setTemporada(temporada);novo.setRecompensa(recompensa);return novo; });
+        if (resgate.getCodigoEntrega()==null) resgate.setCodigoEntrega("LC-"+java.util.UUID.randomUUID().toString().replace("-","").toUpperCase(java.util.Locale.ROOT));
+        recompensaResgateRepository.save(resgate);
+        return new PasseClaimResponse(resgate.getCodigoEntrega(), recompensa.getTitulo(), recompensa.getDescricao());
+    }
 
-        return new PasseClaimResponse(
-                recompensa.getCodigo(),
-                recompensa.getTitulo(),
-                recompensa.getDescricao()
-        );
+    @Transactional
+    public List<Map<String,Object>> colecao(String email) {
+        Usuario usuario=buscarUsuario(email);
+        return recompensaResgateRepository.findByUsuarioId(usuario.getId()).stream().map(r -> {
+            Map<String,Object> item=new java.util.LinkedHashMap<>();item.put("id",r.getRecompensa().getId());item.put("titulo",r.getRecompensa().getTitulo());item.put("tipo",r.getRecompensa().getTipoDigital());
+            item.put("codigo",r.getCodigoEntrega()==null ? "Resgate anterior" : r.getCodigoEntrega());
+            item.put("usado",r.getPedidoUtilizado()!=null && r.getPedidoUtilizado().getStatus()!=com.paulo.ecommerce.model.Pedido.Status.CANCELADO);
+            item.put("ativo",beneficioAtivo(usuario,r));return item;
+        }).toList();
+    }
+
+    private boolean beneficioAtivo(Usuario usuario,PasseRecompensaResgate resgate) {
+        var progresso=progressoUsuarioRepository.findByUsuarioIdAndTemporadaId(usuario.getId(),resgate.getTemporada().getId());
+        return !LocalDate.now().isAfter(resgate.getTemporada().getFimEm().plusDays(30)) && progresso.isPresent() && progresso.get().getXpTotal()>=resgate.getRecompensa().getNivel()*resgate.getTemporada().getXpPorNivel() && (gratuita(resgate.getRecompensa().getNivel()) || premiumAtivo(usuario,resgate.getTemporada()));
+    }
+
+    @Transactional
+    public BigDecimal usarCupom(Usuario usuario,String codigo,com.paulo.ecommerce.model.Pedido pedido) {
+        var resgate=recompensaResgateRepository.findByUsuarioIdAndCodigoEntrega(usuario.getId(),codigo.trim().toUpperCase(java.util.Locale.ROOT)).orElseThrow(() -> new IllegalArgumentException("Cupom não encontrado nesta conta."));
+        if (!"Cupom".equals(resgate.getRecompensa().getTipoDigital()) || !beneficioAtivo(usuario,resgate)) throw new IllegalArgumentException("Cupom indisponível ou expirado.");
+        if (resgate.getPedidoUtilizado()!=null && resgate.getPedidoUtilizado().getStatus()!=com.paulo.ecommerce.model.Pedido.Status.CANCELADO) throw new IllegalArgumentException("Cupom já utilizado ou reservado em outro pedido.");
+        if (pedido.getSubtotal().compareTo(new BigDecimal("100"))<0) throw new IllegalArgumentException("Cupom válido para produtos a partir de R$ 100.");
+        resgate.setPedidoUtilizado(pedido);recompensaResgateRepository.save(resgate);return new BigDecimal("10.00");
+    }
+
+    @Transactional
+    public byte[] baixarBeneficio(String email,Long recompensaId) {
+        Usuario usuario=buscarUsuario(email);
+        var resgate=recompensaResgateRepository.findByUsuarioIdAndRecompensaId(usuario.getId(),recompensaId).orElseThrow(() -> new IllegalArgumentException("Resgate este benefício primeiro."));
+        if (!beneficioAtivo(usuario,resgate)) throw new IllegalArgumentException("Benefício indisponível.");
+        if ("Cupom".equals(resgate.getRecompensa().getTipoDigital())) throw new IllegalArgumentException("Use o código do cupom no checkout.");
+        String svg="""
+            <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900"><defs><linearGradient id="g"><stop stop-color="#0f172a"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/><circle cx="800" cy="400" r="180" fill="none" stroke="#93c5fd" stroke-width="12"/><text x="800" y="430" text-anchor="middle" fill="white" font-size="100">%d</text><text x="800" y="700" text-anchor="middle" fill="white" font-size="42">LEVEL COMMERCE</text></svg>
+            """.formatted(resgate.getRecompensa().getNivel());
+        return svg.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    @Transactional
+    public void aplicarTema(String email,Long recompensaId) {
+        Usuario usuario=buscarUsuario(email);
+        var resgate=recompensaResgateRepository.findByUsuarioIdAndRecompensaId(usuario.getId(),recompensaId).orElseThrow(() -> new IllegalArgumentException("Resgate o tema primeiro."));
+        if(!beneficioAtivo(usuario,resgate) || !"Tema".equals(resgate.getRecompensa().getTipoDigital())) throw new IllegalArgumentException("Tema indisponível.");
+        usuario.setTemaPasse("azul");usuarioRepository.save(usuario);
     }
 
     private boolean gratuita(int nivel) { return nivel % 3 == 0 || nivel == 1 || nivel % 5 == 0; }
@@ -527,7 +564,7 @@ public class PasseService {
 
     private String descricaoRecompensa(int nivel) {
         return switch ((nivel - 1) % 5) {
-            case 0 -> "Cupom digital de vitrine para a proxima compra.";
+            case 0 -> "Cupom pessoal de R$ 10 para produtos a partir de R$ 100; uso único até 30 dias após a temporada.";
             case 1 -> "Avatar exclusivo da temporada para a conta.";
             case 2 -> "Wallpaper premium da LEVEL COMMERCE.";
             case 3 -> "Badge de perfil para exibir progresso.";

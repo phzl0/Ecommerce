@@ -1261,3 +1261,5 @@ body a { color: inherit; text-decoration: none; }
         grid-template-columns: 1fr;
     }
 }
+
+body[data-tema="azul"] { --lc-green:#1d4ed8; --lc-green-dark:#172554; --lc-green-soft:#dbeafe; }

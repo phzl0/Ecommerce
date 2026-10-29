@@ -14,6 +14,13 @@ import jakarta.persistence.UniqueConstraint;
 @Table(name = "passe_recompensa_resgates",
         uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "recompensa_id"}))
 public class PasseRecompensaResgate extends BaseEntity {
+    @jakarta.persistence.Column(unique=true,length=60) private String codigoEntrega;
+    @ManyToOne(fetch=FetchType.LAZY) private com.paulo.ecommerce.model.Pedido pedidoUtilizado;
+    public String getCodigoEntrega(){return codigoEntrega;}
+    public void setCodigoEntrega(String value){codigoEntrega=value;}
+    public com.paulo.ecommerce.model.Pedido getPedidoUtilizado(){return pedidoUtilizado;}
+    public void setPedidoUtilizado(com.paulo.ecommerce.model.Pedido value){pedidoUtilizado=value;}
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -5,6 +5,10 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class CheckoutForm {
+    @Size(max=60) private String cupom;
+    public String getCupom(){return cupom;}
+    public void setCupom(String value){cupom=value;}
+
 
     @NotBlank(message = "Informe o nome de quem vai receber.")
     @Size(max = 120, message = "O nome do destinatario deve ter ate 120 caracteres.")

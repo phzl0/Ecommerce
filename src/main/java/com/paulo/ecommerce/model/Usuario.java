@@ -8,6 +8,10 @@ import jakarta.validation.constraints.Size;
 @Entity
 @Table(name = "usuarios")
 public class Usuario extends BaseEntity{
+    private String temaPasse;
+    public String getTemaPasse(){return temaPasse;}
+    public void setTemaPasse(String value){temaPasse=value;}
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

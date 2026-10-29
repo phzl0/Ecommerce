@@ -9,6 +9,10 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public class CheckoutRequest {
+    @Size(max=60) private String cupom;
+    public String getCupom(){return cupom;}
+    public void setCupom(String value){cupom=value;}
+
     @NotBlank @Pattern(regexp="[a-zA-Z0-9-]{16,64}")
     private String idempotencyKey;
     public String getIdempotencyKey(){return idempotencyKey;}

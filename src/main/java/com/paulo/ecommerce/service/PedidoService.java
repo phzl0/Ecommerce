@@ -25,6 +25,7 @@ import java.util.Locale;
 @Service
 public class PedidoService {
 
+    @org.springframework.beans.factory.annotation.Autowired private PasseService passes;
     private final PedidoRepository pedidoRepository;
     private final ProdutoRepository produtoRepository;
     private final UsuarioRepository usuarioRepository;
@@ -43,6 +44,7 @@ public class PedidoService {
         this.emailService = emailService;
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value={"produto","produtos","metricas"},allEntries=true)
     @Transactional
     public Pedido finalizarPedido(String emailUsuario,
                                   CheckoutForm checkoutForm,
@@ -58,6 +60,7 @@ public class PedidoService {
         return pedido;
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value={"produto","produtos","metricas"},allEntries=true)
     @Transactional
     public Pedido finalizarPedidoApi(String emailUsuario,
                                      CheckoutForm checkoutForm,
@@ -143,6 +146,7 @@ public class PedidoService {
         pedido.setTotal(subtotal.add(pedido.getFrete()));
         pedido.setItens(itens);
         Pedido salvo = pedidoRepository.save(pedido);
+        if (checkoutForm.getCupom()!=null && !checkoutForm.getCupom().isBlank()) { salvo.setDesconto(passes.usarCupom(usuario,checkoutForm.getCupom(),salvo));salvo.setTotal(salvo.getSubtotal().add(salvo.getFrete()).subtract(salvo.getDesconto()));salvo=pedidoRepository.save(salvo); }
         emailService.enviarConfirmacaoPedido(salvo);
         return salvo;
     }
@@ -181,6 +185,7 @@ public class PedidoService {
         return pedido;
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value={"produto","produtos","metricas"},allEntries=true)
     @Transactional
     public void atualizarStatus(Long id, Pedido.Status status) {
         Pedido pedido = pedidoRepository.findLockedById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
@@ -188,12 +193,17 @@ public class PedidoService {
         if (pedido.getStatus() == Pedido.Status.CANCELADO || (status == Pedido.Status.CONFIRMADO && pedido.getStatus() != Pedido.Status.PENDENTE)) throw new IllegalStateException("Transição de pedido inválida.");
         if (status == Pedido.Status.ENVIADO && pedido.getStatus() != Pedido.Status.CONFIRMADO) throw new IllegalStateException("Confirme o pagamento antes do envio.");
         if (status == Pedido.Status.ENTREGUE && pedido.getStatus() != Pedido.Status.ENVIADO) throw new IllegalStateException("O pedido ainda não foi enviado.");
-        if (status == Pedido.Status.CANCELADO) devolverEstoque(pedido);
+        if (status == Pedido.Status.CONFIRMADO && (pedido.getPagamento()==null || pedido.getPagamento().getStatus()!=com.paulo.ecommerce.model.Pagamento.StatusPagamento.APROVADO)) throw new IllegalStateException("Pagamento ainda não aprovado.");
+        if (status == Pedido.Status.CANCELADO) {
+            if (pedido.getPagamento()!=null && pedido.getPagamento().getStatus()==com.paulo.ecommerce.model.Pagamento.StatusPagamento.APROVADO) throw new IllegalStateException("O pagamento aprovado precisa ser estornado no provedor antes do cancelamento.");
+            if(pedido.getStatus()==Pedido.Status.PENDENTE || pedido.getStatus()==Pedido.Status.CONFIRMADO) devolverEstoque(pedido);
+        }
         pedido.setStatus(status);
         pedidoRepository.save(pedido);
         emailService.enviarAtualizacaoStatus(pedido);
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value={"produto","produtos","metricas"},allEntries=true)
     @Transactional
     public void cancelarPedido(Long id, String emailUsuario) {
         Pedido pedido = pedidoRepository.findLockedById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
@@ -214,6 +224,7 @@ public class PedidoService {
         pedidoRepository.save(pedido);
     }
 
+    @org.springframework.cache.annotation.CacheEvict(value={"produto","produtos","metricas"},allEntries=true)
     @Transactional
     public void expirarReserva(Long id) {
         Pedido pedido = bloquearPedido(id);

@@ -21,7 +21,7 @@ public class AuthApiController {
     @GetMapping("/me")
     public AuthStatusResponse me(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
-            return new AuthStatusResponse(false, null, null, null);
+            return new AuthStatusResponse(false, null, null, null, null);
         }
 
         var usuario = usuarioService.buscarPorEmail(userDetails.getUsername());
@@ -29,6 +29,7 @@ public class AuthApiController {
                 true,
                 usuario.getNome(),
                 usuario.getEmail(),
+                usuario.getTemaPasse(),
                 usuario.getRole().name()
         );
     }

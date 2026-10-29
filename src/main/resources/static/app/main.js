@@ -1023,6 +1023,7 @@ function CheckoutPage({ items, auth, clearCart }) {
                 cidade: form.cidade,
                 estado: form.estado,
                 pagamento: form.pagamento,
+                cupom: form.cupom || "",
                 itens: items.map((item) => ({
                     produtoId: item.id,
                     quantidade: item.quantity
@@ -1073,6 +1074,8 @@ function CheckoutPage({ items, auth, clearCart }) {
                         </div>
                     </div>
                     <div className="lc-checkout-card">
+                        <label>Cupom da sua coleção<input value=${form.cupom || ""} maxLength="60" onChange=${e=>setForm({...form,cupom:e.target.value})} placeholder="LC-..." /></label>
+                        <p className="lc-checkout-note">O desconto é validado no servidor e aparece no total final do pedido.</p>
                         <h3>Forma de pagamento</h3>
                         <div className="lc-payment-options">
                             ${[
@@ -1432,6 +1435,8 @@ function PaymentResultPage({ route }) {
 }
 
 function PassPage() {
+    const [collection,setCollection]=useState([]);
+    useEffect(() => { getJson("/api/pass/rewards").then(setCollection).catch(()=>{}); },[]);
     const [dashboard, setDashboard] = useState(null);
     const [claimState, setClaimState] = useState({ loadingId: null, message: "", error: "" });
     const trackRef = useRef(null);
@@ -1490,6 +1495,7 @@ function PassPage() {
                 error: ""
             });
             loadDashboard();
+            getJson("/api/pass/rewards").then(setCollection).catch(()=>{});
         } catch (error) {
             if (error.code === "AUTH_REQUIRED") {
                 requireLogin("/passe");
@@ -1506,6 +1512,8 @@ function PassPage() {
     return html`
         <main className="lc-page">
             <section className="lc-pass-shell">
+                <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais: R$ 10 em produtos a partir de R$ 100, uso único. Benefícios válidos até 30 dias após a temporada.</p>
+                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : r.tipo === "Tema" ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar tema</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
                 <div className="lc-pass-topbar">
                     <div>
                         <span className="lc-kicker">PASSE MENSAL</span>
@@ -1644,6 +1652,8 @@ function PassMissionsPage() {
     return html`
         <main className="lc-page">
             <section className="lc-pass-shell">
+                <div className="lc-checkout-card"><h3>Minha coleção</h3><p>Cupons pessoais: R$ 10 em produtos a partir de R$ 100, uso único. Benefícios válidos até 30 dias após a temporada.</p>
+                ${collection.length ? collection.map(r => html`<div key=${r.id} className="lc-summary-line"><span>${r.titulo} · ${r.tipo}</span>${!r.ativo ? html`<span>Indisponível</span>` : r.tipo === "Cupom" ? html`<code>${r.usado ? "Utilizado / reservado" : r.codigo}</code>` : r.tipo === "Tema" ? html`<button onClick=${async()=>{await postJson(`/api/pass/rewards/${r.id}/apply`,{});window.location.reload();}}>Aplicar tema</button>` : html`<a href=${`/api/pass/rewards/${r.id}/download`}>Baixar benefício</a>`}</div>`) : html`<p>Resgate uma recompensa para vê-la aqui.</p>`}</div>
                 <div className="lc-section-header">
                     <div>
                         <h2>Missoes do passe</h2>
@@ -1711,7 +1721,7 @@ function App() {
     const [auth, setAuth] = useState({ authenticated: false });
 
     const refreshAuth = () => {
-        getJson("/api/auth/me").then(setAuth);
+        getJson("/api/auth/me").then(data => { setAuth(data); document.body.dataset.tema=data.tema || "padrao"; });
     };
 
     useEffect(() => {

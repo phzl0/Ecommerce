@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PasseRecompensaResgateRepository extends JpaRepository<PasseRecompensaResgate, Long> {
+    Optional<PasseRecompensaResgate> findByUsuarioIdAndCodigoEntrega(Long usuarioId,String codigoEntrega);
+    List<PasseRecompensaResgate> findByUsuarioId(Long usuarioId);
+
     Optional<PasseRecompensaResgate> findByUsuarioIdAndRecompensaId(Long usuarioId, Long recompensaId);
     List<PasseRecompensaResgate> findByUsuarioIdAndTemporadaId(Long usuarioId, Long temporadaId);
 }
