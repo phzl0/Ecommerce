@@ -48,11 +48,16 @@ public class UsuarioService {
     }
 
     @Transactional
-    public Usuario atualizar(Long id, Usuario dados) {
+    public Usuario atualizarPerfil(Long id, String nome, String novaSenha) {
         Usuario usuario = buscarPorId(id);
-        usuario.setNome(dados.getNome());
-        if (dados.getSenha() != null && !dados.getSenha().isBlank()) {
-            usuario.setSenha(passwordEncoder.encode(dados.getSenha()));
+        if (nome != null) {
+            nome = nome.trim();
+            if (nome.length() < 2 || nome.length() > 100) throw new IllegalArgumentException("Nome deve ter entre 2 e 100 caracteres.");
+            usuario.setNome(nome);
+        }
+        if (novaSenha != null && !novaSenha.isBlank()) {
+            if (novaSenha.length() < 12 || novaSenha.length() > 72) throw new IllegalArgumentException("A nova senha deve ter entre 12 e 72 caracteres.");
+            usuario.setSenha(passwordEncoder.encode(novaSenha));
         }
         return usuarioRepository.save(usuario);
     }

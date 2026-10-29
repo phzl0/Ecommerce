@@ -26,7 +26,6 @@ public class PasseApiController {
 
     @GetMapping("/current")
     public PasseDashboardResponse current(@AuthenticationPrincipal UserDetails userDetails) {
-        passeService.registrarAcao(userDetails.getUsername(), PasseAcaoTipo.CHECKIN, 1, "dashboard");
         return passeService.carregarDashboard(userDetails.getUsername());
     }
 
@@ -34,7 +33,11 @@ public class PasseApiController {
     public void action(@RequestBody PasseAcaoRequest request,
                        @AuthenticationPrincipal UserDetails userDetails) {
         PasseAcaoTipo acaoTipo = PasseAcaoTipo.valueOf(request.acao());
-        int valor = request.valor() == null ? 1 : request.valor();
+        if (acaoTipo != PasseAcaoTipo.CHECKIN && acaoTipo != PasseAcaoTipo.VIEW_PRODUCT && acaoTipo != PasseAcaoTipo.ADD_TO_CART) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Esta ação só pode ser confirmada pelo servidor.");
+        }
+        if (request.valor() != null && request.valor() != 1) throw new IllegalArgumentException("A quantidade desta ação deve ser 1.");
+        int valor = 1;
         passeService.registrarAcao(userDetails.getUsername(), acaoTipo, valor, request.referencia());
     }
 

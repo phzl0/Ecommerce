@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ProdutoRepository extends JpaRepository<Produto, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select x from Produto x where x.id = :value")
+    java.util.Optional<Produto> findLockedById(@org.springframework.data.repository.query.Param("value") Long value);
 
     boolean existsByNomeIgnoreCase(String nome);
 

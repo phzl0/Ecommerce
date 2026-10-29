@@ -66,7 +66,7 @@ public class PedidoService {
                 .orElseThrow(() ->
                         new RecursoNaoEncontradoException("Usuario", 0L));
 
-        List<CarrinhoItem> itensCarrinho = itensRequest.stream()
+        List<CarrinhoItem> itensCarrinho = itensRequest.stream().sorted(java.util.Comparator.comparing(CheckoutItemRequest::produtoId))
                 .map(item -> {
                     Produto produto = produtoRepository.findById(item.produtoId())
                             .orElseThrow(() ->
@@ -114,12 +114,12 @@ public class PedidoService {
 
         List<ItemPedido> itens = new ArrayList<>();
         for (CarrinhoItem ci : itensCarrinho) {
-            Produto produto = produtoRepository.findById(ci.getProdutoId())
+            Produto produto = produtoRepository.findLockedById(ci.getProdutoId())
                     .orElseThrow(() ->
                             new RecursoNaoEncontradoException("Produto",
                                     ci.getProdutoId()));
 
-            if (produto.getEstoque() < ci.getQuantidade()) {
+            if (!produto.isAtivo() || ci.getQuantidade() <= 0 || produto.getEstoque() < ci.getQuantidade()) {
                 throw new EstoqueInsuficienteException(produto.getNome());
             }
 
@@ -130,10 +130,14 @@ public class PedidoService {
             item.setPedido(pedido);
             item.setProduto(produto);
             item.setQuantidade(ci.getQuantidade());
-            item.setPrecoUnitario(ci.getPrecoUnitario());
+            item.setPrecoUnitario(produto.getPreco());
             itens.add(item);
         }
 
+        subtotal = itens.stream().map(i -> i.getPrecoUnitario().multiply(java.math.BigDecimal.valueOf(i.getQuantidade()))).reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        pedido.setSubtotal(subtotal);
+        pedido.setFrete(calcularFrete(subtotal));
+        pedido.setTotal(subtotal.add(pedido.getFrete()));
         pedido.setItens(itens);
         Pedido salvo = pedidoRepository.save(pedido);
         emailService.enviarConfirmacaoPedido(salvo);
@@ -171,7 +175,12 @@ public class PedidoService {
 
     @Transactional
     public void atualizarStatus(Long id, Pedido.Status status) {
-        Pedido pedido = buscarPorId(id);
+        Pedido pedido = pedidoRepository.findLockedById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
+        if (pedido.getStatus() == status) return;
+        if (pedido.getStatus() == Pedido.Status.CANCELADO || (status == Pedido.Status.CONFIRMADO && pedido.getStatus() != Pedido.Status.PENDENTE)) throw new IllegalStateException("Transição de pedido inválida.");
+        if (status == Pedido.Status.ENVIADO && pedido.getStatus() != Pedido.Status.CONFIRMADO) throw new IllegalStateException("Confirme o pagamento antes do envio.");
+        if (status == Pedido.Status.ENTREGUE && pedido.getStatus() != Pedido.Status.ENVIADO) throw new IllegalStateException("O pedido ainda não foi enviado.");
+        if (status == Pedido.Status.CANCELADO) devolverEstoque(pedido);
         pedido.setStatus(status);
         pedidoRepository.save(pedido);
         emailService.enviarAtualizacaoStatus(pedido);
@@ -179,7 +188,7 @@ public class PedidoService {
 
     @Transactional
     public void cancelarPedido(Long id, String emailUsuario) {
-        Pedido pedido = buscarPorId(id);
+        Pedido pedido = pedidoRepository.findLockedById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
 
         if (!pedido.getUsuario().getEmail().equals(emailUsuario)) {
             throw new org.springframework.security.access
@@ -191,14 +200,18 @@ public class PedidoService {
                     "Apenas pedidos pendentes podem ser cancelados.");
         }
 
-        for (ItemPedido item : pedido.getItens()) {
-            Produto produto = item.getProduto();
-            produto.setEstoque(produto.getEstoque() + item.getQuantidade());
-            produtoRepository.save(produto);
-        }
+        devolverEstoque(pedido);
 
         pedido.setStatus(Pedido.Status.CANCELADO);
         pedidoRepository.save(pedido);
+    }
+
+    private void devolverEstoque(Pedido pedido) {
+        for (ItemPedido item : pedido.getItens().stream().sorted(java.util.Comparator.comparing(i -> i.getProduto().getId())).toList()) {
+            Produto produto = produtoRepository.findLockedById(item.getProduto().getId()).orElseThrow();
+            produto.setEstoque(produto.getEstoque() + item.getQuantidade());
+            produtoRepository.save(produto);
+        }
     }
 
     private String gerarNumeroPedido(Usuario usuario) {

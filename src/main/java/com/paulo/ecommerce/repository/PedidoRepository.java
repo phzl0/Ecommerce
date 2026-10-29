@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select x from Pedido x where x.id = :value")
+    java.util.Optional<Pedido> findLockedById(@org.springframework.data.repository.query.Param("value") Long value);
 
     @EntityGraph(attributePaths = {"usuario", "itens", "itens.produto"})
     List<Pedido> findByUsuarioIdOrderByDataPedidoDesc(Long usuarioId);

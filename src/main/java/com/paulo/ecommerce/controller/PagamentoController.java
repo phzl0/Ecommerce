@@ -11,8 +11,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class PagamentoController {
 
     private final PagamentoService pagamentoService;
+    private final com.paulo.ecommerce.service.PedidoService pedidoService;
 
-    public PagamentoController(PagamentoService pagamentoService) {
+    public PagamentoController(PagamentoService pagamentoService, com.paulo.ecommerce.service.PedidoService pedidoService) {
+        this.pedidoService = pedidoService;
         this.pagamentoService = pagamentoService;
     }
 
@@ -23,7 +25,8 @@ public class PagamentoController {
 
     @PostMapping("/iniciar/{pedidoId}")
     public String iniciarPagamento(@PathVariable Long pedidoId,
-                                   RedirectAttributes redirectAttributes) {
+                                   RedirectAttributes redirectAttributes, java.security.Principal principal) {
+        pedidoService.buscarPorIdDoUsuario(pedidoId, principal.getName());
         try {
             String checkoutUrl =
                     pagamentoService.criarPreferencia(pedidoId);

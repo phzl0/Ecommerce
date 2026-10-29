@@ -43,6 +43,7 @@ public class DataInitializer {
                 System.out.println("Administrador inicial criado a partir das variáveis de ambiente.");
             }
 
+            if (!Boolean.parseBoolean(System.getenv().getOrDefault("DEMO_DATA_ENABLED", "false"))) return;
             List<Categoria> categorias = List.of(
                     criarCategoria(categoriaRepository, "Tecnologia Pro", "Setup, produtividade e performance."),
                     criarCategoria(categoriaRepository, "Casa Inteligente", "Automacao, conforto e design funcional."),

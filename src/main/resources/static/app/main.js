@@ -160,13 +160,17 @@ async function requestJson(url, options = {}) {
     }
 
     if (!response.ok) {
-        const message = await response.text();
+        const body = await response.text();
+        let message = "Não foi possível concluir a solicitação.";
+        try { message = JSON.parse(body).message || message; } catch {}
         const error = new Error(message || "Falha ao processar a solicitacao.");
         error.code = "REQUEST_FAILED";
         throw error;
     }
 
-    return response.json();
+    if (response.status === 204 || response.headers.get("content-length") === "0") return null;
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
 }
 
 function getJson(url) {

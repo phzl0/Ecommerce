@@ -63,13 +63,7 @@ public class AccountApiController {
     public AccountProfileResponse updateProfile(@RequestBody UpdateProfileRequest request,
                                                 @AuthenticationPrincipal UserDetails userDetails) {
         Usuario usuario = usuarioService.buscarPorEmail(userDetails.getUsername());
-        if (request.nome() != null && !request.nome().isBlank()) {
-            usuario.setNome(request.nome().trim());
-        }
-        if (request.senha() != null && !request.senha().isBlank()) {
-            usuario.setSenha(request.senha());
-        }
-        Usuario atualizado = usuarioService.atualizar(usuario.getId(), usuario);
+        Usuario atualizado = usuarioService.atualizarPerfil(usuario.getId(), request.nome(), request.senha());
         int totalPedidos = pedidoService.listarPorUsuario(atualizado.getEmail()).size();
         return new AccountProfileResponse(
                 atualizado.getId(),

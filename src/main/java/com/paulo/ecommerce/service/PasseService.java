@@ -130,7 +130,7 @@ public class PasseService {
                             recompensa.getTitulo(),
                             recompensa.getDescricao(),
                             recompensa.getTipoDigital(),
-                            recompensa.getCodigo(),
+                            resgatado ? recompensa.getCodigo() : null,
                             desbloqueado,
                             resgatado,
                             desbloqueado && !resgatado,
@@ -233,6 +233,7 @@ public class PasseService {
         PasseRecompensaNivel recompensa = recompensaRepository.findById(recompensaId)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Recompensa", recompensaId));
 
+        if (!recompensa.getTemporada().getId().equals(temporada.getId())) throw new IllegalArgumentException("Esta recompensa não pertence à temporada atual.");
         int xpNecessario = recompensa.getNivel() * temporada.getXpPorNivel();
         PasseProgressoUsuario progresso = obterOuCriarProgresso(usuario, temporada);
         if (progresso.getXpTotal() < xpNecessario) {
@@ -304,7 +305,7 @@ public class PasseService {
     }
 
     private Usuario buscarUsuario(String emailUsuario) {
-        return usuarioRepository.findByEmail(emailUsuario)
+        return usuarioRepository.findLockedByEmail(emailUsuario)
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario", 0L));
     }
 
@@ -356,7 +357,7 @@ public class PasseService {
         progressoUsuario.setXpTotal(xpTotal);
         progressoUsuario.setNivelAtual(Math.max(1, Math.min(
                 temporada.getTotalNiveis(),
-                (xpTotal / temporada.getXpPorNivel()) + 1
+                xpTotal / temporada.getXpPorNivel()
         )));
         if (xpTotal >= temporada.getTotalNiveis() * temporada.getXpPorNivel()) {
             progressoUsuario.setNivelAtual(temporada.getTotalNiveis());
