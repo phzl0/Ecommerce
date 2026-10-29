@@ -79,6 +79,7 @@ public class ProdutoService {
         }
 
         return produtos.stream()
+                .filter(produto -> categoriaId == null || (produto.getCategoria() != null && categoriaId.equals(produto.getCategoria().getId())))
                 .filter(produto -> precoMin == null || produto.getPreco().compareTo(precoMin) >= 0)
                 .filter(produto -> precoMax == null || produto.getPreco().compareTo(precoMax) <= 0)
                 .sorted(obterComparador(ordenacao))

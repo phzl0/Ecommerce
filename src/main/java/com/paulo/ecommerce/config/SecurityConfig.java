@@ -23,6 +23,7 @@ import org.springframework.http.HttpMethod;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @org.springframework.beans.factory.annotation.Autowired private RateLimitConfig rateLimit;
     private final UsuarioDetailsService usuarioDetailsService;
 
     public SecurityConfig(UsuarioDetailsService usuarioDetailsService) {
@@ -35,6 +36,12 @@ public class SecurityConfig {
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName(null);
 
+        http.addFilterBefore(new org.springframework.web.filter.OncePerRequestFilter() {
+            @Override protected void doFilterInternal(jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response, jakarta.servlet.FilterChain chain) throws java.io.IOException, jakarta.servlet.ServletException {
+                if ("POST".equals(request.getMethod()) && "/auth/login".equals(request.getServletPath()) && rateLimit.isBlockeado(request.getRemoteAddr())) { response.sendError(429,"Muitas tentativas. Aguarde antes de tentar novamente."); return; }
+                chain.doFilter(request,response);
+            }
+        }, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
         http
                 // ── CSRF ──────────────────────────────────────
                 .csrf(csrf -> csrf

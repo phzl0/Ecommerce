@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/pass")
 public class PasseApiController {
 
+    @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.service.PagamentoService pagamentos;
     private final PasseService passeService;
 
     public PasseApiController(PasseService passeService) {
@@ -29,16 +30,22 @@ public class PasseApiController {
         return passeService.carregarDashboard(userDetails.getUsername());
     }
 
+    @PostMapping("/premium")
+    public com.paulo.ecommerce.dto.api.PaymentRedirectResponse premium(@AuthenticationPrincipal UserDetails user) {
+        Long id=passeService.criarPedidoPremium(user.getUsername());
+        return new com.paulo.ecommerce.dto.api.PaymentRedirectResponse(pagamentos.iniciarFluxoPagamento(id,com.paulo.ecommerce.model.Pagamento.MetodoPagamento.PIX));
+    }
+
     @PostMapping("/actions")
     public void action(@RequestBody PasseAcaoRequest request,
                        @AuthenticationPrincipal UserDetails userDetails) {
         PasseAcaoTipo acaoTipo = PasseAcaoTipo.valueOf(request.acao());
         if (acaoTipo != PasseAcaoTipo.CHECKIN && acaoTipo != PasseAcaoTipo.VIEW_PRODUCT && acaoTipo != PasseAcaoTipo.ADD_TO_CART) {
-            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.BAD_REQUEST, "Esta ação só pode ser confirmada pelo servidor.");
+            throw new IllegalArgumentException("Esta ação só pode ser confirmada pelo servidor.");
         }
         if (request.valor() != null && request.valor() != 1) throw new IllegalArgumentException("A quantidade desta ação deve ser 1.");
         int valor = 1;
-        passeService.registrarAcao(userDetails.getUsername(), acaoTipo, valor, request.referencia());
+        passeService.registrarAcaoNavegador(userDetails.getUsername(), acaoTipo, request.referencia());
     }
 
     @PostMapping("/rewards/{rewardId}/claim")

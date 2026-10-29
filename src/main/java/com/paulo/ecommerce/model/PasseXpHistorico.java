@@ -17,6 +17,11 @@ import jakarta.persistence.UniqueConstraint;
 @Table(name = "passe_xp_historico",
         uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "temporada_id", "origem_tipo", "referencia"}))
 public class PasseXpHistorico extends BaseEntity {
+    @Column(nullable=false, columnDefinition="boolean default false")
+    private boolean estornado;
+    public boolean isEstornado() { return estornado; }
+    public void setEstornado(boolean value) { estornado = value; }
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

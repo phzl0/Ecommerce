@@ -47,7 +47,7 @@ public class PedidoService {
     public Pedido finalizarPedido(String emailUsuario,
                                   CheckoutForm checkoutForm,
                                   HttpSession session) {
-        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+        Usuario usuario = usuarioRepository.findLockedByEmail(emailUsuario)
                 .orElseThrow(() ->
                         new RecursoNaoEncontradoException("Usuario", 0L));
 
@@ -61,11 +61,14 @@ public class PedidoService {
     @Transactional
     public Pedido finalizarPedidoApi(String emailUsuario,
                                      CheckoutForm checkoutForm,
-                                     java.util.List<CheckoutItemRequest> itensRequest) {
-        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+                                     java.util.List<CheckoutItemRequest> itensRequest, String idempotencyKey) {
+        Usuario usuario = usuarioRepository.findLockedByEmail(emailUsuario)
                 .orElseThrow(() ->
                         new RecursoNaoEncontradoException("Usuario", 0L));
 
+        String key=usuario.getId()+"-"+idempotencyKey;
+        var existente=pedidoRepository.findByUsuarioIdAndCheckoutKey(usuario.getId(),key);
+        if(existente.isPresent()) return existente.get();
         List<CarrinhoItem> itensCarrinho = itensRequest.stream().sorted(java.util.Comparator.comparing(CheckoutItemRequest::produtoId))
                 .map(item -> {
                     Produto produto = produtoRepository.findById(item.produtoId())
@@ -81,7 +84,7 @@ public class PedidoService {
                 })
                 .toList();
 
-        return criarPedido(usuario, checkoutForm, itensCarrinho);
+        Pedido pedido=criarPedido(usuario,checkoutForm,itensCarrinho); pedido.setCheckoutKey(key);return pedidoRepository.save(pedido);
     }
 
     private Pedido criarPedido(Usuario usuario,
@@ -113,7 +116,7 @@ public class PedidoService {
         pedido.setTotal(subtotal.add(frete));
 
         List<ItemPedido> itens = new ArrayList<>();
-        for (CarrinhoItem ci : itensCarrinho) {
+        for (CarrinhoItem ci : itensCarrinho.stream().sorted(java.util.Comparator.comparing(CarrinhoItem::getProdutoId)).toList()) {
             Produto produto = produtoRepository.findLockedById(ci.getProdutoId())
                     .orElseThrow(() ->
                             new RecursoNaoEncontradoException("Produto",
@@ -155,6 +158,11 @@ public class PedidoService {
     public List<Pedido> listarTodos() {
         return pedidoRepository.findAll(
                 Sort.by("dataPedido").descending());
+    }
+
+    @Transactional
+    public Pedido bloquearPedido(Long id) {
+        return pedidoRepository.findLockedById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
     }
 
     public Pedido buscarPorId(Long id) {
@@ -206,7 +214,16 @@ public class PedidoService {
         pedidoRepository.save(pedido);
     }
 
+    @Transactional
+    public void expirarReserva(Long id) {
+        Pedido pedido = bloquearPedido(id);
+        if (pedido.getStatus() != Pedido.Status.PENDENTE || !pedido.getDataPedido().isBefore(java.time.LocalDateTime.now().minusHours(24))) return;
+        if (pedido.getPagamento() != null && pedido.getPagamento().getStatus() == com.paulo.ecommerce.model.Pagamento.StatusPagamento.APROVADO) return;
+        devolverEstoque(pedido); pedido.setStatus(Pedido.Status.CANCELADO); pedidoRepository.save(pedido);
+    }
+
     private void devolverEstoque(Pedido pedido) {
+        if (pedido.getTemporadaPasseId() != null) return;
         for (ItemPedido item : pedido.getItens().stream().sorted(java.util.Comparator.comparing(i -> i.getProduto().getId())).toList()) {
             Produto produto = produtoRepository.findLockedById(item.getProduto().getId()).orElseThrow();
             produto.setEstoque(produto.getEstoque() + item.getQuantidade());

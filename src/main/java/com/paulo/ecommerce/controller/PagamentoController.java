@@ -10,10 +10,12 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/pagamento")
 public class PagamentoController {
 
+    private final com.paulo.ecommerce.service.WebhookSignature signature;
     private final PagamentoService pagamentoService;
     private final com.paulo.ecommerce.service.PedidoService pedidoService;
 
-    public PagamentoController(PagamentoService pagamentoService, com.paulo.ecommerce.service.PedidoService pedidoService) {
+    public PagamentoController(PagamentoService pagamentoService, com.paulo.ecommerce.service.PedidoService pedidoService, com.paulo.ecommerce.service.WebhookSignature signature) {
+        this.signature = signature;
         this.pedidoService = pedidoService;
         this.pagamentoService = pagamentoService;
     }
@@ -84,17 +86,14 @@ public class PagamentoController {
     @PostMapping("/webhook")
     @ResponseBody
     public ResponseEntity<Void> webhook(
-            @RequestParam(required = false) String type,
-            @RequestParam(name = "data.id", required = false) String dataId,
-            @RequestBody(required = false) String body) {
-        try {
-            if ("payment".equals(type) && dataId != null) {
-                pagamentoService.processarWebhook(dataId, type);
-            }
-        } catch (Exception e) {
-            System.err.println("Webhook error: " + e.getMessage());
-        }
-        return ResponseEntity.ok().build();
+        @RequestParam(required = false) String type,
+        @RequestParam(name = "data.id", required = false) String dataId,
+        @RequestHeader(name = "x-signature", required = false) String signed,
+        @RequestHeader(name = "x-request-id", required = false) String requestId) {
+        if (!signature.valid(signed, requestId, dataId)) return ResponseEntity.status(401).build();
+        if (!"payment".equals(type)) return ResponseEntity.noContent().build();
+        try { pagamentoService.processarWebhook(dataId, type); return ResponseEntity.ok().build(); }
+        catch (RuntimeException error) { return ResponseEntity.status(503).build(); }
     }
 
     private String buildPaymentRedirect(String status, String preferenceId, Long pedidoId) {

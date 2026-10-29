@@ -9,6 +9,11 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public class CheckoutRequest {
+    @NotBlank @Pattern(regexp="[a-zA-Z0-9-]{16,64}")
+    private String idempotencyKey;
+    public String getIdempotencyKey(){return idempotencyKey;}
+    public void setIdempotencyKey(String value){idempotencyKey=value;}
+
 
     @NotBlank
     @Size(max = 120)
@@ -46,10 +51,12 @@ public class CheckoutRequest {
     private String estado;
 
     @NotBlank
+    @Pattern(regexp="pix|boleto|cartao")
     private String pagamento;
 
     @Valid
     @NotEmpty
+    @Size(max=100)
     private List<CheckoutItemRequest> itens;
 
     public String getNome() { return nome; }

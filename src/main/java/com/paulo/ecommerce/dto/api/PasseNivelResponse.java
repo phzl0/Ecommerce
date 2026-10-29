@@ -2,6 +2,7 @@ package com.paulo.ecommerce.dto.api;
 
 public record PasseNivelResponse(
         long recompensaId,
+        boolean premium,
         int nivel,
         int xpNecessario,
         String titulo,

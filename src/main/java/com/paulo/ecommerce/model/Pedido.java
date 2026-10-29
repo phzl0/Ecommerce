@@ -10,6 +10,14 @@ import java.util.List;
 @Entity
 @Table(name = "pedidos")
 public class Pedido extends BaseEntity{
+    @Column(unique=true,length=100)
+    private String checkoutKey;
+    public String getCheckoutKey(){return checkoutKey;}
+    public void setCheckoutKey(String value){checkoutKey=value;}
+    private Long temporadaPasseId;
+    public Long getTemporadaPasseId() { return temporadaPasseId; }
+    public void setTemporadaPasseId(Long value) { temporadaPasseId = value; }
+
 
     @OneToOne(mappedBy = "pedido", cascade = CascadeType.ALL)
     private Pagamento pagamento;

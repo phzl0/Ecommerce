@@ -423,7 +423,7 @@ function PassPreview({ auth }) {
         if (!auth.authenticated) {
             return;
         }
-        getJson("/api/pass/current").then(setDashboard).catch(() => null);
+        trackPassAction("CHECKIN").then(() => getJson("/api/pass/current")).then(setDashboard).catch(() => null);
     }, [auth.authenticated]);
 
     if (!auth.authenticated || !dashboard) {
@@ -1006,11 +1006,13 @@ function CheckoutPage({ items, auth, clearCart }) {
         saveCheckoutDraft(form);
     }, [form]);
 
+    const checkoutRequestId = useRef(window.crypto.randomUUID());
     const submitCheckout = async () => {
         setSubmitting(true);
         setMessage("");
         try {
             const response = await postJson("/api/checkout/orders", {
+                idempotencyKey: checkoutRequestId.current,
                 nome: form.nome,
                 telefone: form.telefone,
                 cep: form.cep,
@@ -1253,6 +1255,7 @@ function OrderDetailPage({ orderId, route }) {
     const [order, setOrder] = useState(null);
     const { params } = parseRoute(route);
     const [message, setMessage] = useState(
+        params.get("paymentsDisabled") ? "Pagamentos desativados neste ambiente de demonstração. Nenhuma cobrança foi feita." :
         params.get("paymentError") ? "Nao foi possivel abrir o pagamento automaticamente. Tente novamente." :
         params.get("openPayment") ? "O pedido esta pronto para retomar o pagamento." :
         ""
@@ -1394,8 +1397,8 @@ function PaymentResultPage({ route }) {
 
     const map = {
         sucesso: {
-            title: "Pagamento recebido",
-            copy: "Seu pedido foi confirmado e ja esta no fluxo de processamento."
+            title: "Retorno do pagamento recebido",
+            copy: "Confira o status confirmado pelo provedor nos detalhes do pedido. O retorno do navegador não comprova aprovação."
         },
         falha: {
             title: "Pagamento nao aprovado",
@@ -1434,7 +1437,7 @@ function PassPage() {
     const trackRef = useRef(null);
 
     const loadDashboard = () => {
-        getJson("/api/pass/current")
+        trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
             .then(setDashboard)
             .catch((error) => {
                 if (error.code === "AUTH_REQUIRED") {
@@ -1463,7 +1466,7 @@ function PassPage() {
 
     const premiumLevels = dashboard.niveis;
     const freeLevels = dashboard.niveis.map((reward) => {
-        const hasReward = reward.nivel % 3 === 0 || reward.nivel === 1 || reward.nivel === 5 || reward.nivel === 10 || reward.nivel === 15 || reward.nivel === 20 || reward.nivel === 25 || reward.nivel === 30;
+        const hasReward = !reward.premium;
         return {
             ...reward,
             titulo: hasReward ? reward.titulo : "Sem recompensa neste nivel",
@@ -1548,6 +1551,8 @@ function PassPage() {
                     <div className="lc-section-header">
                         <div>
                             <h3>Trilha do passe</h3>
+                            <p>${dashboard.premiumAtivo ? "Premium ativo nesta temporada" : `Premium: ${currency(dashboard.precoPremium)} por temporada, sem renovação automática`}</p>
+                            ${!dashboard.premiumAtivo ? html`<button className="lc-btn lc-btn-primary" onClick=${async () => { try { const r=await postJson("/api/pass/premium",{}); window.location.href=r.redirectUrl; } catch(e) { setClaimState({loadingId:null,message:"",error:e.message}); } }}>Adquirir premium</button>` : null}
                             <p>Premium em cima, progresso no meio e gratuito embaixo, em uma unica trilha horizontal.</p>
                         </div>
                         <div className="lc-pass-actions">
@@ -1572,14 +1577,14 @@ function PassPage() {
                                         <div className=${`lc-pass-lane-card premium ${premiumReward.desbloqueado ? "unlocked" : ""}`}>
                                             <small>Premium</small>
                                             <strong>Nivel ${premiumReward.nivel}</strong>
-                                            <span>${premiumReward.tipoDigital}</span>
+                                            <span>${premiumReward.premium ? premiumReward.tipoDigital : "Sem recompensa premium"}</span>
                                             <div className="lc-pass-lane-progress">
                                                 <div style=${{ width: `${premiumReward.progressoPercentual}%` }}></div>
                                             </div>
                                             <button
                                                 type="button"
                                                 className=${`lc-pass-claim-btn ${premiumReward.disponivelParaResgate ? "available" : ""}`}
-                                                disabled=${premiumReward.resgatado || !premiumReward.disponivelParaResgate || claimState.loadingId === premiumReward.recompensaId}
+                                                disabled=${!premiumReward.premium || premiumReward.resgatado || !premiumReward.disponivelParaResgate || claimState.loadingId === premiumReward.recompensaId}
                                                 onClick=${() => handleClaimReward(premiumReward)}
                                             >
                                                 ${premiumButtonLabel}
@@ -1598,8 +1603,8 @@ function PassPage() {
                                             <div className="lc-pass-lane-progress">
                                                 <div style=${{ width: `${freeReward.progressoPercentual}%` }}></div>
                                             </div>
-                                            <button type="button" className="lc-pass-claim-btn" disabled=${true}>
-                                                ${freeButtonLabel}
+                                            <button type="button" className="lc-pass-claim-btn" disabled=${!freeReward.hasReward || freeReward.resgatado || !freeReward.disponivelParaResgate || !!claimState.loadingId} onClick=${() => handleClaimReward(freeReward)}>
+                                                ${freeReward.resgatado ? "Resgatada" : freeReward.hasReward && freeReward.disponivelParaResgate ? "Resgatar" : freeButtonLabel}
                                             </button>
                                         </div>
                                     </div>
@@ -1617,7 +1622,7 @@ function PassMissionsPage() {
     const [dashboard, setDashboard] = useState(null);
 
     useEffect(() => {
-        getJson("/api/pass/current")
+        trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
             .then(setDashboard)
             .catch((error) => {
                 if (error.code === "AUTH_REQUIRED") {

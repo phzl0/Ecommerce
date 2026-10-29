@@ -9,6 +9,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+    java.util.Optional<Pedido> findByUsuarioIdAndCheckoutKey(Long usuarioId,String checkoutKey);
+    List<Pedido> findByUsuarioIdAndTemporadaPasseId(Long usuarioId, Long temporadaPasseId);
+    List<Pedido> findTop100ByStatusAndDataPedidoBeforeOrderByIdAsc(Pedido.Status status, LocalDateTime limite);
+
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select x from Pedido x where x.id = :value")
     java.util.Optional<Pedido> findLockedById(@org.springframework.data.repository.query.Param("value") Long value);

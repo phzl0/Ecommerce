@@ -27,6 +27,10 @@ public class PagamentoService {
 
     @Value("${app.payments.enabled:false}")
     private boolean paymentsEnabled;
+    @Value("${app.payments.live-mode:false}") private boolean liveMode;
+    @Value("${app.payments.collector-id:}") private String collectorId;
+    @Value("${mercadopago.access-token:}") private String accessToken;
+
 
     public PagamentoService(PagamentoRepository pagamentoRepository,
                             PedidoService pedidoService,
@@ -43,12 +47,15 @@ public class PagamentoService {
         if (!paymentsEnabled) {
             throw new IllegalStateException("Pagamentos desativados neste ambiente.");
         }
-        Pedido pedido = pedidoService.buscarPorId(pedidoId);
+        if (accessToken.isBlank() || collectorId.isBlank()) throw new IllegalStateException("Configure as credenciais e a conta recebedora do pagamento.");
+        Pedido pedido = pedidoService.bloquearPedido(pedidoId);
+        if (pedido.getStatus() != Pedido.Status.PENDENTE) throw new IllegalStateException("Este pedido não está disponível para pagamento.");
 
         Pagamento pagamento = pagamentoRepository
                 .findByPedidoId(pedidoId)
                 .orElse(new Pagamento());
 
+        if (pagamento.getStatus() == StatusPagamento.APROVADO || pagamento.getStatus() == StatusPagamento.REEMBOLSADO) throw new IllegalStateException("Este pagamento já foi concluído.");
         pagamento.setPedido(pedido);
         pagamento.setValor(pedido.getTotal());
         pagamento.setStatus(StatusPagamento.PENDENTE);
@@ -75,6 +82,9 @@ public class PagamentoService {
 
         PreferenceRequest preferenceRequest = PreferenceRequest.builder()
                 .items(itens)
+                .shipments(PreferenceShipmentsRequest.builder().mode("not_specified").cost(pedido.getFrete()).build())
+                .expires(true)
+                .expirationDateTo(java.time.OffsetDateTime.now().plusHours(24))
                 .payer(payer)
                 .backUrls(backUrls)
                 .autoReturn("approved")
@@ -84,12 +94,12 @@ public class PagamentoService {
                 .build();
 
         PreferenceClient client = new PreferenceClient();
-        Preference preference = client.create(preferenceRequest);
+        Preference preference = criarNoProvedor(preferenceRequest);
 
         pagamento.setMpPreferenceId(preference.getId());
         pagamentoRepository.save(pagamento);
 
-        return preference.getInitPoint();
+        return liveMode ? preference.getInitPoint() : preference.getSandboxInitPoint();
     }
 
     public Pagamento buscarPorPreferenceId(String preferenceId) {
@@ -100,63 +110,44 @@ public class PagamentoService {
 
     @Transactional
     public void processarWebhook(String paymentId, String type) {
-        if (!"payment".equals(type)) return;
-
+        if (!paymentsEnabled || !"payment".equals(type)) throw new IllegalStateException("Pagamentos não disponíveis.");
         try {
-            com.mercadopago.client.payment.PaymentClient client =
-                    new com.mercadopago.client.payment.PaymentClient();
-
-            com.mercadopago.resources.payment.Payment mp =
-                    client.get(Long.parseLong(paymentId));
-
-            String externalRef = mp.getExternalReference();
-            if (externalRef == null) return;
-
-            Long pedidoId = Long.parseLong(externalRef);
-
-            Pagamento pagamento = pagamentoRepository
-                    .findByPedidoId(pedidoId)
-                    .orElseThrow(() ->
-                            new RecursoNaoEncontradoException("Pagamento", pedidoId));
-
-            pagamento.setMpPaymentId(paymentId);
-
+            var mp = consultarPagamento(Long.parseLong(paymentId));
+            if (mp.getExternalReference() == null) throw new IllegalArgumentException("Pagamento sem pedido.");
+            Long pedidoId = Long.parseLong(mp.getExternalReference());
+            Pedido pedido = pedidoService.bloquearPedido(pedidoId);
+            Pagamento pagamento = pagamentoRepository.findByPedidoId(pedidoId).orElseThrow();
+            if (!"BRL".equals(mp.getCurrencyId()) || mp.getTransactionAmount() == null || mp.getTransactionAmount().compareTo(pedido.getTotal()) != 0
+                || !collectorId.equals(String.valueOf(mp.getCollectorId())) || !Boolean.valueOf(liveMode).equals(mp.isLiveMode())) {
+                throw new IllegalStateException("O pagamento não corresponde ao valor, moeda, recebedor ou ambiente do pedido.");
+            }
+            if (pagamento.getMpPaymentId() != null && !pagamento.getMpPaymentId().equals(paymentId) && pagamento.getStatus() == StatusPagamento.APROVADO) {
+                throw new IllegalStateException("Outro pagamento já foi aprovado para este pedido; requer conciliação.");
+            }
             switch (mp.getStatus()) {
                 case "approved" -> {
+                    if (pagamento.getStatus() == StatusPagamento.APROVADO) return;
+                    if (pedido.getStatus() != Pedido.Status.PENDENTE) throw new IllegalStateException("Pagamento recebido após encerramento do pedido; requer conciliação.");
+                    pagamento.setMpPaymentId(paymentId);
                     pagamento.setStatus(StatusPagamento.APROVADO);
                     pagamento.setPagoEm(LocalDateTime.now());
-
-                    pedidoService.atualizarStatus(
-                            pedidoId, Pedido.Status.CONFIRMADO);
-
-                    passeService.registrarXpCompraAprovada(
-                            pagamento.getPedido().getUsuario().getEmail(),
-                            pedidoId,
-                            pagamento.getPedido().getTotal()
-                    );
-
-                    emailService.enviarAtualizacaoStatus(
-                            pedidoService.buscarPorId(pedidoId));
+                    pedidoService.atualizarStatus(pedidoId, Pedido.Status.CONFIRMADO);
+                    if (pedido.getTemporadaPasseId() == null) passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(), pedidoId, pedido.getSubtotal());
                 }
-
-                case "rejected" ->
-                        pagamento.setStatus(StatusPagamento.RECUSADO);
-
-                case "cancelled" ->
-                        pagamento.setStatus(StatusPagamento.CANCELADO);
-
-                case "refunded" -> {
+                case "refunded", "charged_back" -> {
+                    if (pagamento.getStatus() == StatusPagamento.REEMBOLSADO) return;
+                    if (pagamento.getMpPaymentId() != null && !pagamento.getMpPaymentId().equals(paymentId)) throw new IllegalStateException("Estorno de tentativa diferente.");
                     pagamento.setStatus(StatusPagamento.REEMBOLSADO);
-
-                    pedidoService.atualizarStatus(
-                            pedidoId, Pedido.Status.CANCELADO);
+                    if (pedido.getStatus() != Pedido.Status.CANCELADO) pedidoService.atualizarStatus(pedidoId, Pedido.Status.CANCELADO);
+                    passeService.estornarCompra(pedido.getUsuario().getEmail(), pedidoId);
                 }
+                case "rejected" -> { if (pagamento.getStatus() != StatusPagamento.APROVADO) pagamento.setStatus(StatusPagamento.RECUSADO); }
+                case "cancelled" -> { if (pagamento.getStatus() != StatusPagamento.APROVADO) pagamento.setStatus(StatusPagamento.CANCELADO); }
+                default -> { /* Do not regress an approved payment on an old pending event. */ }
             }
-
             pagamentoRepository.save(pagamento);
-
-        } catch (Exception e) {
-            System.err.println("Erro ao processar webhook: " + e.getMessage());
+        } catch (com.mercadopago.exceptions.MPException | com.mercadopago.exceptions.MPApiException e) {
+            throw new IllegalStateException("Não foi possível consultar o pagamento; a notificação precisa ser repetida.", e);
         }
     }
 
@@ -168,6 +159,7 @@ public class PagamentoService {
 
     @Transactional
     public String iniciarFluxoPagamento(Long pedidoId, MetodoPagamento metodoPagamento) {
+        if (!paymentsEnabled) return "/pedidos/"+pedidoId+"?paymentsDisabled=true";
         try {
             Pagamento pagamento = pagamentoRepository.findByPedidoId(pedidoId)
                     .orElseGet(() -> {
@@ -183,10 +175,13 @@ public class PagamentoService {
 
             return criarPreferencia(pedidoId);
 
-        } catch (Exception e) {
-            return "/pagamento/pedido/" + pedidoId;
+        } catch (MPException | MPApiException e) {
+            throw new IllegalStateException("Não foi possível abrir o pagamento. Seu pedido está salvo para nova tentativa.", e);
         }
     }
+
+    protected com.mercadopago.resources.payment.Payment consultarPagamento(Long id) throws MPException, MPApiException { return new com.mercadopago.client.payment.PaymentClient().get(id); }
+    protected Preference criarNoProvedor(PreferenceRequest request) throws MPException, MPApiException { return new PreferenceClient().create(request); }
 
     public MetodoPagamento mapearMetodo(String pagamento) {
         if (pagamento == null) {
@@ -203,34 +198,4 @@ public class PagamentoService {
         };
     }
 
-    @Transactional
-    public void atualizarStatusManual(String preferenceId, String status) {
-        pagamentoRepository.findByMpPreferenceId(preferenceId)
-                .ifPresent(pagamento -> {
-                    switch (status) {
-                        case "approved" -> {
-                            pagamento.setStatus(StatusPagamento.APROVADO);
-                            pagamento.setPagoEm(LocalDateTime.now());
-
-                            pedidoService.atualizarStatus(
-                                    pagamento.getPedido().getId(),
-                                    Pedido.Status.CONFIRMADO);
-
-                            passeService.registrarXpCompraAprovada(
-                                    pagamento.getPedido().getUsuario().getEmail(),
-                                    pagamento.getPedido().getId(),
-                                    pagamento.getPedido().getTotal()
-                            );
-                        }
-
-                        case "failure" ->
-                                pagamento.setStatus(StatusPagamento.RECUSADO);
-
-                        default ->
-                                pagamento.setStatus(StatusPagamento.PENDENTE);
-                    }
-
-                    pagamentoRepository.save(pagamento);
-                });
-    }
 }

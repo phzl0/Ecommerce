@@ -45,11 +45,13 @@ public class CheckoutApiController {
         var pedido = pedidoService.finalizarPedidoApi(
                 userDetails.getUsername(),
                 form,
-                request.getItens()
+                request.getItens(), request.getIdempotencyKey()
         );
 
         Pagamento.MetodoPagamento metodo = pagamentoService.mapearMetodo(request.getPagamento());
-        String redirectUrl = pagamentoService.iniciarFluxoPagamento(pedido.getId(), metodo);
+        String redirectUrl;
+        try { redirectUrl=pagamentoService.iniciarFluxoPagamento(pedido.getId(),metodo); }
+        catch(RuntimeException error) { redirectUrl="/pedidos/"+pedido.getId()+"?paymentError=true"; }
         return new CheckoutResponse(pedido.getId(), pedido.getNumero(), redirectUrl);
     }
 }

@@ -28,7 +28,6 @@ public class LoginAttemptListener {
     }
 
     private String getIp() {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        return xfHeader != null ? xfHeader.split(",")[0] : request.getRemoteAddr();
+        return request.getRemoteAddr();
     }
 }

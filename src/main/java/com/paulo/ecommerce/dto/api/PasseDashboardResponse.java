@@ -3,6 +3,8 @@ package com.paulo.ecommerce.dto.api;
 import java.util.List;
 
 public record PasseDashboardResponse(
+        boolean premiumAtivo,
+        java.math.BigDecimal precoPremium,
         String temporadaNome,
         String temporadaPeriodo,
         int xpTotal,

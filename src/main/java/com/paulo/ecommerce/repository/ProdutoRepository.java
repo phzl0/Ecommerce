@@ -12,6 +12,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
     @org.springframework.data.jpa.repository.Query("select x from Produto x where x.id = :value")
     java.util.Optional<Produto> findLockedById(@org.springframework.data.repository.query.Param("value") Long value);
 
+    Optional<Produto> findBySku(String sku);
     boolean existsByNomeIgnoreCase(String nome);
 
     @EntityGraph(attributePaths = {"categoria"})
