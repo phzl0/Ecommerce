@@ -301,7 +301,7 @@ function benefitItems() {
   return [
     {
       title: "Compra protegida",
-      copy: "Conta, checkout e pedidos agora rodam pela mesma base React + API.",
+      copy: "Sua conta, seus pedidos e seu histórico em um lugar.",
     },
     {
       title: "Navegacao marketplace",
@@ -842,8 +842,8 @@ function AuthPage({ type, auth, route }) {
           <p className="lc-checkout-note">
             ${
               isLogin
-                ? "Quando o login terminar, o backend devolve voce para o caminho salvo em returnUrl."
-                : "Depois do cadastro, faca login e siga para pagamento usando o mesmo fluxo React."
+                ? "Depois de entrar, você continuará de onde parou."
+                : "Depois de criar sua conta, entre para continuar a compra."
             }
           </p>
           <${AppLink}
@@ -1347,7 +1347,7 @@ function CheckoutPage({ items, auth, clearCart }) {
           <div className="lc-section-header">
             <div>
               <h2>Endereco e pagamento</h2>
-              <p>Fluxo direto de compra usando APIs reais do backend.</p>
+              <p>Informe onde receber e confira as condições da compra.</p>
             </div>
           </div>
           <div className="lc-checkout-card">
@@ -1441,7 +1441,7 @@ function CheckoutPage({ items, auth, clearCart }) {
             <p className="lc-checkout-note">
               ${
                 auth.authenticated
-                  ? "Voce esta autenticado. Ao confirmar, o backend cria o pedido e segue para pagamento."
+                  ? "Confira o total antes de continuar. O pedido ficará disponível na sua conta."
                   : "Entre na sua conta para concluir a compra e iniciar o pagamento."
               }
             </p>
@@ -2393,7 +2393,7 @@ function Footer() {
     <footer className="lc-footer">
       <div>
         <strong>${BRAND}</strong>
-        <p>Storefront marketplace com identidade verde, branca e preta.</p>
+        <p>Compras, missões e benefícios em uma só experiência.</p>
       </div>
       <div className="lc-footer-links">
         <${AppLink} href="/">Inicio<//>
