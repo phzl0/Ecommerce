@@ -1782,23 +1782,26 @@ function RewardHighlights({ products, target }) {
     label: products[index]?.nome || label,
     image: products[index]?.imagemUrl || (index % 2 ? "/app/level-free.webp" : "/app/level-premium.webp"),
   }));
+  const rows = [highlights.slice(0, 4), highlights.slice(4, 7), highlights.slice(7)];
   return html`<section className="lc-reward-highlights" aria-label="Vitrine ilustrativa de prêmios">
-    <div className="lc-reward-highlights-track">
-      ${[false, true].map(copy => html`<div className="lc-reward-highlight-set" key=${String(copy)}
-        aria-hidden=${copy ? "true" : undefined}>
-        ${highlights.map(({ image, label }, index) => html`<a href=${target} className="lc-reward-highlight"
-          key=${index} tabIndex=${copy ? -1 : undefined} aria-label=${`${label} · Ver passe`}>
-          <img src=${image} alt="" decoding="async" onError=${event => {
-            if (!event.currentTarget.src.endsWith("/app/level-free.webp")) event.currentTarget.src = "/app/level-free.webp";
-          }} />
-          <strong>${label}</strong>
-        </a>`)}
-      </div>`)}
-    </div>
+    ${rows.map((row, index) => html`<div key=${index} className="lc-reward-highlights-row">
+      <div className="lc-reward-highlights-track" data-direction=${index === 1 ? "left" : "right"}>
+        ${[false, true].map(copy => html`<div className="lc-reward-highlight-set" key=${String(copy)}
+          aria-hidden=${copy ? "true" : undefined}>
+          ${row.map(({ image, label }, itemIndex) => html`<a href=${target} className="lc-reward-highlight"
+            key=${itemIndex} tabIndex=${copy ? -1 : undefined} aria-label=${`${label} · Ver passe`}>
+            <img src=${image} alt="" decoding="async" onError=${event => {
+              if (!event.currentTarget.src.endsWith("/app/level-free.webp")) event.currentTarget.src = "/app/level-free.webp";
+            }} />
+            <strong>${label}</strong>
+          </a>`)}
+        </div>`)}
+      </div>
+    </div>`)}
   </section>`;
 }
 
-function PassPage({ auth, notify, notifyGain, demoProducts }) {
+function PassPage({ auth, notify, notifyGain, products, onAddToCart, onBuyNow }) {
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
@@ -1888,27 +1891,39 @@ function PassPage({ auth, notify, notifyGain, demoProducts }) {
     </div>`;
   };
 
+  const premiumAccess = pass ? html`<div className=${`lc-premium-access ${pass.premiumAtivo ? "active" : "locked"}`}>
+    <span className="lc-premium-badge"><${Icon} name=${pass.premiumAtivo ? "shield" : "lock"} /></span>
+    <div><strong>${pass.premiumAtivo ? "Premium ativo" : "Trilha Premium bloqueada"}</strong>
+      <small>${pass.premiumAtivo ? `Acesso até ${new Date(pass.premiumValidoAte).toLocaleDateString("pt-BR")}`
+        : `${currency(pass.precoPremium)} por mês${auth.ambienteLocal ? " · ativação de teste" : ""}`}</small></div>
+    ${!pass.premiumAtivo && auth.ambienteLocal ? html`<button type="button" className="lc-btn lc-neon-btn"
+      disabled=${busy !== null} onClick=${buyPremium}>Liberar Premium</button>` : null}
+  </div>` : null;
+
   return html`<main className="lc-level-pass">
     <header className="lc-rewards-banner lc-level-pass-header">
       <div className="lc-page lc-rewards-banner-content">
-      <span className="lc-eyebrow">LEVEL REWARDS</span>
-      <h1>Passe LEVEL</h1>
-      ${pass ? html`<p className="lc-pass-season">${pass.temporadaNome} <span>· ${pass.temporadaPeriodo}</span></p>`
-        : html`<p>Suba de nível com suas compras e missões e desbloqueie recompensas na temporada.</p>`}
-      ${pass ? html`<div className="lc-level-pass-progress">
-        <div>
-          <strong>Nível ${pass.nivelAtual} de ${pass.totalNiveis} <span>· ${pass.xpTotal} XP</span></strong>
-          <progress aria-label="Progresso para o próximo nível" value=${Math.min(pass.xpNoNivelAtual, pass.xpPorNivel)}
-            max=${pass.xpPorNivel}></progress>
-          <small>${pass.nivelAtual >= pass.totalNiveis ? "Último nível alcançado" : `${pass.xpParaProximoNivel} XP para o próximo nível`}</small>
+        <div className="lc-pass-banner-copy">
+          <span className="lc-eyebrow">LEVEL REWARDS</span>
+          <h1>Passe LEVEL</h1>
+          ${pass ? html`<p className="lc-pass-season">${pass.temporadaNome} <span>· ${pass.temporadaPeriodo}</span></p>`
+            : html`<p>Suba de nível com suas compras e missões e desbloqueie recompensas na temporada.</p>`}
+          ${pass ? html`<div className="lc-level-pass-progress">
+            <div>
+              <strong>Nível ${pass.nivelAtual} de ${pass.totalNiveis} <span>· ${pass.xpTotal} XP</span></strong>
+              <progress aria-label="Progresso para o próximo nível" value=${Math.min(pass.xpNoNivelAtual, pass.xpPorNivel)}
+                max=${pass.xpPorNivel}></progress>
+              <small>${pass.nivelAtual >= pass.totalNiveis ? "Último nível alcançado" : `${pass.xpParaProximoNivel} XP para o próximo nível`}</small>
+            </div>
+            <${AppLink} href="/passe/missoes" className="lc-btn lc-neon-btn">Ver missões<//>
+          </div>` : auth.ready && !auth.authenticated
+            ? html`<${AppLink} href=${buildLoginUrl("/passe")} className="lc-btn lc-neon-btn">Entrar para ver meu passe<//>`
+            : null}
         </div>
-        <${AppLink} href="/passe/missoes" className="lc-btn lc-neon-btn">Ver missões<//>
-      </div>` : auth.ready && !auth.authenticated
-        ? html`<${AppLink} href=${buildLoginUrl("/passe")} className="lc-btn lc-neon-btn">Entrar para ver meu passe<//>`
-        : null}
+        <${RewardHighlights} products=${products} target=${pass ? "#trilha-do-passe" : buildLoginUrl("/passe")} />
       </div>
     </header>
-    <div className="lc-page lc-rewards-content">
+    ${showIntro || error || (auth.authenticated && !pass) ? html`<div className="lc-page lc-rewards-content">
     ${showIntro ? html`<aside className="lc-pass-intro" aria-label="Como subir de nível">
       <p>Suba de nível com compras, missões e eventos para liberar recompensas.</p>
       <${AppLink} href="/passe/missoes">Ver missões<//>
@@ -1916,21 +1931,13 @@ function PassPage({ auth, notify, notifyGain, demoProducts }) {
     </aside>` : null}
     ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
     ${auth.authenticated && !pass && !error ? html`<p role="status">Carregando temporada…</p>` : null}
-    ${pass ? html`<div className=${`lc-premium-access ${pass.premiumAtivo ? "active" : "locked"}`}>
-        <span className="lc-premium-badge"><${Icon} name=${pass.premiumAtivo ? "shield" : "lock"} /></span>
-        <div><strong>${pass.premiumAtivo ? "Premium ativo" : "Trilha Premium bloqueada"}</strong>
-          <small>${pass.premiumAtivo ? `Acesso até ${new Date(pass.premiumValidoAte).toLocaleDateString("pt-BR")}`
-            : `${currency(pass.precoPremium)} por mês${auth.ambienteLocal ? " · ativação de teste" : ""}`}</small></div>
-        ${!pass.premiumAtivo && auth.ambienteLocal ? html`<button type="button" className="lc-btn lc-neon-btn"
-          disabled=${busy !== null} onClick=${buyPremium}>Liberar Premium</button>` : null}
-      </div>` : null}
-    </div>
-    <${RewardHighlights} products=${demoProducts} target=${pass ? "#trilha-do-passe" : buildLoginUrl("/passe")} />
+    </div>` : null}
     ${pass ? html`<section id="trilha-do-passe" className="lc-page lc-level-trail" aria-labelledby="level-trail-title">
       <div className="lc-level-trail-heading">
         <div><h2 id="level-trail-title">Trilha de recompensas</h2>
           <p>Os prêmios de cada trilha liberam conforme você alcança os níveis.</p></div>
       </div>
+      ${pass.premiumAtivo ? premiumAccess : null}
       <div className="lc-rail-toolbar">
         <span>Deslize a trilha para explorar os níveis.</span>
         <div>
@@ -1939,6 +1946,7 @@ function PassPage({ auth, notify, notifyGain, demoProducts }) {
         </div>
       </div>
       <div className=${`lc-rail ${pass.premiumAtivo ? "" : "lc-rail-locked"}`}>
+        ${!pass.premiumAtivo ? html`<div className="lc-premium-overlay">${premiumAccess}</div>` : null}
         <div className="lc-rail-labels" aria-hidden="true"><strong className="premium">Premium</strong><span>Nível</span><strong className="free">Gratuito</strong></div>
         <div className="lc-rail-track" ref=${track} tabIndex="0" role="region" aria-label="Níveis e recompensas do passe">
           ${pass.niveis.map(reward => html`
@@ -1957,6 +1965,10 @@ function PassPage({ auth, notify, notifyGain, demoProducts }) {
         </div>`)}
       </details>` : null}
     </section>` : null}
+    ${products.length ? html`<div className="lc-page lc-pass-products">
+      <${HomeProductShelf} title="Produtos da loja" products=${products}
+        onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
+    </div>` : null}
   </main>`;
 }
 
@@ -2295,8 +2307,9 @@ function App() {
       return html`<${BenefitsPage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
     if (path === "/passe") {
       const products = [...(homeData?.destaques || []), ...(homeData?.novidades || [])];
-      const demoProducts = [...new Map(products.map(product => [product.id, product])).values()];
-      return html`<${PassPage} auth=${auth} notify=${notify} notifyGain=${notifyGain} demoProducts=${demoProducts} />`;
+      const uniqueProducts = [...new Map(products.map(product => [product.id, product])).values()];
+      return html`<${PassPage} auth=${auth} notify=${notify} notifyGain=${notifyGain} products=${uniqueProducts}
+        onAddToCart=${addToCartWithTracking} onBuyNow=${buyNow} />`;
     }
     if (path === "/passe/missoes") return html`<${PassMissionsPage} auth=${auth} demoProducts=${homeData?.destaques || []}
       onAddToCart=${addToCartWithTracking} onBuyNow=${buyNow} />`;

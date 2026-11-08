@@ -562,8 +562,6 @@
   .lc-product-page .lc-detail-copy { padding: 0; }
   .lc-catalog-shell .lc-product-grid, .lc-product-page .lc-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .lc-rail-labels > strong { padding-inline: 6px; }
-  .lc-premium-access { flex-wrap: wrap; }
-  .lc-premium-access .lc-btn { flex-basis: 100%; }
   .lc-missions-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -647,24 +645,44 @@
 .lc-rewards-banner p { color: #e3f1e5; margin: 8px 0 16px; }
 .lc-rewards-banner small { color: #d0e8d4; }
 .lc-rewards-banner progress { accent-color: #79ff57; }
-.lc-rewards-content { padding-top: 24px; }
+.lc-level-pass-header .lc-rewards-banner-content {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 424px);
+  align-items: center;
+  justify-items: stretch;
+  gap: 24px;
+}
+.lc-pass-banner-copy { min-width: 0; }
+.lc-rewards-content, .lc-level-trail, .lc-pass-products { width: 100%; }
+.lc-rewards-content, .lc-level-pass > .lc-level-trail { padding-block: 0; }
+.lc-pass-products { padding-top: 0; }
+.lc-pass-products .lc-home-shelf { margin-top: 0; }
 .lc-pass-intro {
   display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
-  margin-bottom: 16px; padding: 8px 16px; border: 1px solid var(--lc-line);
+  margin-bottom: 0; padding: 8px 16px; border: 1px solid var(--lc-line);
   border-radius: 8px; background: var(--lc-surface-alt);
 }
 .lc-pass-intro p { flex: 1 1 240px; margin: 0; }
 .lc-pass-intro a { color: var(--lc-green-dark); font-weight: 700; text-decoration: underline; }
 .lc-pass-intro button { min-height: 32px; padding-inline: 8px; }
 #trilha-do-passe { scroll-margin-top: 144px; }
-.lc-reward-highlights { overflow: hidden; background: #090f0b; padding-block: 8px; }
+.lc-reward-highlights {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #46634d;
+  border-radius: 12px;
+  background: rgb(5 14 8 / 85%);
+}
+.lc-reward-highlights-row { min-width: 0; overflow: hidden; border-radius: 8px; }
 .lc-reward-highlights-track {
   display: flex;
   width: max-content;
-  animation: lc-reward-loop 46s linear infinite;
+  animation: lc-reward-loop 32s linear infinite;
 }
+.lc-reward-highlights-track[data-direction="right"] { animation-direction: reverse; }
 .lc-reward-highlight-set { display: flex; gap: 8px; padding-right: 8px; }
-.lc-reward-highlights:focus-within .lc-reward-highlights-track { animation-play-state: paused; }
+.lc-reward-highlights-row:focus-within .lc-reward-highlights-track { animation-play-state: paused; }
 @keyframes lc-reward-loop { to { transform: translateX(-50%); } }
 .lc-mission-products h2 { color: var(--lc-text); margin: 0; font-size: 1.125rem; }
 .lc-reward-highlight {
@@ -672,8 +690,8 @@
   grid-template-columns: 40px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  width: max(136px, 10vw);
-  min-height: 60px;
+  width: 136px;
+  min-height: 58px;
   padding: 8px;
   border: 1px solid #2e4936;
   border-radius: 8px;
@@ -701,6 +719,33 @@
   color-scheme: dark;
 }
 .lc-rail-track { grid-auto-columns: var(--lc-reward-width); }
+.lc-premium-overlay {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  height: var(--lc-reward-height);
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  padding: 8px;
+  background: rgb(0 0 0 / 35%);
+  pointer-events: none;
+}
+.lc-premium-overlay .lc-premium-access {
+  margin: 0;
+  width: min(100%, 420px);
+  background: linear-gradient(105deg, #101a14f2, #174323eb);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 55%);
+}
+.lc-premium-overlay .lc-btn { pointer-events: auto; }
+@media (max-width: 760px) {
+  .lc-level-pass-header .lc-rewards-banner-content { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .lc-reward-highlights { width: min(100%, 424px); }
+}
+@media (max-width: 480px) {
+  .lc-premium-overlay .lc-premium-access { flex-wrap: wrap; gap: 8px; padding: 8px; font-size: .875rem; }
+  .lc-premium-overlay .lc-btn { flex-basis: 100%; }
+}
 .lc-reward-state {
   min-height: 30px;
   padding-inline: 8px;
@@ -782,7 +827,7 @@
   #trilha-do-passe { scroll-margin-top: 230px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lc-reward-highlights { overflow-x: auto; scrollbar-width: none; }
+  .lc-reward-highlights-row { overflow-x: auto; scrollbar-width: none; }
   .lc-reward-highlights-track { animation: none; }
   .lc-reward-highlight-set[aria-hidden="true"] { display: none; }
 }

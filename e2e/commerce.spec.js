@@ -48,10 +48,28 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(showcase.getByRole("link")).toHaveCount(10);
   await expect(showcase.getByRole("button")).toHaveCount(0);
   await expect(showcase.locator("img").first()).toHaveCSS("height", "40px");
-  await expect(showcase.locator(".lc-reward-highlights-track")).toHaveCSS("animation-name", "lc-reward-loop");
-  expect(await showcase.evaluate(element => element.previousElementSibling.querySelector(".lc-premium-access button")?.textContent))
-    .toContain("Liberar Premium");
+  const tracks = showcase.locator(".lc-reward-highlights-track");
+  await expect(tracks).toHaveCount(3);
+  for (const [index, direction] of ["reverse", "normal", "reverse"].entries()) {
+    await expect(tracks.nth(index)).toHaveCSS("animation-name", "lc-reward-loop");
+    await expect(tracks.nth(index)).toHaveCSS("animation-direction", direction);
+  }
+  expect(await showcase.evaluate(element => {
+    const banner = element.closest("header");
+    const frame = element.getBoundingClientRect();
+    return banner && frame.left >= banner.querySelector("h1").getBoundingClientRect().right
+      && frame.right <= banner.getBoundingClientRect().right;
+  })).toBeTruthy();
+  const overlay = page.locator(".lc-rail > .lc-premium-overlay");
+  await expect(overlay.getByRole("button", { name: "Liberar Premium" })).toBeVisible();
+  expect(await overlay.evaluate(element => {
+    const layer = element.getBoundingClientRect();
+    const premium = element.parentElement.querySelector(".lc-rail-reward.premium").getBoundingClientRect();
+    const free = element.parentElement.querySelector(".lc-rail-reward.free").getBoundingClientRect();
+    return layer.top === premium.top && layer.bottom === premium.bottom && layer.bottom < free.top;
+  })).toBeTruthy();
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(tracks.first()).toHaveCSS("animation-name", "none");
   await showcase.getByRole("link").first().click();
   await expect(page).toHaveURL(/#trilha-do-passe$/);
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -233,5 +251,14 @@ test("catalog, private pass, checkout without live charges and profile", async (
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+  const passProducts = page.locator(".lc-pass-products");
+  await expect(passProducts.getByRole("heading", { name: "Produtos da loja" })).toBeVisible();
+  const availableCard = passProducts.locator("article").filter({
+    has: page.getByRole("button", { name: "Comprar agora" }).and(page.locator(":enabled")),
+  }).first();
+  const itemName = await availableCard.getByRole("heading").innerText();
+  await availableCard.getByRole("button", { name: "Comprar agora" }).click();
+  await expect(page).toHaveURL(/\/checkout\?modo=imediato$/);
+  await expect(page.getByRole("complementary", { name: "Resumo da compra" })).toContainText(itemName);
   expect(errors).toEqual([]);
 });

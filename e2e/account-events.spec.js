@@ -184,6 +184,7 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(admin.getByText("Pagamento simulado. Nenhuma cobrança foi realizada.")).toBeVisible();
     await page.goto("/passe");
     await expect(page.getByText("Premium ativo", { exact: true })).toBeVisible();
+    await expect(page.locator(".lc-premium-overlay")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Liberar Premium" })).toHaveCount(0);
 
     await admin.goto("/admin/produtos/" + product.id + "/editar");
