@@ -22,8 +22,8 @@
 
         <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
 
-        <form th:action="@{/admin/produtos}" method="get" class="admin-filter">
-            <label>Buscar produtos<input name="busca" th:value="${busca}" placeholder="Nome ou SKU"></label>
+        <form th:action="@{/admin/produtos}" method="get" class="admin-filter admin-table-toolbar" aria-label="Filtrar produtos">
+            <label class="admin-toolbar-search">Buscar produtos<input name="busca" th:value="${busca}" placeholder="Nome ou SKU"></label>
             <label>Visibilidade<select name="visibilidade">
                 <option value="ativos" th:selected="${visibilidade == 'ativos'}">Ativos</option>
                 <option value="inativos" th:selected="${visibilidade == 'inativos'}">Inativos</option>
@@ -39,33 +39,32 @@
         <table class="admin-table">
             <thead>
             <tr>
-                <th>Imagem</th>
-                <th>Produto</th>
-                <th>SKU</th>
-                <th>Categoria</th>
-                <th>Preço</th>
-                <th>Estoque</th>
-                <th>Status</th>
-                <th>Ações</th>
+                <th scope="col">Produto</th>
+                <th scope="col">Categoria</th>
+                <th scope="col" class="admin-number">Preço</th>
+                <th scope="col" class="admin-number">Estoque</th>
+                <th scope="col">Visibilidade</th>
+                <th scope="col">Ações</th>
             </tr>
             </thead>
             <tbody>
-            <tr th:if="${produtos.isEmpty()}"><td colspan="8" class="admin-empty">Nenhum produto encontrado.</td></tr>
+            <tr th:if="${produtos.isEmpty()}"><td colspan="6" class="admin-empty">Nenhum produto encontrado.</td></tr>
             <tr th:each="produto : ${produtos}">
-                <td>
-                    <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
-                         alt="" class="admin-product-image">
-                </td>
-                <td>
-                    <strong th:text="${produto.nome}"></strong>
-                    <div class="table-subtext" th:text="${produto.marca != null ? produto.marca : 'Sem marca'}"></div>
-                </td>
-                <td th:text="${produto.sku != null ? produto.sku : '-'}"></td>
+                <th scope="row" class="admin-row-label">
+                    <div class="admin-product-cell">
+                        <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
+                             width="32" height="32" loading="lazy" decoding="async" alt="" class="admin-product-image">
+                        <div>
+                            <a th:href="@{/admin/produtos/{id}/editar(id=${produto.id})}" th:text="${produto.nome}"></a>
+                            <div class="table-subtext" th:text="${produto.sku != null ? produto.sku : 'Sem SKU'}"></div>
+                        </div>
+                    </div>
+                </th>
                 <td th:text="${produto.categoria != null ? produto.categoria.nome : '-'}"></td>
-                <td th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}"></td>
-                <td>
-                    <span th:text="${produto.estoque}"
-                          th:classappend="${produto.estoque == 0} ? 'text-danger' : ''"></span>
+                <td class="admin-number" th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}"></td>
+                <td class="admin-number">
+                    <strong th:text="${produto.estoque}" th:classappend="${produto.estoque == 0 ? 'text-danger' : ''}"></strong>
+                    <div class="table-subtext" th:if="${produto.estoque > 0 and produto.estoque <= limiteEstoque}">Estoque baixo</div>
                 </td>
                 <td>
                     <span class="status-badge" th:classappend="${produto.ativo ? 'status-confirmado' : 'status-cancelado'}"

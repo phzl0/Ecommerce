@@ -44,7 +44,7 @@
             </div>
         </section>
 
-        <section class="admin-section" aria-labelledby="admin-priorities">
+        <section class="admin-section admin-priority-panel" aria-labelledby="admin-priorities">
             <h2 id="admin-priorities">Atenção agora</h2>
             <div class="admin-priorities">
                 <a th:href="@{/admin/pedidos(status='PENDENTE')}">
@@ -76,7 +76,7 @@
                 <tr>
                     <th>Pedido</th>
                     <th>Cliente</th>
-                    <th>Total</th>
+                    <th class="admin-number">Total</th>
                     <th>Status</th>
                     <th>Data</th>
                     <th></th>
@@ -87,7 +87,7 @@
                 <tr th:each="pedido : ${pedidosRecentes}">
                     <td th:text="${pedido.numero != null ? pedido.numero : '#' + pedido.id}"></td>
                     <td th:text="${pedido.usuario.nome}"></td>
-                    <td th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></td>
+                    <td class="admin-number" th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></td>
                     <td>
                         <span class="status-badge"
                               th:text="${pedido.status}"

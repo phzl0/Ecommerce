@@ -47,6 +47,7 @@ test("catalog, private pass, checkout without live charges and profile", async (
   const showcase = page.getByRole("region", { name: "Vitrine ilustrativa de prêmios" });
   await expect(showcase.getByRole("link")).toHaveCount(10);
   await expect(showcase.getByRole("button")).toHaveCount(0);
+  await expect(showcase.locator("img").first()).toHaveCSS("height", "40px");
   await expect(showcase.locator(".lc-reward-highlights-track")).toHaveCSS("animation-name", "lc-reward-loop");
   expect(await showcase.evaluate(element => element.previousElementSibling.querySelector(".lc-premium-access button")?.textContent))
     .toContain("Liberar Premium");
@@ -107,6 +108,20 @@ test("catalog, private pass, checkout without live charges and profile", async (
   const catalog = await (await page.request.get("/api/store/catalog")).json();
   expect(catalog.produtos.length).toBeGreaterThan(0);
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/catalogo");
+  const filterToggle = page.getByRole("button", { name: /^Filtros e ordenação/ });
+  const filters = page.getByRole("form", { name: "Filtrar catálogo" });
+  await expect(filters).toBeHidden();
+  await filterToggle.click();
+  await filters.getByLabel("Busca").fill("produto-inexistente-para-filtro");
+  await expect(page).toHaveURL(/\/catalogo$/);
+  await filters.getByRole("button", { name: "Aplicar filtros" }).click();
+  await expect(page.getByText(/Nenhum produto encontrado/)).toBeVisible();
+  await expect(filters).toBeHidden();
+  await filterToggle.click();
+  await filters.getByRole("button", { name: "Limpar", exact: true }).click();
+  await expect(page.locator(".lc-product-visual").first()).toHaveCSS("height", "96px");
+
   const longName = "Produto com título longo " + "SuperModelo".repeat(14);
   await page.route("**/api/store/catalog?*", async route => {
     const data = await (await route.fetch()).json();
@@ -135,14 +150,14 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(summary).toContainText("Quantidade 1");
   await expect(summary.locator("img")).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Endereco de entrega" }),
+    page.getByRole("heading", { name: "Endereço de entrega" }),
   ).toBeVisible();
   for (const [label, value] of [
     ["Nome completo", "Cliente navegador"],
     ["Telefone", "11999999999"],
     ["CEP", "01001000"],
-    ["Endereco", "Rua teste"],
-    ["Numero", "10"],
+    ["Endereço", "Rua teste"],
+    ["Número", "10"],
     ["Bairro", "Centro"],
     ["Cidade", "São Paulo"],
     ["Estado", "SP"],

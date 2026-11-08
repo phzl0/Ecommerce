@@ -187,7 +187,9 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(page.getByRole("button", { name: "Liberar Premium" })).toHaveCount(0);
 
     await admin.goto("/admin/produtos/" + product.id + "/editar");
-    const originalImage = await admin.getByRole("img", { name: "Imagem atual" }).getAttribute("src");
+    const preview = admin.getByRole("img", { name: "Imagem atual" });
+    await expect(preview).toHaveCSS("height", "64px");
+    const originalImage = await preview.getAttribute("src");
     await admin.getByLabel("Descrição curta", { exact: true }).fill("Descrição atualizada no painel.");
     await admin.getByRole("button", { name: "Salvar produto" }).click();
     await expect(admin.getByText("Produto salvo com sucesso!")).toBeVisible();

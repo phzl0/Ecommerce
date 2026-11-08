@@ -515,14 +515,14 @@ function ProductCard({ product, onAddToCart, onBuyNow }) {
   const href = `/produto/${product.id}`;
   return html`<article className="lc-product-card lc-shelf-card">
     <${AppLink} href=${href} className="lc-product-visual">
-      <img src=${product.imagemUrl || "/images/sem-foto.png"} alt=${product.nome} loading="lazy"
+      <img src=${product.imagemUrl || "/images/sem-foto.png"} alt=${product.nome} loading="lazy" decoding="async"
         onError=${event => {
           if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
         }} />
     <//>
     <div className="lc-product-copy">
       <h3><${AppLink} href=${href}>${product.nome}<//></h3>
-      <strong>${currency(product.preco)}</strong>
+      <strong className="lc-card-price">${currency(product.preco)}</strong>
       <${ProductPurchaseActions} product=${product} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
     </div>
   </article>`;
@@ -533,20 +533,8 @@ function HomeProductShelf({ title, products, onAddToCart, onBuyNow }) {
   return html`<section className="lc-section lc-home-shelf">
     <${SectionHeader} title=${title} actionLabel="Ver catálogo" />
     <div className="lc-home-products">
-      ${products.slice(0, 6).map(product => html`
-        <article className="lc-home-product" key=${product.id}>
-          <${AppLink} href=${`/produto/${product.id}`} className="lc-home-product-photo">
-            <img src=${product.imagemUrl || "/images/sem-foto.png"} alt=${product.nome} loading="lazy"
-              onError=${event => {
-                if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
-              }} />
-          <//>
-          <div className="lc-home-product-info">
-            <h3><${AppLink} href=${`/produto/${product.id}`}>${product.nome}<//></h3>
-            <strong>${currency(product.preco)}</strong>
-            <${ProductPurchaseActions} product=${product} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
-          </div>
-        </article>`)}
+      ${products.slice(0, 6).map(product => html`<${ProductCard}
+        key=${product.id} product=${product} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />`)}
     </div>
   </section>`;
 }
@@ -668,139 +656,109 @@ function formatCep(cep) {
   return cep.replace(/^(\d{5})(\d{3})$/, "$1-$2");
 }
 
-function CatalogFilters({ categories, filters, setFilters }) {
-  return html`
-    <aside className="lc-filter-card">
-      <h3>Filtrar resultados</h3>
-      <label>
-        Busca
-        <input
-          value=${filters.busca}
-          onChange=${(event) => setFilters({ ...filters, busca: event.target.value })}
-          placeholder="Produto ou marca"
-        />
+function CatalogFilters({ categories, initialFilters, onApply }) {
+  const [filters, setFilters] = useState(initialFilters);
+  const [expanded, setExpanded] = useState(false);
+  const change = (field, value) => setFilters(current => ({ ...current, [field]: value }));
+  const activeCount = [initialFilters.busca, initialFilters.categoriaId, initialFilters.precoMin,
+    initialFilters.precoMax, initialFilters.ordenacao !== "relevancia"].filter(Boolean).length;
+
+  return html`<aside className="lc-catalog-filters" data-expanded=${expanded}>
+    <button type="button" className="lc-btn lc-btn-ghost lc-filter-toggle" aria-expanded=${expanded}
+      aria-controls="catalog-filters" onClick=${() => setExpanded(!expanded)}>
+      Filtros e ordenação${activeCount ? ` (${activeCount})` : ""}
+    </button>
+    <form id="catalog-filters" className="lc-filter-card" aria-label="Filtrar catálogo" onSubmit=${event => {
+      event.preventDefault();
+      onApply(filters);
+      setExpanded(false);
+    }}>
+      <h2>Filtros</h2>
+      <label>Busca
+        <input value=${filters.busca} onChange=${event => change("busca", event.target.value)}
+          placeholder="Nome do produto" />
       </label>
-      <label>
-        Categoria
-        <select
-          value=${filters.categoriaId}
-          onChange=${(event) => setFilters({ ...filters, categoriaId: event.target.value })}
-        >
+      <label>Categoria
+        <select value=${filters.categoriaId} onChange=${event => change("categoriaId", event.target.value)}>
           <option value="">Todas</option>
-          ${categories.map(
-            (category) => html`
-              <option key=${category.id} value=${category.id}>
-                ${category.nome}
-              </option>
-            `,
-          )}
+          ${categories.map(category => html`<option key=${category.id} value=${category.id}>${category.nome}</option>`)}
         </select>
       </label>
-      <label>
-        Preco minimo
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value=${filters.precoMin}
-          onChange=${(event) => setFilters({ ...filters, precoMin: event.target.value })}
-        />
-      </label>
-      <label>
-        Preco maximo
-        <input
-          type="number"
-          min="0"
-          step="0.01"
-          value=${filters.precoMax}
-          onChange=${(event) => setFilters({ ...filters, precoMax: event.target.value })}
-        />
-      </label>
-      <label>
-        Ordenar por
-        <select
-          value=${filters.ordenacao}
-          onChange=${(event) => setFilters({ ...filters, ordenacao: event.target.value })}
-        >
-          <option value="relevancia">Relevancia</option>
-          <option value="preco-asc">Menor preco</option>
-          <option value="preco-desc">Maior preco</option>
+      <div className="lc-filter-prices">
+        <label>Preço mínimo
+          <input type="number" min="0" step="0.01" value=${filters.precoMin}
+            onChange=${event => change("precoMin", event.target.value)} />
+        </label>
+        <label>Preço máximo
+          <input type="number" min="0" step="0.01" value=${filters.precoMax}
+            onChange=${event => change("precoMax", event.target.value)} />
+        </label>
+      </div>
+      <label>Ordenar por
+        <select value=${filters.ordenacao} onChange=${event => change("ordenacao", event.target.value)}>
+          <option value="relevancia">Relevância</option>
+          <option value="preco-asc">Menor preço</option>
+          <option value="preco-desc">Maior preço</option>
           <option value="recentes">Mais recentes</option>
-          <option value="nome-desc">Nome Z-A</option>
+          <option value="nome-desc">Nome Z–A</option>
         </select>
       </label>
-    </aside>
-  `;
+      <div className="lc-filter-actions">
+        <button type="submit" className="lc-btn lc-btn-primary">Aplicar filtros</button>
+        <button type="button" className="lc-btn lc-btn-ghost" onClick=${() => {
+          const empty = parseCatalogFilters("/catalogo");
+          setFilters(empty);
+          onApply(empty);
+          setExpanded(false);
+        }}>Limpar</button>
+      </div>
+    </form>
+  </aside>`;
 }
 
 function CatalogPage({ route, onAddToCart, onBuyNow }) {
   const [data, setData] = useState({ categorias: [], produtos: [], total: 0 });
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState(parseCatalogFilters(route));
+  const [error, setError] = useState(false);
+  const filters = useMemo(() => parseCatalogFilters(route), [route]);
 
   useEffect(() => {
-    setFilters(parseCatalogFilters(route));
-  }, [route]);
-
-  useEffect(() => {
+    let active = true;
     const params = new URLSearchParams();
-    if (filters.busca) params.set("busca", filters.busca);
-    if (filters.categoriaId) params.set("categoriaId", filters.categoriaId);
-    if (filters.precoMin) params.set("precoMin", filters.precoMin);
-    if (filters.precoMax) params.set("precoMax", filters.precoMax);
-    if (filters.ordenacao) params.set("ordenacao", filters.ordenacao);
-
+    Object.entries(filters).forEach(([field, value]) => { if (value) params.set(field, value); });
     setLoading(true);
+    setError(false);
     getJson(`/api/store/catalog?${params.toString()}`)
-      .then(setData)
-      .finally(() => setLoading(false));
+      .then(result => { if (active) setData(result); })
+      .catch(() => { if (active) setError(true); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [filters]);
 
   const updateFilters = (nextFilters) => {
     const params = new URLSearchParams();
-    if (nextFilters.busca) params.set("busca", nextFilters.busca);
-    if (nextFilters.categoriaId)
-      params.set("categoriaId", nextFilters.categoriaId);
-    if (nextFilters.precoMin) params.set("precoMin", nextFilters.precoMin);
-    if (nextFilters.precoMax) params.set("precoMax", nextFilters.precoMax);
-    if (nextFilters.ordenacao && nextFilters.ordenacao !== "relevancia")
-      params.set("ordenacao", nextFilters.ordenacao);
-    navigate(`/catalogo${params.toString() ? `?${params.toString()}` : ""}`);
+    Object.entries(nextFilters).forEach(([field, value]) => {
+      if (value && !(field === "ordenacao" && value === "relevancia")) params.set(field, value);
+    });
+    navigate(`/catalogo${params.size ? `?${params}` : ""}`);
   };
 
-  return html`
-    <main className="lc-page lc-catalog-page">
-      <section className="lc-catalog-shell">
-        <${CatalogFilters}
-          categories=${data.categorias}
-          filters=${filters}
-          setFilters=${updateFilters}
-        />
-        <div className="lc-catalog-results">
-          <div className="lc-section-header">
-            <div>
-              <h1>Catálogo</h1>
-              <p>
-                ${loading ? "Atualizando produtos..." : `${data.total} produtos encontrados.`}
-              </p>
-            </div>
-          </div>
-          <div className="lc-product-grid">
-            ${data.produtos.map(
-              (product) => html`
-                <${ProductCard}
-                  key=${product.id}
-                  product=${product}
-                  onAddToCart=${onAddToCart}
-                  onBuyNow=${onBuyNow}
-                />
-              `,
-            )}
-          </div>
-        </div>
-      </section>
-    </main>
-  `;
+  return html`<main className="lc-page lc-catalog-page">
+    <header className="lc-store-heading lc-catalog-heading">
+      <h1>Catálogo</h1>
+      <p role="status">${loading ? "Atualizando produtos…" : !error && `${data.total} ${data.total === 1 ? "produto encontrado" : "produtos encontrados"}`}</p>
+    </header>
+    <section className="lc-catalog-shell">
+      <${CatalogFilters} key=${route} categories=${data.categorias} initialFilters=${filters} onApply=${updateFilters} />
+      <div className="lc-catalog-results" aria-busy=${loading}>
+        ${error ? html`<p role="alert" className="lc-form-notice error">Não foi possível carregar os produtos.</p>`
+          : !loading && !data.produtos.length ? html`<p className="lc-catalog-empty">Nenhum produto encontrado. Ajuste ou limpe os filtros para continuar.</p>`
+          : html`<div className="lc-product-grid">${data.produtos.map(product => html`
+              <${ProductCard} key=${product.id} product=${product} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />`)}
+            </div>`}
+      </div>
+    </section>
+  </main>`;
 }
 
 function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, reviewRequested, address }) {
@@ -894,26 +852,24 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
           />
         </div>
         <div className="lc-detail-copy">
-          <div className="lc-card-overlay detail">
-            ${product.destaque ? html`<span className="lc-tag">Produto destaque</span>` : null}
-            <span className="lc-outline-tag"
-              >${product.sku || "LEVEL SKU"}</span
-            >
+          <div className="lc-detail-meta">
+            <span>${product.marca || BRAND}</span>
+            ${product.sku ? html`<span>SKU ${product.sku}</span>` : null}
+            ${product.destaque ? html`<span className="lc-detail-featured">Destaque</span>` : null}
           </div>
-          <span className="lc-product-brand">${product.marca || BRAND}</span>
           <h1>${product.nome}</h1>
-          <p className="lc-detail-price">${currency(product.preco)}</p>
           <div className="lc-review-summary">
-            <strong
-              >${product.mediaAvaliacoes?.toFixed ? product.mediaAvaliacoes.toFixed(1) : product.mediaAvaliacoes || "0.0"}</strong
-            >
-            <span>${product.totalAvaliacoes} avaliações</span>
+            ${product.totalAvaliacoes
+              ? html`<strong>★ ${Number(product.mediaAvaliacoes || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1 })}</strong>`
+              : null}
+            <a href="#avaliacoes-do-produto">${product.totalAvaliacoes
+              ? `${product.totalAvaliacoes} ${product.totalAvaliacoes === 1 ? "avaliação" : "avaliações"}`
+              : "Ainda sem avaliações"}</a>
           </div>
-          <p className="lc-detail-short">
-            ${product.descricaoCurta || product.descricao}
-          </p>
-          <p className="lc-detail-stock">
-            ${product.estoque > 0 ? `${product.estoque} unidades disponiveis` : "Produto indisponivel"}
+          <p className="lc-detail-price">${currency(product.preco)}</p>
+          ${product.descricaoCurta ? html`<p className="lc-detail-short">${product.descricaoCurta}</p>` : null}
+          <p className="lc-detail-stock" data-available=${product.estoque > 0}>
+            ${product.estoque > 0 ? "Em estoque" : "Produto indisponível"}
           </p>
           <div className="lc-detail-actions">
             <button
@@ -944,7 +900,7 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
         <p>${product.descricao || "Descrição detalhada em breve."}</p>
       </section>
 
-      <section className="lc-section lc-review-grid">
+      <section id="avaliacoes-do-produto" className="lc-section lc-review-grid">
         <div className="lc-checkout-card">
           <h3>Avaliações de clientes</h3>
           <div className="lc-pass-history">
@@ -1204,8 +1160,8 @@ function CheckoutPage({ items, auth, clearCart, address }) {
               <p>Informe onde receber e confira as condições da compra.</p>
             </div>
           </div>
-          <div className="lc-checkout-card">
-            <h3>Endereco de entrega</h3>
+          <section className="lc-checkout-card" aria-labelledby="checkout-delivery">
+            <h2 id="checkout-delivery"><span className="lc-checkout-step" aria-hidden="true">1</span> Endereço de entrega</h2>
             ${address ? html`<button type="button" className="lc-btn lc-btn-ghost lc-use-address"
               onClick=${() => setForm(current => ({ ...current, ...address }))}>Usar endereço salvo</button>` : null}
             <div className="lc-form-grid two">
@@ -1227,14 +1183,14 @@ function CheckoutPage({ items, auth, clearCart, address }) {
                   onChange=${(e) => setForm({ ...form, cep: e.target.value })}
               /></label>
               <label
-                >Endereco<input
+                >Endereço<input
                   value=${form.endereco}
                   onChange=${(e) => setForm({ ...form, endereco: e.target.value })}
               /></label>
             </div>
             <div className="lc-form-grid three">
               <label
-                >Numero<input
+                >Número<input
                   value=${form.numero}
                   onChange=${(e) => setForm({ ...form, numero: e.target.value })}
               /></label>
@@ -1261,8 +1217,9 @@ function CheckoutPage({ items, auth, clearCart, address }) {
                   onChange=${(e) => setForm({ ...form, estado: e.target.value })}
               /></label>
             </div>
-          </div>
-          <div className="lc-checkout-card">
+          </section>
+          <section className="lc-checkout-card" aria-labelledby="checkout-payment">
+            <h2 id="checkout-payment"><span className="lc-checkout-step" aria-hidden="true">2</span> Pagamento</h2>
             <label
               >Cupom da sua coleção<input
                 value=${form.cupom || ""}
@@ -1279,7 +1236,7 @@ function CheckoutPage({ items, auth, clearCart, address }) {
             <div className="lc-payment-options">
               ${[
                 ["pix", "Pix"],
-                ["cartao", "Cartao de credito"],
+                ["cartao", "Cartão de crédito"],
                 ["boleto", "Boleto bancario"],
               ].map(
                 ([value, label]) => html`
@@ -1287,6 +1244,7 @@ function CheckoutPage({ items, auth, clearCart, address }) {
                     key=${value}
                     className=${`lc-payment-option ${form.pagamento === value ? "ativo" : ""}`}
                     onClick=${() => setForm({ ...form, pagamento: value })}
+                    aria-pressed=${form.pagamento === value}
                     type="button"
                   >
                     ${label}
@@ -1301,7 +1259,7 @@ function CheckoutPage({ items, auth, clearCart, address }) {
                   : "Entre na sua conta para concluir a compra e iniciar o pagamento."
               }
             </p>
-          </div>
+          </section>
         </div>
         <aside className="lc-cart-summary" aria-label="Resumo da compra">
           <h2>Resumo da compra</h2>
@@ -1324,7 +1282,7 @@ function CheckoutPage({ items, auth, clearCart, address }) {
           </div>
           <div className="lc-summary-line">
             <span>Frete</span
-            ><strong>${freight === 0 ? "Gratis" : currency(freight)}</strong>
+            ><strong>${freight === 0 ? "Grátis" : currency(freight)}</strong>
           </div>
           <div className="lc-summary-line lc-summary-total"><span>Total</span><strong>${currency(total)}</strong></div>
           ${message ? html`<p className="lc-checkout-note" role="alert">${message}</p>` : null}
@@ -1830,7 +1788,7 @@ function RewardHighlights({ products, target }) {
         aria-hidden=${copy ? "true" : undefined}>
         ${highlights.map(({ image, label }, index) => html`<a href=${target} className="lc-reward-highlight"
           key=${index} tabIndex=${copy ? -1 : undefined} aria-label=${`${label} · Ver passe`}>
-          <img src=${image} alt="" onError=${event => {
+          <img src=${image} alt="" decoding="async" onError=${event => {
             if (!event.currentTarget.src.endsWith("/app/level-free.webp")) event.currentTarget.src = "/app/level-free.webp";
           }} />
           <strong>${label}</strong>

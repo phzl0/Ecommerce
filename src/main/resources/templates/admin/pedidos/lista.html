@@ -18,8 +18,8 @@
         </div></header>
         <p th:if="${msg}" class="alert alert-sucesso" role="status" th:text="${msg}"></p>
         <p th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></p>
-        <form th:action="@{/admin/pedidos}" method="get" class="admin-filter">
-            <label>Buscar pedidos<input name="busca" th:value="${busca}" placeholder="Número, cliente ou e-mail"></label>
+        <form th:action="@{/admin/pedidos}" method="get" class="admin-filter admin-table-toolbar" aria-label="Filtrar pedidos">
+            <label class="admin-toolbar-search">Buscar pedidos<input name="busca" th:value="${busca}" placeholder="Número, cliente ou e-mail"></label>
             <label>Status<select name="status">
                 <option value="">Todos</option>
                 <option th:each="opcao : ${statusOpcoes}" th:value="${opcao}" th:text="${opcao}"
@@ -40,7 +40,7 @@
             <tr>
                 <th>Número</th>
                 <th>Cliente</th>
-                <th>Total</th>
+                <th class="admin-number">Total</th>
                 <th>Pedido</th>
                 <th>Pagamento</th>
                 <th>Envio</th>
@@ -51,16 +51,22 @@
             <tbody>
             <tr th:if="${pedidos.isEmpty()}"><td colspan="8" class="admin-empty">Nenhum pedido encontrado.</td></tr>
             <tr th:each="pedido : ${pedidos}">
-                <td th:text="${pedido.numero != null ? pedido.numero : '#' + pedido.id}"></td>
+                <th scope="row" class="admin-row-label">
+                    <a th:href="@{/admin/pedidos/{id}(id=${pedido.id})}"
+                       th:text="${pedido.numero != null ? pedido.numero : '#' + pedido.id}"></a>
+                    <div class="table-subtext" th:text="${pedido.temporadaPasseId != null ? 'Passe' : 'Loja'}"></div>
+                </th>
                 <td th:text="${pedido.usuario.nome}"></td>
-                <td th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></td>
+                <td class="admin-number" th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></td>
                 <td>
                         <span class="status-badge"
                               th:text="${pedido.status}"
                               th:classappend="'status-' + ${pedido.status.name().toLowerCase()}">
                         </span>
                 </td>
-                <td th:text="${pedido.pagamento == null ? 'Sem pagamento' : pedido.pagamento.status}"></td>
+                <td><span class="status-badge"
+                    th:classappend="${pedido.pagamento == null ? 'status-neutro' : (pedido.pagamento.status.name() == 'APROVADO' ? 'status-confirmado' : (pedido.pagamento.status.name() == 'PENDENTE' ? 'status-pendente' : 'status-neutro'))}"
+                    th:text="${pedido.pagamento == null ? 'Sem pagamento' : pedido.pagamento.status}"></span></td>
                 <td th:text="${pedido.temporadaPasseId != null ? 'Digital' :
                     (pedido.status.name() == 'ENVIADO' ? 'Enviado' : (pedido.status.name() == 'ENTREGUE' ? 'Entregue' :
                     (pedido.status.name() == 'CONFIRMADO' ? 'A enviar' : '—')))}"></td>
