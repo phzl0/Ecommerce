@@ -19,6 +19,7 @@
     <a th:href="@{/admin/pedidos}" th:classappend="${activePage == 'pedidos'} ? 'ativo' : ''">
       Pedidos
     </a>
+    <a th:href="@{/admin/eventos}" th:classappend="${activePage == 'eventos'} ? 'ativo' : ''">Eventos</a>
     <hr class="sidebar-divider">
     <a th:href="@{/}">Ver storefront</a>
     <form th:action="@{/auth/logout}" method="post" class="sidebar-logout">

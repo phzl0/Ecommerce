@@ -231,3 +231,32 @@
         grid-template-columns: 1fr;
     }
 }
+
+.lc-admin-event-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+.lc-admin-event-form label {
+    display: grid;
+    gap: 8px;
+    font-weight: 650;
+}
+.lc-admin-event-form input,
+.lc-admin-event-form textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    border: 1px solid #aab1bb;
+    border-radius: 8px;
+    font: inherit;
+}
+.lc-admin-event-form textarea { min-height: 96px; }
+.lc-admin-event-form .lc-admin-full { grid-column: 1 / -1; }
+.lc-admin-events { display: grid; gap: 8px; padding: 0; list-style: none; }
+.lc-admin-events li { display: grid; gap: 4px; padding: 8px 0; border-bottom: 1px solid #dce0e6; }
+.lc-admin-simulation { margin-top: 24px; padding-top: 16px; border-top: 1px solid #dce0e6; }
+@media (max-width: 640px) {
+    .lc-admin-event-form { grid-template-columns: 1fr; }
+}

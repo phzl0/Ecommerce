@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Eventos | LEVEL COMMERCE</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='eventos'"></div>
+    <main class="admin-main">
+        <div class="admin-header"><h1>Eventos semanais</h1><a href="/eventos">Ver na loja</a></div>
+        <div th:if="${msg}" class="alert alert-sucesso" role="status" th:text="${msg}"></div>
+        <div th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></div>
+        <div class="form-card">
+            <h2>Publicar evento</h2>
+            <p>Os horários seguem o fuso da loja. O evento pode durar até sete dias e as regras ficam fixas após a publicação.</p>
+            <form method="post" th:action="@{/admin/eventos}" class="lc-admin-event-form">
+                <label>Título<input name="titulo" required maxlength="100" value="Semana XP em Dobro"></label>
+                <label>Nome do selo<input name="selo" required maxlength="80" value="Veterano da Semana LEVEL"></label>
+                <label class="lc-admin-full">Descrição<textarea name="descricao" required maxlength="500">Ganhe XP em dobro em compras aprovadas durante a campanha.</textarea></label>
+                <label>Início<input name="inicio" type="datetime-local" required th:value="${inicio}"></label>
+                <label>Fim<input name="fim" type="datetime-local" required th:value="${fim}"></label>
+                <label>Multiplicador<input name="multiplicador" type="number" min="1" max="5" required value="2"></label>
+                <label>Valor mínimo em produtos (R$)<input name="minimo" type="number" min="0" max="999999.99" step="0.01" required value="0"></label>
+                <label>Meta para resgate (XP)<input name="meta" type="number" min="1" max="100000" required value="10"></label>
+                <label>Limite por cliente (XP)<input name="limite" type="number" min="1" max="100000" required value="200"></label>
+                <button type="submit" class="btn btn-primary">Publicar evento</button>
+            </form>
+        </div>
+        <div class="form-card">
+            <h2>Eventos publicados</h2>
+            <p th:if="${eventos.empty}">Nenhum evento publicado.</p>
+            <ul class="lc-admin-events">
+                <li th:each="evento : ${eventos}">
+                    <strong th:text="${evento.titulo}"></strong>
+                    <span th:text="${evento.estado}"></span>
+                    <small th:text="${#temporals.format(evento.inicio, 'dd/MM/yyyy HH:mm')} + ' até ' + ${#temporals.format(evento.fim, 'dd/MM/yyyy HH:mm')}"></small>
+                </li>
+            </ul>
+        </div>
+    </main>
+</div>
+</body>
+</html>

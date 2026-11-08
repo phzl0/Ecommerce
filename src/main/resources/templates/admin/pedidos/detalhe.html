@@ -79,6 +79,11 @@
                         Atualizar
                     </button>
                 </form>
+                <form th:if="${simulacaoDisponivel and pedido.status.name() == 'PENDENTE'}"
+                      th:action="@{/admin/pedidos/{id}/simular(id=${pedido.id})}" method="post" class="lc-admin-simulation">
+                    <p>Teste local. Aprova o pedido para validar XP e recompensas.</p>
+                    <button type="submit" class="btn btn-primary">Simular pagamento aprovado</button>
+                </form>
             </aside>
         </div>
     </main>
