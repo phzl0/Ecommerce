@@ -1,6 +1,5 @@
 package com.paulo.ecommerce.service;
 
-import com.paulo.ecommerce.dto.CarrinhoItem;
 import com.paulo.ecommerce.dto.CheckoutForm;
 import com.paulo.ecommerce.dto.api.CheckoutItemRequest;
 import com.paulo.ecommerce.exception.CarrinhoVazioException;
@@ -15,6 +14,8 @@ import com.paulo.ecommerce.repository.ProdutoRepository;
 import com.paulo.ecommerce.repository.UsuarioRepository;
 import jakarta.servlet.http.HttpSession;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.UUID;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.data.domain.Sort;
@@ -55,7 +56,10 @@ public class PedidoService {
             .findLockedByEmail(emailUsuario)
             .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario", 0L));
 
-    List<CarrinhoItem> itensCarrinho = carrinhoService.getCarrinho(session);
+    List<CheckoutItemRequest> itensCarrinho =
+        carrinhoService.getCarrinho(session).stream()
+            .map(item -> new CheckoutItemRequest(item.getProdutoId(), item.getQuantidade()))
+            .toList();
 
     Pedido pedido = criarPedido(usuario, checkoutForm, itensCarrinho);
     carrinhoService.limpar(session);
@@ -69,7 +73,7 @@ public class PedidoService {
   public Pedido finalizarPedidoApi(
       String emailUsuario,
       CheckoutForm checkoutForm,
-      java.util.List<CheckoutItemRequest> itensRequest,
+      List<CheckoutItemRequest> itensRequest,
       String idempotencyKey) {
     Usuario usuario =
         usuarioRepository
@@ -79,32 +83,13 @@ public class PedidoService {
     String key = usuario.getId() + "-" + idempotencyKey;
     var existente = pedidoRepository.findByUsuarioIdAndCheckoutKey(usuario.getId(), key);
     if (existente.isPresent()) return existente.get();
-    List<CarrinhoItem> itensCarrinho =
-        itensRequest.stream()
-            .sorted(java.util.Comparator.comparing(CheckoutItemRequest::produtoId))
-            .map(
-                item -> {
-                  Produto produto =
-                      produtoRepository
-                          .findById(item.produtoId())
-                          .orElseThrow(
-                              () -> new RecursoNaoEncontradoException("Produto", item.produtoId()));
-                  return new CarrinhoItem(
-                      produto.getId(),
-                      produto.getNome(),
-                      produto.getImagemUrl(),
-                      produto.getPreco(),
-                      item.quantidade());
-                })
-            .toList();
-
-    Pedido pedido = criarPedido(usuario, checkoutForm, itensCarrinho);
+    Pedido pedido = criarPedido(usuario, checkoutForm, itensRequest);
     pedido.setCheckoutKey(key);
     return pedidoRepository.save(pedido);
   }
 
   private Pedido criarPedido(
-      Usuario usuario, CheckoutForm checkoutForm, List<CarrinhoItem> itensCarrinho) {
+      Usuario usuario, CheckoutForm checkoutForm, List<CheckoutItemRequest> itensCarrinho) {
 
     if (itensCarrinho.isEmpty()) {
       throw new CarrinhoVazioException();
@@ -112,7 +97,7 @@ public class PedidoService {
 
     Pedido pedido = new Pedido();
     pedido.setUsuario(usuario);
-    pedido.setNumero(gerarNumeroPedido(usuario));
+    pedido.setNumero("LC-" + UUID.randomUUID().toString().replace("-", "").substring(0, 26));
     pedido.setNomeDestinatario(checkoutForm.getNomeDestinatario());
     pedido.setTelefoneContato(checkoutForm.getTelefoneContato());
     pedido.setCepEntrega(checkoutForm.getCep());
@@ -121,44 +106,34 @@ public class PedidoService {
     pedido.setComplementoEntrega(checkoutForm.getComplemento());
     pedido.setObservacoes(checkoutForm.getObservacoes());
     pedido.setEnderecoEntrega(checkoutForm.getEnderecoCompleto());
-    java.math.BigDecimal subtotal =
-        itensCarrinho.stream()
-            .map(CarrinhoItem::getSubtotal)
-            .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-    java.math.BigDecimal frete = calcularFrete(subtotal);
-    pedido.setSubtotal(subtotal);
-    pedido.setFrete(frete);
-    pedido.setDesconto(java.math.BigDecimal.ZERO);
-    pedido.setTotal(subtotal.add(frete));
-
     List<ItemPedido> itens = new ArrayList<>();
-    for (CarrinhoItem ci :
+    for (CheckoutItemRequest ci :
         itensCarrinho.stream()
-            .sorted(java.util.Comparator.comparing(CarrinhoItem::getProdutoId))
+            .sorted(Comparator.comparing(CheckoutItemRequest::produtoId))
             .toList()) {
       Produto produto =
           produtoRepository
-              .findLockedById(ci.getProdutoId())
-              .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", ci.getProdutoId()));
+              .findLockedById(ci.produtoId())
+              .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", ci.produtoId()));
 
       if (!produto.isAtivo()
-          || ci.getQuantidade() <= 0
-          || produto.getEstoque() < ci.getQuantidade()) {
+          || ci.quantidade() <= 0
+          || produto.getEstoque() < ci.quantidade()) {
         throw new EstoqueInsuficienteException(produto.getNome());
       }
 
-      produto.setEstoque(produto.getEstoque() - ci.getQuantidade());
+      produto.setEstoque(produto.getEstoque() - ci.quantidade());
       produtoRepository.save(produto);
 
       ItemPedido item = new ItemPedido();
       item.setPedido(pedido);
       item.setProduto(produto);
-      item.setQuantidade(ci.getQuantidade());
+      item.setQuantidade(ci.quantidade());
       item.setPrecoUnitario(produto.getPreco());
       itens.add(item);
     }
 
-    subtotal =
+    java.math.BigDecimal subtotal =
         itens.stream()
             .map(
                 i -> i.getPrecoUnitario().multiply(java.math.BigDecimal.valueOf(i.getQuantidade())))
@@ -198,6 +173,17 @@ public class PedidoService {
         .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
   }
 
+  @Transactional
+  public Pedido bloquearPedidoParaConciliacao(Long id) {
+    // Checkout and purchase XP lock the customer before any shared stock is changed.
+    String email =
+        pedidoRepository.findOwnerEmail(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
+    usuarioRepository.findLockedByEmail(email)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Usuario", 0L));
+    return bloquearPedido(id);
+  }
+
   public Pedido buscarPorId(Long id) {
     return pedidoRepository
         .findByIdComDetalhes(id)
@@ -224,6 +210,7 @@ public class PedidoService {
             .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
     if (pedido.getStatus() == status) return;
     if (pedido.getStatus() == Pedido.Status.CANCELADO
+        || status == Pedido.Status.PENDENTE
         || (status == Pedido.Status.CONFIRMADO && pedido.getStatus() != Pedido.Status.PENDENTE))
       throw new IllegalStateException("Transição de pedido inválida.");
     if (status == Pedido.Status.ENVIADO && pedido.getStatus() != Pedido.Status.CONFIRMADO)
@@ -294,24 +281,12 @@ public class PedidoService {
     if (pedido.getTemporadaPasseId() != null) return;
     for (ItemPedido item :
         pedido.getItens().stream()
-            .sorted(java.util.Comparator.comparing(i -> i.getProduto().getId()))
+            .sorted(Comparator.comparing(i -> i.getProduto().getId()))
             .toList()) {
       Produto produto = produtoRepository.findLockedById(item.getProduto().getId()).orElseThrow();
       produto.setEstoque(produto.getEstoque() + item.getQuantidade());
       produtoRepository.save(produto);
     }
-  }
-
-  private String gerarNumeroPedido(Usuario usuario) {
-    String baseUsuario =
-        usuario.getNome() == null
-            ? "CLI"
-            : usuario.getNome().replaceAll("[^A-Za-z0-9]", "").toUpperCase(Locale.ROOT);
-    if (baseUsuario.isBlank()) {
-      baseUsuario = "CLI";
-    }
-    baseUsuario = baseUsuario.substring(0, Math.min(baseUsuario.length(), 3));
-    return "ML-" + baseUsuario + "-" + System.currentTimeMillis();
   }
 
   private java.math.BigDecimal calcularFrete(java.math.BigDecimal subtotal) {

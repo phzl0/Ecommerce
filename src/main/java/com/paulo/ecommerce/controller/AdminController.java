@@ -170,8 +170,12 @@ public class AdminController {
       @PathVariable Long id,
       @RequestParam Pedido.Status status,
       RedirectAttributes redirectAttributes) {
-    pedidoService.atualizarStatus(id, status);
-    redirectAttributes.addFlashAttribute("msg", "Status atualizado!");
+    try {
+      pedidoService.atualizarStatus(id, status);
+      redirectAttributes.addFlashAttribute("msg", "Status atualizado!");
+    } catch (IllegalStateException error) {
+      redirectAttributes.addFlashAttribute("erro", error.getMessage());
+    }
     return "redirect:/admin/pedidos/" + id;
   }
 }

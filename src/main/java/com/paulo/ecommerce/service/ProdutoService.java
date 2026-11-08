@@ -98,7 +98,9 @@ public class ProdutoService {
       value = {"produto", "produtos"},
       allEntries = true)
   public void deletar(Long id) {
-    Produto produto = buscarPorId(id);
+    Produto produto =
+        produtoRepository.findLockedById(id)
+            .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", id));
     produto.setAtivo(false);
     produtoRepository.save(produto);
   }

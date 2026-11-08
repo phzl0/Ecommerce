@@ -26,6 +26,9 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
   List<Pedido> findTop100ByStatusAndDataPedidoBeforeOrderByIdAsc(
       Pedido.Status status, LocalDateTime limite);
 
+  @Query("select p.usuario.email from Pedido p where p.id = :id")
+  java.util.Optional<String> findOwnerEmail(@Param("id") Long id);
+
   @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
   @org.springframework.data.jpa.repository.Query("select x from Pedido x where x.id = :value")
   java.util.Optional<Pedido> findLockedById(

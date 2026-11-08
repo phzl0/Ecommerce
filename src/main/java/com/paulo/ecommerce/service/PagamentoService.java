@@ -165,7 +165,7 @@ public class PagamentoService {
       if (mp.getExternalReference() == null)
         throw new IllegalArgumentException("Pagamento sem pedido.");
       Long pedidoId = Long.parseLong(mp.getExternalReference());
-      Pedido pedido = pedidoService.bloquearPedido(pedidoId);
+      Pedido pedido = pedidoService.bloquearPedidoParaConciliacao(pedidoId);
       Pagamento pagamento = pagamentoRepository.findByPedidoId(pedidoId).orElseThrow();
       if (!"BRL".equals(mp.getCurrencyId())
           || mp.getTransactionAmount() == null
@@ -209,11 +209,13 @@ public class PagamentoService {
           passeService.estornarCompra(pedido.getUsuario().getEmail(), pedidoId);
         }
         case "rejected" -> {
-          if (pagamento.getStatus() != StatusPagamento.APROVADO)
+          if (pagamento.getStatus() != StatusPagamento.APROVADO
+              && pagamento.getStatus() != StatusPagamento.REEMBOLSADO)
             pagamento.setStatus(StatusPagamento.RECUSADO);
         }
         case "cancelled" -> {
-          if (pagamento.getStatus() != StatusPagamento.APROVADO)
+          if (pagamento.getStatus() != StatusPagamento.APROVADO
+              && pagamento.getStatus() != StatusPagamento.REEMBOLSADO)
             pagamento.setStatus(StatusPagamento.CANCELADO);
         }
         default -> {

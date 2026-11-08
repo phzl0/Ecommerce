@@ -136,9 +136,18 @@ class CommerceIntegrationTest {
     order.setSubtotal(new BigDecimal("100"));
     order = orders.saveAndFlush(order);
     assertEquals(0, new BigDecimal("10").compareTo(passes.usarCupom(u, claim.codigo(), order)));
-    final Pedido otherOrder = order;
+    var otherOrder = new Pedido();
+    otherOrder.setUsuario(u);
+    otherOrder.setNumero("COUPON-SECOND-ORDER");
+    otherOrder.setSubtotal(new BigDecimal("100"));
+    otherOrder.setTotal(new BigDecimal("100"));
+    orders.saveAndFlush(otherOrder);
     assertThrows(
         IllegalArgumentException.class, () -> passes.usarCupom(u, claim.codigo(), otherOrder));
+
+    order.setStatus(Pedido.Status.CANCELADO);
+    orders.saveAndFlush(order);
+    assertEquals(0, new BigDecimal("10").compareTo(passes.usarCupom(u, claim.codigo(), otherOrder)));
   }
 
   @Test
@@ -198,6 +207,25 @@ class CommerceIntegrationTest {
     orderService.expirarReserva(order.getId());
     assertEquals(5, products.findById(p.getId()).orElseThrow().getEstoque());
     assertEquals(Pedido.Status.CANCELADO, orders.findById(order.getId()).orElseThrow().getStatus());
+  }
+
+  @Test
+  void adminCannotMoveShippedOrderBackToPending() throws Exception {
+    var order = new Pedido();
+    order.setUsuario(account());
+    order.setNumero("SHIPPED-TEST");
+    order.setTotal(new BigDecimal("100"));
+    order.setStatus(Pedido.Status.ENVIADO);
+    order = orders.saveAndFlush(order);
+
+    mvc.perform(
+            post("/admin/pedidos/{id}/status", order.getId())
+                .with(user("admin@example.test").roles("ADMIN"))
+                .with(csrf())
+                .param("status", "PENDENTE"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(flash().attributeExists("erro"));
+    assertEquals(Pedido.Status.ENVIADO, orders.findById(order.getId()).orElseThrow().getStatus());
   }
 
   @Test
