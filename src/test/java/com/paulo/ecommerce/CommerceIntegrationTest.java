@@ -45,6 +45,26 @@ class CommerceIntegrationTest {
   }
 
   @Test
+  void registrationCannotReuseAnExistingAccountIdOrSetItsOwnRole() throws Exception {
+    var existing = account();
+    mvc.perform(post("/auth/cadastro")
+            .with(csrf())
+            .param("id", existing.getId().toString())
+            .param("role", "ADMIN")
+            .param("temaPasse", "azul")
+            .param("nome", "Outra conta")
+            .param("email", "nova-conta@example.test")
+            .param("senha", "uma-senha-de-teste"))
+        .andExpect(redirectedUrl("/login?sucesso=true"));
+
+    var created = users.findByEmail("nova-conta@example.test").orElseThrow();
+    assertNotEquals(existing.getId(), created.getId());
+    assertEquals(Usuario.Role.CLIENTE, created.getRole());
+    assertNull(created.getTemaPasse());
+    assertEquals("checkout@example.test", users.findById(existing.getId()).orElseThrow().getEmail());
+  }
+
+  @Test
   void checkoutIsIdempotentAndUsesDatabasePrices() throws Exception {
     var u = account();
     var p = product();

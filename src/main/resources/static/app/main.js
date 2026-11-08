@@ -928,7 +928,7 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify }) {
               disabled=${product.estoque <= 0}
               onClick=${() => onAddToCart(product)}
             >
-              Adicionar a sacola
+              Adicionar à sacola
             </button>
           </div>
           <div className="lc-rich-copy">
@@ -1422,7 +1422,7 @@ function ProfilePage({ auth, onAuthRefresh, notify }) {
               type="submit"
               disabled=${saving}
             >
-              ${saving ? "Salvando..." : "Salvar alteracoes"}
+              ${saving ? "Salvando..." : "Salvar alterações"}
             </button>
           </form>
           <aside className="lc-cart-summary">

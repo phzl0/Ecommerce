@@ -56,8 +56,8 @@ export function AuthPage({ type, auth, route, postJson, csrf }) {
     setForm({ ...form, [field]: event.target.value });
     setFeedback(null);
   };
-  const validLength = form.senha.trim().length > 0 && form.senha.length >= 12
-    && new TextEncoder().encode(form.senha).length <= 72;
+  const tooLong = new TextEncoder().encode(form.senha).length > 72;
+  const validLength = form.senha.trim().length > 0 && form.senha.length >= 12 && !tooLong;
   const notice = feedback || (query.has("erro") ? { error: true, text: "E-mail ou senha incorretos." }
     : query.has("reset") ? { text: "Senha atualizada. Entre com sua nova senha." }
     : query.has("sucesso") ? { text: "Conta criada. Entre para continuar." }
@@ -131,7 +131,9 @@ export function AuthPage({ type, auth, route, postJson, csrf }) {
               </label>` : null}
               ${createsPassword ? html`
                 <p id="password-hint" className=${validLength ? "lc-password-ok" : "lc-auth-hint"}>
-                  ${validLength ? "✓ Comprimento válido." : "Use pelo menos 12 caracteres e até 72 bytes. Prefira uma frase longa que só você conheça."}
+                  ${validLength ? "✓ Comprimento válido."
+                    : tooLong ? "A senha ficou longa demais. Reduza o tamanho."
+                    : "Use pelo menos 12 caracteres. Prefira uma frase que só você conheça."}
                 </p>
                 <label>Confirme a senha
                   <input type=${visible ? "text" : "password"} aria-label="Confirme a senha" required autoComplete="new-password"

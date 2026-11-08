@@ -25,21 +25,32 @@ public class UsuarioService {
   }
 
   @Transactional
-  public Usuario cadastrar(Usuario usuario) {
-    usuario.setNome(usuario.getNome().trim());
-    usuario.setEmail(usuario.getEmail().trim().toLowerCase(java.util.Locale.ROOT));
-    validarSenha(usuario.getSenha());
-    if (usuario.getNome().length() < 2 || usuario.getNome().length() > 100)
+  public Usuario cadastrar(Usuario dados) {
+    String nome = dados.getNome().trim();
+    String email = dados.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
+    validarSenha(dados.getSenha());
+    if (nome.length() < 2 || nome.length() > 100)
       throw new IllegalArgumentException("Informe um nome de 2 a 100 caracteres.");
-    if (com.paulo.ecommerce.config.LocalDevelopmentConfig.ADMIN_EMAIL.equals(usuario.getEmail())
-        || usuarioRepository.existsByEmailIgnoreCase(usuario.getEmail())) {
-      throw new EmailJaCadastradoException(usuario.getEmail());
+    if (email.length() > 254) throw new IllegalArgumentException("Informe um e-mail válido.");
+    if (com.paulo.ecommerce.config.LocalDevelopmentConfig.ADMIN_EMAIL.equals(email)
+        || usuarioRepository.existsByEmailIgnoreCase(email)) {
+      throw new EmailJaCadastradoException(email);
     }
-    usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
-    usuario.setRole(Usuario.Role.CLIENTE);
-    emailService.enviarBoasVindas(usuario);
 
-    return usuarioRepository.saveAndFlush(usuario);
+    Usuario novo = new Usuario();
+    novo.setNome(nome);
+    novo.setEmail(email);
+    novo.setSenha(passwordEncoder.encode(dados.getSenha()));
+    novo.setRole(Usuario.Role.CLIENTE);
+    Usuario salvo = usuarioRepository.saveAndFlush(novo);
+    org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+        new org.springframework.transaction.support.TransactionSynchronization() {
+          @Override
+          public void afterCommit() {
+            emailService.enviarBoasVindas(salvo);
+          }
+        });
+    return salvo;
   }
 
   public static void validarSenha(String senha) {
