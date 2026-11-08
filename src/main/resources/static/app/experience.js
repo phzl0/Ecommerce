@@ -7,6 +7,8 @@ const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
 
 export function Icon({ name }) {
   const paths = {
+    pin: "M20 10c0 6-8 11-8 11S4 16 4 10a8 8 0 1 1 16 0Zm-5 0a3 3 0 1 0-6 0 3 3 0 0 0 6 0Z",
+    lock: "M6 10h12v11H6zm2 0V7a4 4 0 1 1 8 0v3",
     moon: "M20.8 14.7A9 9 0 0 1 9.3 3.2 9 9 0 1 0 20.8 14.7Z",
     sun: "M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z",
     search: "M21 21l-4.4-4.4M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z",

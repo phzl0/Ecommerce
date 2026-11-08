@@ -59,6 +59,8 @@ public class PasseApiController {
   @PostMapping("/premium")
   public com.paulo.ecommerce.dto.api.PaymentRedirectResponse premium(
       @AuthenticationPrincipal UserDetails user) {
+    if (!pagamentos.simulacaoDisponivel())
+      throw new IllegalStateException("A assinatura está disponível apenas para testes no ambiente local.");
     Long id = passeService.criarPedidoPremium(user.getUsername());
     return new com.paulo.ecommerce.dto.api.PaymentRedirectResponse(
         pagamentos.iniciarFluxoPagamento(

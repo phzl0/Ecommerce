@@ -56,17 +56,13 @@ public class PasseService {
   @org.springframework.beans.factory.annotation.Autowired
   private com.paulo.ecommerce.repository.PedidoRepository pedidoRepository;
 
-  @org.springframework.beans.factory.annotation.Value("${app.pass.premium-price:197.00}")
-  private BigDecimal precoPremium;
+  private static final BigDecimal PRECO_PREMIUM = new BigDecimal("79.00");
 
   @org.springframework.beans.factory.annotation.Value("${app.pass.total-levels:30}")
   private int niveisNovasTemporadas;
 
   @org.springframework.beans.factory.annotation.Value("${app.pass.xp-per-level:100}")
   private int xpNivelNovasTemporadas;
-
-  @org.springframework.beans.factory.annotation.Value("${app.pass.required-spend:1200.00}")
-  private BigDecimal gastoMinimoFinal;
 
   @org.springframework.beans.factory.annotation.Value("${app.pass.coupon-value:10.00}")
   private BigDecimal valorCupom;
@@ -120,7 +116,7 @@ public class PasseService {
 
     if (missaoTemplateRepository
         .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId())
-        .isEmpty()) {
+        .size() < 12) {
       criarMissoes(temporada);
     }
   }
@@ -139,8 +135,9 @@ public class PasseService {
     Map<Long, PasseMissaoProgresso> progressoMap =
         carregarProgressoMissao(usuario, temporada, templates);
 
-    boolean premiumAtivoAgora = premiumAtivo(usuario, temporada);
-    BigDecimal gastoMes = gastoNaTemporada(usuario, temporada);
+    LocalDateTime agora = LocalDateTime.now();
+    LocalDateTime premiumValidoAte = validadePremium(usuario, temporada, agora);
+    boolean premiumAtivoAgora = premiumValidoAte != null;
     int xpPorNivel = temporada.getXpPorNivel();
     int xpNoNivelAtual =
         progressoUsuario.getXpTotal() >= temporada.getTotalNiveis() * xpPorNivel
@@ -171,9 +168,10 @@ public class PasseService {
                               100, (int) Math.round((progressoBruto / (double) xpPorNivel) * 100)));
                   boolean desbloqueado = progressoUsuario.getXpTotal() >= xpNecessario;
                   boolean resgatado = resgatadas.contains(recompensa.getId());
+                  boolean premium = exigePremium(recompensa);
                   return new PasseNivelResponse(
                       recompensa.getId(),
-                      !gratuita(recompensa.getNivel()),
+                      premium,
                       recompensa.getNivel(),
                       xpNecessario,
                       recompensa.getTitulo(),
@@ -184,9 +182,7 @@ public class PasseService {
                       resgatado,
                       desbloqueado
                           && !resgatado
-                          && (gratuita(recompensa.getNivel()) || premiumAtivoAgora)
-                          && (recompensa.getNivel() < temporada.getTotalNiveis()
-                              || gastoMes.compareTo(gastoMinimoFinal) >= 0),
+                          && (!premium || premiumAtivoAgora),
                       progressoPercentual);
                 })
             .toList();
@@ -216,9 +212,8 @@ public class PasseService {
 
     return new PasseDashboardResponse(
         premiumAtivoAgora,
-        precoPremium,
-        gastoMes,
-        gastoMinimoFinal,
+        PRECO_PREMIUM,
+        premiumValidoAte,
         temporada.getNome(),
         temporada.getInicioEm().format(DateTimeFormatter.ofPattern("dd/MM"))
             + " a "
@@ -439,11 +434,7 @@ public class PasseService {
 
     if (!recompensa.getTemporada().getId().equals(temporada.getId()))
       throw new IllegalArgumentException("Esta recompensa não pertence à temporada atual.");
-    if (recompensa.getNivel().equals(temporada.getTotalNiveis())
-        && gastoNaTemporada(usuario, temporada).compareTo(gastoMinimoFinal) < 0)
-      throw new IllegalStateException(
-          "A recompensa final exige o gasto mínimo em produtos aprovados nesta temporada.");
-    if (!gratuita(recompensa.getNivel()) && !premiumAtivo(usuario, temporada))
+    if (exigePremium(recompensa) && validadePremium(usuario, temporada, LocalDateTime.now()) == null)
       throw new IllegalStateException("Esta recompensa exige passe premium ativo.");
     int xpNecessario = recompensa.getNivel() * temporada.getXpPorNivel();
     PasseProgressoUsuario progresso = obterOuCriarProgresso(usuario, temporada);
@@ -460,6 +451,7 @@ public class PasseService {
                   novo.setUsuario(usuario);
                   novo.setTemporada(temporada);
                   novo.setRecompensa(recompensa);
+                  novo.setPremiumNecessario(exigePremium(recompensa));
                   return novo;
                 });
     boolean primeiroResgate = resgate.getCodigoEntrega() == null;
@@ -515,25 +507,20 @@ public class PasseService {
         .toList();
   }
 
-  private BigDecimal gastoNaTemporada(Usuario usuario, PasseTemporada temporada) {
-    return pedidoRepository.gastoAprovado(
-        usuario.getId(),
-        temporada.getInicioEm().atStartOfDay(),
-        temporada.getFimEm().plusDays(1).atStartOfDay());
-  }
-
   private boolean beneficioAtivo(Usuario usuario, PasseRecompensaResgate resgate) {
-    var progresso =
-        progressoUsuarioRepository.findByUsuarioIdAndTemporadaId(
-            usuario.getId(), resgate.getTemporada().getId());
-    return (!resgate.getRecompensa().getNivel().equals(resgate.getTemporada().getTotalNiveis())
-            || gastoNaTemporada(usuario, resgate.getTemporada()).compareTo(gastoMinimoFinal) >= 0)
-        && !LocalDate.now().isAfter(resgate.getTemporada().getFimEm().plusDays(30))
+    var progresso = progressoUsuarioRepository.findByUsuarioIdAndTemporadaId(
+        usuario.getId(), resgate.getTemporada().getId());
+    boolean premium = resgate.getPremiumNecessario() == null
+        ? !gratuita(resgate.getRecompensa().getNivel())
+        : resgate.getPremiumNecessario();
+    LocalDateTime resgatadoEm = resgate.getCriadoEm() == null
+        ? resgate.getTemporada().getFimEm().atTime(23, 59)
+        : resgate.getCriadoEm();
+    return !LocalDate.now().isAfter(resgate.getTemporada().getFimEm().plusDays(30))
         && progresso.isPresent()
         && progresso.get().getXpTotal()
             >= resgate.getRecompensa().getNivel() * resgate.getTemporada().getXpPorNivel()
-        && (gratuita(resgate.getRecompensa().getNivel())
-            || premiumAtivo(usuario, resgate.getTemporada()));
+        && (!premium || validadePremium(usuario, resgate.getTemporada(), resgatadoEm) != null);
   }
 
   @Transactional
@@ -602,42 +589,42 @@ public class PasseService {
     return nivel % 3 == 0 || nivel == 1 || nivel % 5 == 0;
   }
 
-  private boolean premiumAtivo(Usuario usuario, PasseTemporada temporada) {
-    return pedidoRepository
-        .findByUsuarioIdAndTemporadaPasseId(usuario.getId(), temporada.getId())
-        .stream()
-        .anyMatch(
-            p ->
-                p.getStatus() != com.paulo.ecommerce.model.Pedido.Status.CANCELADO
-                    && p.getPagamento() != null
-                    && p.getPagamento().getStatus()
-                        == com.paulo.ecommerce.model.Pagamento.StatusPagamento.APROVADO);
+  private boolean exigePremium(PasseRecompensaNivel recompensa) {
+    return recompensa.getNivel().equals(recompensa.getTemporada().getTotalNiveis())
+        || !gratuita(recompensa.getNivel());
+  }
+
+  private LocalDateTime validadePremium(Usuario usuario, PasseTemporada temporada, LocalDateTime referencia) {
+    return pedidoRepository.pagamentosPasse(usuario.getId(), temporada.getId(), referencia.minusDays(32))
+        .stream().map(pedido -> {
+          var pagoEm = pedido.getPagamento().getPagoEm();
+          if (pagoEm != null && pagoEm.isAfter(referencia)) return null;
+          return pedido.isPasseMensal()
+              ? pagoEm == null ? null : pagoEm.plusMonths(1)
+              : temporada.getFimEm().plusDays(1).atStartOfDay();
+        })
+        .filter(validade -> validade != null && validade.isAfter(referencia))
+        .max(LocalDateTime::compareTo).orElse(null);
   }
 
   @Transactional
   public Long criarPedidoPremium(String email) {
     Usuario usuario = buscarUsuario(email);
     PasseTemporada temporada = obterPasseAtual();
-    if (premiumAtivo(usuario, temporada))
-      throw new IllegalStateException("Você já possui o passe premium desta temporada.");
-    var anteriores =
-        pedidoRepository.findByUsuarioIdAndTemporadaPasseId(usuario.getId(), temporada.getId());
-    var aberto =
-        anteriores.stream()
-            .filter(p -> p.getStatus() == com.paulo.ecommerce.model.Pedido.Status.PENDENTE)
-            .findFirst();
+    if (validadePremium(usuario, temporada, LocalDateTime.now()) != null)
+      throw new IllegalStateException("Seu Passe Premium já está ativo.");
+    var aberto = pedidoRepository.findFirstByUsuarioIdAndPasseMensalTrueAndStatusAndDataPedidoAfterOrderByIdDesc(
+        usuario.getId(), com.paulo.ecommerce.model.Pedido.Status.PENDENTE, LocalDateTime.now().minusHours(24));
     if (aberto.isPresent()) return aberto.get().getId();
-    if (precoPremium == null || precoPremium.signum() <= 0)
-      throw new IllegalStateException("Configure o preço do passe.");
     Produto produto =
         produtoRepository
-            .findBySku("PASSE-PREMIUM-" + temporada.getSlug())
+            .findBySku("PASSE-MENSAL-" + temporada.getSlug())
             .orElseGet(
                 () -> {
                   Produto virtual = new Produto();
-                  virtual.setNome("Passe premium — " + temporada.getNome());
-                  virtual.setSku("PASSE-PREMIUM-" + temporada.getSlug());
-                  virtual.setPreco(precoPremium);
+                  virtual.setNome("Passe Premium mensal");
+                  virtual.setSku("PASSE-MENSAL-" + temporada.getSlug());
+                  virtual.setPreco(PRECO_PREMIUM);
                   virtual.setAtivo(false);
                   virtual.setEstoque(0);
                   return produtoRepository.save(virtual);
@@ -645,17 +632,18 @@ public class PasseService {
     var pedido = new com.paulo.ecommerce.model.Pedido();
     pedido.setUsuario(usuario);
     pedido.setTemporadaPasseId(temporada.getId());
+    pedido.setPasseMensal(true);
     pedido.setNumero(
         "PP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24));
-    pedido.setSubtotal(precoPremium);
+    pedido.setSubtotal(PRECO_PREMIUM);
     pedido.setFrete(BigDecimal.ZERO);
-    pedido.setTotal(precoPremium);
+    pedido.setTotal(PRECO_PREMIUM);
     pedido.setEnderecoEntrega("Entrega digital na conta");
     var item = new com.paulo.ecommerce.model.ItemPedido();
     item.setPedido(pedido);
     item.setProduto(produto);
     item.setQuantidade(1);
-    item.setPrecoUnitario(precoPremium);
+    item.setPrecoUnitario(PRECO_PREMIUM);
     pedido.setItens(List.of(item));
     return pedidoRepository.save(pedido).getId();
   }
@@ -891,16 +879,7 @@ public class PasseService {
         1,
         120,
         4);
-    criarMissao(
-        temporada,
-        "weekly-spend-500",
-        "Gastar R$ 500 na semana",
-        "Acumule R$ 500 em compras aprovadas na semana.",
-        PassePeriodicidade.SEMANAL,
-        PasseAcaoTipo.SPEND_APPROVED_CENTS,
-        50000,
-        180,
-        5);
+
     criarMissao(
         temporada,
         "weekly-review",
@@ -922,16 +901,25 @@ public class PasseService {
         3,
         320,
         7);
-    criarMissao(
-        temporada,
-        "monthly-spend-1200",
-        "Gastar R$ 1.200 no mes",
-        "Acumule R$ 1.200 em compras aprovadas no passe atual.",
-        PassePeriodicidade.MENSAL,
-        PasseAcaoTipo.SPEND_APPROVED_CENTS,
-        120000,
-        420,
-        8);
+
+    criarMissao(temporada, "daily-view-five", "Explorar 5 produtos",
+        "Visite cinco páginas de produto diferentes hoje.",
+        PassePeriodicidade.DIARIA, PasseAcaoTipo.VIEW_PRODUCT, 5, 30, 4);
+    criarMissao(temporada, "weekly-view-ten", "Explorar 10 produtos",
+        "Visite dez páginas de produto durante a semana.",
+        PassePeriodicidade.SEMANAL, PasseAcaoTipo.VIEW_PRODUCT, 10, 70, 5);
+    criarMissao(temporada, "weekly-checkin-three", "Fazer 3 check-ins",
+        "Visite a loja em três dias desta semana.",
+        PassePeriodicidade.SEMANAL, PasseAcaoTipo.CHECKIN, 3, 80, 9);
+    criarMissao(temporada, "monthly-checkin-ten", "Fazer 10 check-ins",
+        "Visite a loja em dez dias desta temporada.",
+        PassePeriodicidade.MENSAL, PasseAcaoTipo.CHECKIN, 10, 180, 8);
+    criarMissao(temporada, "monthly-view-twenty", "Explorar 20 produtos",
+        "Visite vinte páginas de produto durante o mês.",
+        PassePeriodicidade.MENSAL, PasseAcaoTipo.VIEW_PRODUCT, 20, 160, 9);
+    criarMissao(temporada, "monthly-reviews-two", "Publicar 2 avaliações",
+        "Avalie dois produtos comprados durante a temporada.",
+        PassePeriodicidade.MENSAL, PasseAcaoTipo.REVIEW_SUBMITTED, 2, 160, 10);
   }
 
   private void criarMissao(
@@ -944,6 +932,7 @@ public class PasseService {
       int metaValor,
       int xpRecompensa,
       int ordem) {
+    if (missaoTemplateRepository.existsByTemporadaIdAndCodigo(temporada.getId(), codigo)) return;
     PasseMissaoTemplate missao = new PasseMissaoTemplate();
     missao.setTemporada(temporada);
     missao.setCodigo(codigo);

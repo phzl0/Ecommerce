@@ -18,6 +18,16 @@ public class PasseRecompensaResgate extends BaseEntity {
   @jakarta.persistence.Column(precision = 10, scale = 2)
   private java.math.BigDecimal valorCupom;
 
+  private Boolean premiumNecessario;
+
+  public Boolean getPremiumNecessario() {
+    return premiumNecessario;
+  }
+
+  public void setPremiumNecessario(boolean value) {
+    premiumNecessario = value;
+  }
+
   @jakarta.persistence.Column(precision = 10, scale = 2)
   private java.math.BigDecimal minimoCupom;
 

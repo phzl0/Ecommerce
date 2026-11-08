@@ -27,6 +27,20 @@ test("registers, earns event XP from a local purchase and claims a badge", async
   await expect(page).toHaveURL(/\/login\?.*sucesso=true/);
   await login(page, email, password);
 
+  await page.getByRole("link", { name: /Entregar em Adicionar endereço/ }).click();
+  for (const [label, value] of [
+    ["CEP", "01001000"], ["Rua ou avenida", "Rua Teste"], ["Número", "10"],
+    ["Bairro", "Centro"], ["Cidade", "São Paulo"], ["UF", "SP"],
+  ]) {
+    await page.getByLabel(label, { exact: true }).fill(value);
+  }
+  await page.getByRole("button", { name: "Salvar endereço" }).click();
+  const deliveryLink = page.getByRole("navigation", { name: "Navegação da loja" })
+    .getByRole("link", { name: /São Paulo · 01001-000/ });
+  await expect(deliveryLink).toBeVisible();
+  await page.reload();
+  await expect(deliveryLink).toBeVisible();
+
   const admin = await browser.newPage();
   try {
     await login(admin, "admin@level.local", "AdminLocal123!", "/admin");
@@ -41,13 +55,13 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     const catalog = await (await page.request.get("/api/store/catalog")).json();
     const product = catalog.produtos.find((item) => item.estoque && item.preco >= 50);
     await page.goto("/produto/" + product.id);
+    await expect(deliveryLink).toBeVisible();
     await page.getByRole("button", { name: "Adicionar à sacola", exact: true }).click();
     await expect(page.getByText("Adicionado à sacola", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Comprar agora", exact: true }).first().click();
+    await expect(page.getByLabel("CEP", { exact: true })).toHaveValue("01001000");
     for (const [label, value] of [
       ["Nome completo", "Cliente Evento"], ["Telefone", "11999999999"],
-      ["CEP", "01001000"], ["Endereco", "Rua Teste"], ["Numero", "10"],
-      ["Bairro", "Centro"], ["Cidade", "São Paulo"], ["Estado", "SP"],
     ]) {
       await page.getByLabel(label, { exact: true }).fill(value);
     }
@@ -76,6 +90,26 @@ test("registers, earns event XP from a local purchase and claims a badge", async
 
     await page.goto("/passe/missoes");
     await expect(page.getByRole("heading", { name: "Missões do passe" })).toBeVisible();
+    for (const tab of ["Diárias", "Semanais", "Mensais"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      await expect(page.getByRole("tabpanel").getByRole("article")).toHaveCount(4);
+    }
+    await page.getByRole("tab", { name: "Especiais" }).click();
+    await expect(page.getByRole("tabpanel").getByText("Semana XP em Dobro")).toBeVisible();
+
+    await page.goto("/passe");
+    await expect(page.getByText(/R\$\s?79,00 por mês/)).toBeVisible();
+    await page.getByRole("button", { name: "Liberar Premium" }).click();
+    await expect(page).toHaveURL(/\/pedidos\/\d+/);
+    const premiumId = new URL(page.url()).pathname.split("/").pop();
+    const subscription = await (await page.request.get("/api/account/orders/" + premiumId)).json();
+    expect(Number(subscription.total)).toBe(79);
+    await admin.goto("/admin/pedidos/" + premiumId);
+    await admin.getByRole("button", { name: "Simular pagamento aprovado" }).click();
+    await expect(admin.getByText("Pagamento simulado. Nenhuma cobrança foi realizada.")).toBeVisible();
+    await page.goto("/passe");
+    await expect(page.getByText("Premium ativo", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Liberar Premium" })).toHaveCount(0);
   } finally {
     await admin.close();
   }

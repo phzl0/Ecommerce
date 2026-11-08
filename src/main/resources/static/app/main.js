@@ -284,7 +284,7 @@ function AppLink({ href, className = "", current, children }) {
   `;
 }
 
-function NavBar({ totalItems, onSearch, auth, categories, notificationProps, path, dark, toggleTheme }) {
+function NavBar({ totalItems, onSearch, auth, categories, notificationProps, path, dark, toggleTheme, address }) {
   const [search, setSearch] = useState(() => parseCatalogFilters(location.pathname + location.search).busca || "");
   return html`
     <header className="lc-nav-shell">
@@ -314,6 +314,10 @@ function NavBar({ totalItems, onSearch, auth, categories, notificationProps, pat
         </nav>
       </div>
       <nav className="lc-nav-bottom" aria-label="Navegação da loja">
+        <${AppLink} href=${auth.authenticated ? "/conta/endereco" : buildLoginUrl("/conta/endereco")} className="lc-nav-address">
+          <${Icon} name="pin" />
+          <span><small>Entregar em</small><strong>${address ? `${address.cidade} · ${formatCep(address.cep)}` : "Adicionar endereço"}</strong></span>
+        <//>
         <${AppLink} href="/" current=${path === "/"}>Início<//>
         <details className="lc-nav-popover lc-categories-menu">
           <summary><${Icon} name="menu" /> Categorias</summary>
@@ -389,18 +393,15 @@ function BannerCarousel({ banners }) {
 
 function PromoTicker() {
   const headlines = ["Compre agora!", "Desconto de até 50%!", "Ganhe XP nas suas compras", "Confira os eventos da semana"];
-  const [paused, setPaused] = useState(false);
   return html`<section className="lc-ticker" aria-label="Chamadas promocionais demonstrativas">
     <span className="lc-ticker-label">DEMO</span>
-    <div className="lc-ticker-window" data-paused=${paused}>
+    <div className="lc-ticker-window">
       <div className="lc-ticker-track">
         ${[false, true].map(copy => html`<ul key=${String(copy)} aria-hidden=${copy}>
           ${headlines.map(text => html`<li key=${text}>${text}</li>`)}
         </ul>`)}
       </div>
     </div>
-    <button type="button" className="lc-ticker-control" aria-label=${paused ? "Retomar faixa" : "Pausar faixa"}
-      onClick=${() => setPaused(!paused)}>${paused ? "▶" : "Ⅱ"}</button>
   </section>`;
 }
 
@@ -452,52 +453,22 @@ function CategoryStrip({ categories }) {
   `;
 }
 
-function ProductCard({ product, onAddToCart, onBuyNow }) {
-  return html`
-    <article className="lc-product-card">
-      <${AppLink}
-        href=${`/produto/${product.id}`}
-        className="lc-product-visual"
-      >
-        <img
-          src=${product.imagemUrl || "/images/sem-foto.png"}
-          alt=${product.nome}
-          loading="lazy"
-        />
-        <div className="lc-card-overlay">
-          ${product.destaque ? html`<span className="lc-tag">Destaque</span>` : null}
-          <span className="lc-outline-tag">${product.sku || "LEVEL"}</span>
-        </div>
-      <//>
-      <div className="lc-product-copy">
-        <span className="lc-product-brand">${product.marca || BRAND}</span>
-        <h3><${AppLink} href=${`/produto/${product.id}`}>${product.nome}<//></h3>
-        <p>
-          ${product.descricaoCurta || "Curadoria pensada para performance e conversao."}
-        </p>
-        <div className="lc-product-meta">
-          <span>${product.categoria?.nome || "Colecao especial"}</span>
-          <strong>${currency(product.preco)}</strong>
-        </div>
-      </div>
-      <div className="lc-card-actions">
-        <button
-          className="lc-btn lc-btn-primary"
-          disabled=${product.estoque <= 0}
-              onClick=${() => onBuyNow(product)}
-        >
-          Comprar agora
-        </button>
-        <button
-          className="lc-btn lc-btn-ghost"
-          disabled=${product.estoque <= 0}
-              onClick=${() => onAddToCart(product)}
-        >
-          Adicionar
-        </button>
-      </div>
-    </article>
-  `;
+function ProductCard({ product, onAddToCart }) {
+  const href = `/produto/${product.id}`;
+  return html`<article className="lc-product-card lc-shelf-card">
+    <${AppLink} href=${href} className="lc-product-visual">
+      <img src=${product.imagemUrl || "/images/sem-foto.png"} alt=${product.nome} loading="lazy"
+        onError=${event => {
+          if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
+        }} />
+    <//>
+    <div className="lc-product-copy">
+      <h3><${AppLink} href=${href}>${product.nome}<//></h3>
+      <strong>${currency(product.preco)}</strong>
+      <button type="button" className="lc-btn lc-btn-ghost" disabled=${product.estoque <= 0}
+        onClick=${() => onAddToCart(product)}>${product.estoque > 0 ? "Adicionar" : "Esgotado"}</button>
+    </div>
+  </article>`;
 }
 
 function HomeProductShelf({ title, products, onAddToCart }) {
@@ -551,91 +522,94 @@ function HomePage({ data, onAddToCart, auth }) {
 }
 
 function AccountPage({ auth }) {
-  return html`
-    <main className="lc-page">
-      <section className="lc-account-shell">
-        <div className="lc-section-header">
-          <div>
-            <h2>Conta LEVEL COMMERCE</h2>
-            <p>
-              ${
-                auth.authenticated
-                  ? `Voce esta logado como ${auth.nome}.`
-                  : "Escolha o proximo passo da sua jornada de compra."
-              }
-            </p>
-          </div>
-        </div>
-        <div className="lc-account-grid">
-          ${
-            auth.authenticated
-              ? html`
-                  <${AppLink} href="/pedidos" className="lc-account-card">
-                    <strong>Meus pedidos</strong>
-                    <span>Acompanhe entrega, pagamento e historico.</span>
-                  <//>
-                  <${AppLink} href="/passe" className="lc-account-card">
-                    <strong>Passe mensal</strong>
-                    <span>Suba de nivel com XP de compras e missoes.</span>
-                  <//>
-                  <${AppLink} href="/conta/beneficios" className="lc-account-card">
-                    <strong>Cupons e recompensas</strong>
-                    <span>Consulte e use os benefícios que você já resgatou.</span>
-                  <//>
-                  <${AppLink} href="/perfil" className="lc-account-card">
-                    <strong>Meu perfil</strong>
-                    <span>Atualize nome, senha e dados da conta.</span>
-                  <//>
-                  <${AppLink} href="/checkout" className="lc-account-card">
-                    <strong>Retomar checkout</strong>
-                    <span
-                      >Volte direto para endereco e forma de pagamento.</span
-                    >
-                  <//>
-                  <form
-                    action="/auth/logout"
-                    method="post"
-                    className="lc-account-card lc-account-form"
-                  >
-                    <input type="hidden" name="_csrf" value=${getCsrfToken()} />
-                    <strong>Encerrar sessao</strong>
-                    <span>Sair da conta atual com seguranca.</span>
-                    <button type="submit" className="lc-btn lc-btn-ghost">
-                      Sair
-                    </button>
-                  </form>
-                `
-              : html`
-                  <${AppLink} href="/login" className="lc-account-card">
-                    <strong>Entrar</strong>
-                    <span
-                      >Acesse sua area para compras, pedidos e pagamentos.</span
-                    >
-                  <//>
-                  <${AppLink} href="/cadastro" className="lc-account-card">
-                    <strong>Criar conta</strong>
-                    <span
-                      >Cadastre-se para continuar a compra com dados
-                      salvos.</span
-                    >
-                  <//>
-                  <${AppLink} href="/catalogo" className="lc-account-card">
-                    <strong>Explorar catalogo</strong>
-                    <span>Descubra as colecoes da LEVEL COMMERCE.</span>
-                  <//>
-                  <${AppLink}
-                    href=${buildLoginUrl("/checkout")}
-                    className="lc-account-card"
-                  >
-                    <strong>Continuar compra</strong>
-                    <span>Entre e volte direto para o checkout.</span>
-                  <//>
-                `
-          }
-        </div>
-      </section>
-    </main>
-  `;
+  const options = auth.authenticated ? [
+    ["/pedidos", "Meus pedidos", "Acompanhe pagamentos, envios e entregas."],
+    ["/conta/endereco", "Endereço de entrega", "Gerencie o endereço usado nas suas compras."],
+    ["/perfil", "Dados da conta", "Atualize seu nome e sua senha."],
+    ["/passe", "Passe LEVEL", "Acompanhe sua assinatura, seus níveis e missões."],
+    ["/conta/beneficios", "Cupons e recompensas", "Veja e use os benefícios que você resgatou."],
+  ] : [
+    ["/login", "Entrar", "Acesse seus pedidos e dados da conta."],
+    ["/cadastro", "Criar conta", "Cadastre-se para acompanhar compras e benefícios."],
+    ["/catalogo", "Explorar catálogo", "Continue navegando pela loja."],
+  ];
+
+  return html`<main className="lc-page lc-account-page">
+    <header className="lc-store-heading">
+      <h1>Minha conta</h1>
+      ${auth.authenticated ? html`<p>${auth.nome} · ${auth.email}</p>` : null}
+    </header>
+    <nav className="lc-account-menu" aria-label="Opções da conta">
+      ${options.map(([href, title, description]) => html`
+        <${AppLink} key=${href} href=${href} className="lc-account-row">
+          <span><strong>${title}</strong><small>${description}</small></span><span aria-hidden="true">›</span>
+        <//>`)}
+    </nav>
+    ${auth.authenticated ? html`<form action="/auth/logout" method="post" className="lc-account-exit">
+      <input type="hidden" name="_csrf" value=${getCsrfToken()} />
+      <button type="submit" className="lc-btn lc-btn-ghost">Sair da conta</button>
+    </form>` : null}
+  </main>`;
+}
+
+const addressFields = [
+  ["cep", "CEP", 9, "postal-code"], ["endereco", "Rua ou avenida", 120, "address-line1"],
+  ["numero", "Número", 20], ["complemento", "Complemento (opcional)", 80, "address-line2"],
+  ["bairro", "Bairro", 80], ["cidade", "Cidade", 80, "address-level2"], ["estado", "UF", 2, "address-level1"],
+];
+
+function AddressPage({ address, onSaved, notify }) {
+  const [form, setForm] = useState(() => ({ ...address }));
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const values = editing ? form : (address || {});
+
+  async function save(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const saved = await putJson("/api/account/address", values);
+      onSaved(saved);
+      setEditing(false);
+      notify("Endereço salvo", `${saved.cidade} · ${formatCep(saved.cep)}`);
+    } catch (failure) {
+      if (failure.code === "AUTH_REQUIRED") requireLogin("/conta/endereco");
+      else setError(failure.message || "Não foi possível salvar o endereço.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return html`<main className="lc-page lc-account-page">
+    <header className="lc-store-heading">
+      <${AppLink} href="/conta">‹ Minha conta<//>
+      <h1>Endereço de entrega</h1>
+      <p>Salve um endereço padrão para usar nas suas compras.</p>
+    </header>
+    <form className="lc-checkout-card lc-address-form" onSubmit=${save}>
+      <div className="lc-form-grid two">
+        ${addressFields.map(([field, label, max, autocomplete]) => html`
+          <label key=${field}>${label}<input value=${values[field] || ""} maxLength=${max}
+            autoComplete=${autocomplete} required=${field !== "complemento"}
+            inputMode=${field === "cep" ? "numeric" : undefined}
+            pattern=${field === "cep" ? "[0-9]{5}-?[0-9]{3}" : undefined}
+            onChange=${event => {
+              setEditing(true);
+              setForm({ ...values, [field]: event.target.value });
+            }} /></label>`)}
+      </div>
+      ${error ? html`<p role="alert" className="lc-form-notice error">${error}</p>` : null}
+      <button type="submit" className="lc-btn lc-btn-primary" disabled=${saving}>
+        ${saving ? "Salvando…" : "Salvar endereço"}
+      </button>
+    </form>
+  </main>`;
+}
+
+function formatCep(cep) {
+  return cep.replace(/^(\d{5})(\d{3})$/, "$1-$2");
 }
 
 function CatalogFilters({ categories, filters, setFilters }) {
@@ -703,7 +677,7 @@ function CatalogFilters({ categories, filters, setFilters }) {
   `;
 }
 
-function CatalogPage({ route, onAddToCart, onBuyNow }) {
+function CatalogPage({ route, onAddToCart }) {
   const [data, setData] = useState({ categorias: [], produtos: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState(parseCatalogFilters(route));
@@ -749,7 +723,7 @@ function CatalogPage({ route, onAddToCart, onBuyNow }) {
         <div className="lc-catalog-results">
           <div className="lc-section-header">
             <div>
-              <h2>Catalogo LEVEL COMMERCE</h2>
+              <h1>Catálogo</h1>
               <p>
                 ${loading ? "Atualizando produtos..." : `${data.total} produtos encontrados.`}
               </p>
@@ -762,7 +736,6 @@ function CatalogPage({ route, onAddToCart, onBuyNow }) {
                   key=${product.id}
                   product=${product}
                   onAddToCart=${onAddToCart}
-                  onBuyNow=${onBuyNow}
                 />
               `,
             )}
@@ -773,7 +746,7 @@ function CatalogPage({ route, onAddToCart, onBuyNow }) {
   `;
 }
 
-function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify }) {
+function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, address }) {
   const [product, setProduct] = useState(null);
   const [reviewForm, setReviewForm] = useState({ nota: "5", comentario: "" });
   const [reviewMessage, setReviewMessage] = useState("");
@@ -813,12 +786,18 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify }) {
     return html`<main className="lc-page"><p>Carregando produto...</p></main>`;
 
   return html`
-    <main className="lc-page">
+    <main className="lc-page lc-product-page">
+      <nav className="lc-breadcrumb" aria-label="Onde você está">
+        <${AppLink} href="/">Início<//><span>›</span><${AppLink} href="/catalogo">Catálogo<//>
+      </nav>
       <section className="lc-detail-shell">
         <div className="lc-detail-visual">
           <img
             src=${product.imagemUrl || "/images/sem-foto.png"}
             alt=${product.nome}
+            onError=${event => {
+              if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
+            }}
           />
         </div>
         <div className="lc-detail-copy">
@@ -835,7 +814,7 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify }) {
             <strong
               >${product.mediaAvaliacoes?.toFixed ? product.mediaAvaliacoes.toFixed(1) : product.mediaAvaliacoes || "0.0"}</strong
             >
-            <span>${product.totalAvaliacoes} avaliacao(oes)</span>
+            <span>${product.totalAvaliacoes} avaliações</span>
           </div>
           <p className="lc-detail-short">
             ${product.descricaoCurta || product.descricao}
@@ -859,35 +838,22 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify }) {
               Adicionar à sacola
             </button>
           </div>
-          <div className="lc-rich-copy">
-            <h3>Descricao completa</h3>
-            <p>${product.descricao || "Descricao detalhada em breve."}</p>
-          </div>
+          <p className="lc-detail-delivery"><${Icon} name="pin" /> Entregar em
+            <${AppLink} href=${auth.authenticated ? "/conta/endereco" : buildLoginUrl("/conta/endereco")}>
+              ${address ? `${address.cidade} · ${formatCep(address.cep)}` : "Adicionar endereço"}
+            <//>
+          </p>
         </div>
       </section>
 
-      <section className="lc-section">
-        <${SectionHeader}
-          title="Produtos relacionados"
-          description="Mais itens para ampliar ticket medio e reforcar a jornada de compra."
-        />
-        <div className="lc-product-grid compact">
-          ${product.relacionados.map(
-            (related) => html`
-              <${ProductCard}
-                key=${related.id}
-                product=${related}
-                onAddToCart=${onAddToCart}
-                onBuyNow=${onBuyNow}
-              />
-            `,
-          )}
-        </div>
+      <section className="lc-section lc-product-description">
+        <h2>Descrição do produto</h2>
+        <p>${product.descricao || "Descrição detalhada em breve."}</p>
       </section>
 
       <section className="lc-section lc-review-grid">
         <div className="lc-checkout-card">
-          <h3>Avaliacoes de clientes</h3>
+          <h3>Avaliações de clientes</h3>
           <div className="lc-pass-history">
             ${
               product.avaliacoes?.length
@@ -962,6 +928,24 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify }) {
           }
         </div>
       </section>
+      <section className="lc-section">
+        <${SectionHeader}
+          title="Produtos relacionados"
+
+        />
+        <div className="lc-product-grid compact">
+          ${product.relacionados.map(
+            (related) => html`
+              <${ProductCard}
+                key=${related.id}
+                product=${related}
+                onAddToCart=${onAddToCart}
+              />
+            `,
+          )}
+        </div>
+      </section>
+
     </main>
   `;
 }
@@ -976,12 +960,12 @@ function CartPage({ items, updateQuantity, removeItem }) {
   const total = subtotal + freight;
 
   return html`
-    <main className="lc-page">
+    <main className="lc-page lc-cart-page">
       <section className="lc-cart-shell">
         <div className="lc-cart-list">
           <div className="lc-section-header">
             <div>
-              <h2>Sacola LEVEL</h2>
+              <h1>Minha sacola</h1>
               <p>Revise os itens antes de seguir para endereco e pagamento.</p>
             </div>
           </div>
@@ -994,7 +978,7 @@ function CartPage({ items, updateQuantity, removeItem }) {
                   alt=${item.nome}
                 />
                 <div>
-                  <strong>${item.nome}</strong>
+                  <${AppLink} href=${`/produto/${item.id}`}><strong>${item.nome}</strong><//>
                   <span>${currency(item.preco)} por unidade</span>
                   <div className="lc-qty-row">
                     <button
@@ -1038,16 +1022,16 @@ function CartPage({ items, updateQuantity, removeItem }) {
           <p className="lc-checkout-note">
             ${freight === 0 ? "Voce atingiu frete gratis." : "Frete gratis a partir de R$ 299,00."}
           </p>
-          <${AppLink} href="/checkout" className="lc-btn lc-btn-primary"
-            >Continuar compra<//
-          >
+          <${AppLink} href=${items.length ? "/checkout" : "/catalogo"} className="lc-btn lc-btn-primary">
+            ${items.length ? "Continuar compra" : "Ver catálogo"}
+          <//>
         </aside>
       </section>
     </main>
   `;
 }
 
-function CheckoutPage({ items, auth, clearCart }) {
+function CheckoutPage({ items, auth, clearCart, address }) {
   const [paymentConfig, setPaymentConfig] = useState(null);
   useEffect(() => {
     if (auth.authenticated)
@@ -1055,7 +1039,7 @@ function CheckoutPage({ items, auth, clearCart }) {
         .then(setPaymentConfig)
         .catch(() => {});
   }, [auth.authenticated]);
-  const [form, setForm] = useState(initialCheckoutForm);
+  const [form, setForm] = useState(() => ({ ...initialCheckoutForm(), ...address }));
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const subtotal = useMemo(
@@ -1116,17 +1100,19 @@ function CheckoutPage({ items, auth, clearCart }) {
   };
 
   return html`
-    <main className="lc-page">
+    <main className="lc-page lc-checkout-page">
       <section className="lc-checkout-shell">
         <div className="lc-checkout-main">
           <div className="lc-section-header">
             <div>
-              <h2>Endereco e pagamento</h2>
+              <h1>Finalizar compra</h1>
               <p>Informe onde receber e confira as condições da compra.</p>
             </div>
           </div>
           <div className="lc-checkout-card">
             <h3>Endereco de entrega</h3>
+            ${address ? html`<button type="button" className="lc-btn lc-btn-ghost lc-use-address"
+              onClick=${() => setForm(current => ({ ...current, ...address }))}>Usar endereço salvo</button>` : null}
             <div className="lc-form-grid two">
               <label
                 >Nome completo<input
@@ -1699,6 +1685,7 @@ function PassPage({ auth, notify }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
   const track = useRef(null);
+  const guided = useRef(false);
 
   useEffect(() => {
     if (!auth.authenticated) return;
@@ -1710,6 +1697,18 @@ function PassPage({ auth, notify }) {
   }, [auth.authenticated]);
 
   const pass = auth.authenticated ? dashboard : null;
+  useEffect(() => {
+    if (!pass || guided.current) return;
+    guided.current = true;
+    if (pass.niveis.some(reward => reward.disponivelParaResgate && !reward.resgatado)) {
+      notify("Você tem prêmios para resgatar", "Veja os níveis liberados na trilha.");
+    } else if (pass.xpParaProximoNivel > 0) {
+      const xp = pass.xpParaProximoNivel;
+      notify(`${xp === 1 ? "Falta" : "Faltam"} ${xp} XP para o próximo nível`, "Veja as missões disponíveis.");
+    } else {
+      notify("Você alcançou o último nível", "Confira as recompensas da temporada.");
+    }
+  }, [pass, notify]);
   const moveTrack = (direction) => {
     const rail = track.current;
     rail?.scrollBy({
@@ -1748,9 +1747,9 @@ function PassPage({ auth, notify }) {
   }
 
   const rewardCell = (reward, premium) => {
-    if (reward.premium !== premium) return html`<div className="lc-rail-reward empty" aria-hidden="true">—</div>`;
+    if (reward.premium !== premium) return html`<div className=${`lc-rail-reward ${premium ? "premium" : "free"} empty`} aria-hidden="true">—</div>`;
     const available = reward.disponivelParaResgate && !reward.resgatado;
-    return html`<div className=${`lc-rail-reward ${available ? "available" : ""}`}>
+    return html`<div className=${`lc-rail-reward ${premium ? "premium" : "free"} ${available ? "available" : ""}`}>
       <span>${reward.tipoDigital}</span>
       <strong title=${reward.descricao}>${reward.titulo}</strong>
       ${available ? html`<button type="button" className="lc-btn lc-btn-primary"
@@ -1782,13 +1781,16 @@ function PassPage({ auth, notify }) {
     ${auth.authenticated && !pass && !error ? html`<p role="status">Carregando temporada…</p>` : null}
     ${pass ? html`<section className="lc-level-trail" aria-labelledby="level-trail-title">
       <div className="lc-level-trail-heading">
-        <div>
-          <h2 id="level-trail-title">Trilha de recompensas</h2>
-          <p>${pass.premiumAtivo ? "Premium ativo nesta temporada"
-            : `Premium por ${currency(pass.precoPremium)} nesta temporada, sem renovação automática.`}</p>
-        </div>
-        ${!pass.premiumAtivo ? html`<button type="button" className="lc-btn lc-btn-primary"
-          disabled=${busy !== null} onClick=${buyPremium}>Adquirir premium</button>` : null}
+        <div><h2 id="level-trail-title">Trilha de recompensas</h2>
+          <p>Os prêmios de cada trilha liberam conforme você alcança os níveis.</p></div>
+      </div>
+      <div className=${`lc-premium-access ${pass.premiumAtivo ? "active" : "locked"}`}>
+        <span className="lc-premium-badge"><${Icon} name=${pass.premiumAtivo ? "shield" : "lock"} /></span>
+        <div><strong>${pass.premiumAtivo ? "Premium ativo" : "Trilha Premium bloqueada"}</strong>
+          <small>${pass.premiumAtivo ? `Acesso até ${new Date(pass.premiumValidoAte).toLocaleDateString("pt-BR")}`
+            : `${currency(pass.precoPremium)} por mês${auth.ambienteLocal ? " · ativação de teste" : ""}`}</small></div>
+        ${!pass.premiumAtivo && auth.ambienteLocal ? html`<button type="button" className="lc-btn lc-neon-btn"
+          disabled=${busy !== null} onClick=${buyPremium}>Liberar Premium</button>` : null}
       </div>
       <div className="lc-rail-toolbar">
         <span>Deslize a trilha para explorar os níveis.</span>
@@ -1797,7 +1799,7 @@ function PassPage({ auth, notify }) {
           <button type="button" className="lc-btn lc-btn-ghost" aria-label="Próximos níveis" onClick=${() => moveTrack(1)}>→</button>
         </div>
       </div>
-      <div className="lc-rail">
+      <div className=${`lc-rail ${pass.premiumAtivo ? "" : "lc-rail-locked"}`}>
         <div className="lc-rail-labels" aria-hidden="true"><strong>Premium</strong><span>Nível</span><strong>Gratuito</strong></div>
         <div className="lc-rail-track" ref=${track} tabIndex="0" role="region" aria-label="Níveis e recompensas do passe">
           ${pass.niveis.map(reward => html`
@@ -1809,7 +1811,6 @@ function PassPage({ auth, notify }) {
             </div>`)}
         </div>
       </div>
-      <p className="lc-level-pass-footnote">Recompensa final · ${currency(pass.gastoAprovado)} de ${currency(pass.gastoMinimoFinal)} em produtos aprovados.</p>
       ${pass.historico.length ? html`<details className="lc-pass-xp-history">
         <summary>Últimos ganhos de XP</summary>
         ${pass.historico.map((item, index) => html`<div className="lc-summary-line" key=${index}>
@@ -1875,86 +1876,71 @@ function BenefitsPage({ auth, onAuthRefresh, notify }) {
 
 function PassMissionsPage() {
   const [dashboard, setDashboard] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [selected, setSelected] = useState(0);
+  const [error, setError] = useState("");
+  const tabs = ["Diárias", "Semanais", "Mensais", "Especiais"];
 
   useEffect(() => {
-    trackPassAction("CHECKIN")
-      .then(() => getJson("/api/pass/current"))
+    trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
       .then(setDashboard)
-      .catch((error) => {
-        if (error.code === "AUTH_REQUIRED") {
-          requireLogin("/passe/missoes");
-        }
+      .catch(failure => {
+        if (failure.code === "AUTH_REQUIRED") requireLogin("/passe/missoes");
+        else setError("Não foi possível carregar as missões.");
       });
+    getJson("/api/events")
+      .then(data => setEvents(data.filter(event => event.estado !== "Encerrado").slice(0, 4)))
+      .catch(() => {});
   }, []);
 
-  if (!dashboard) {
-    return html`<main className="lc-page"><p>Carregando missoes...</p></main>`;
-  }
-
-  const missionSections = [
-    ["Missoes diarias", dashboard.missoesDiarias],
-    ["Missoes semanais", dashboard.missoesSemanais],
-    ["Missoes mensais", dashboard.missoesMensais],
-  ];
-
-  return html`
-    <main className="lc-page">
-      <section className="lc-pass-shell">
-        <div className="lc-section-header">
-          <div>
-            <h2>Missões do passe</h2>
-            <p>
-              Acompanhe os objetivos do ciclo atual e volte para a trilha quando
-              quiser.
-            </p>
-          </div>
-          <${AppLink} href="/passe" className="lc-btn lc-btn-primary"
-            >Voltar para niveis<//
-          >
+  const missions = dashboard ? [dashboard.missoesDiarias, dashboard.missoesSemanais, dashboard.missoesMensais][selected] : [];
+  return html`<main className="lc-page lc-missions-page">
+    <header className="lc-store-heading">
+      <${AppLink} href="/passe">‹ Passe LEVEL<//>
+      <h1>Missões do passe</h1>
+      <p>Confira seus objetivos e acompanhe o XP que cada um rende.</p>
+    </header>
+    ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
+    <div className="lc-mission-tabs" role="tablist" aria-label="Tipos de missão">
+      ${tabs.map((label, index) => html`<button key=${label} type="button" role="tab"
+        id=${`mission-tab-${index}`} aria-controls="mission-panel" aria-selected=${selected === index}
+        tabIndex=${selected === index ? 0 : -1}
+        onClick=${() => setSelected(index)}
+        onKeyDown=${event => {
+          const delta = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+          if (!delta) return;
+          event.preventDefault();
+          const next = (index + delta + tabs.length) % tabs.length;
+          setSelected(next);
+          event.currentTarget.parentElement.querySelectorAll("button")[next].focus();
+        }}>${label}</button>`)}
+    </div>
+    <section id="mission-panel" role="tabpanel" aria-labelledby=${`mission-tab-${selected}`}>
+      ${selected === 3 ? html`
+        <div className="lc-missions-grid">
+          ${events.map(event => html`<article key=${event.id} className="lc-mission-row">
+            <div><h2>${event.titulo}</h2><p>${event.descricao}</p></div>
+            <div className="lc-mission-meta"><strong>${event.estado}</strong>
+              <${AppLink} href="/eventos">Ver evento →<//></div>
+          </article>`)}
         </div>
-        ${missionSections.map(
-          ([title, missions]) => html`
-            <div key=${title} className="lc-checkout-card">
-              <h3>${title}</h3>
-              <div className="lc-pass-missions">
-                ${missions.map(
-                  (mission) => html`
-                    <div key=${mission.id} className="lc-pass-mission">
-                      <div>
-                        <strong>${mission.titulo}</strong>
-                        <span>${mission.descricao}</span>
-                        ${
-                          mission.ctaHref
-                            ? html`
-                                <div className="lc-pass-mission-action">
-                                  <${AppLink}
-                                    href=${mission.ctaHref}
-                                    className="lc-pass-mini-btn"
-                                  >
-                                    ${mission.ctaLabel || "Ir para missao"}
-                                  <//>
-                                </div>
-                              `
-                            : null
-                        }
-                      </div>
-                      <div className="lc-pass-mission-meta">
-                        <span
-                          >${mission.progressoAtual}/${mission.metaValor}</span
-                        >
-                        <strong>+${mission.xpRecompensa} XP</strong>
-                        <small>Reseta em ${mission.resetaEm}</small>
-                      </div>
-                    </div>
-                  `,
-                )}
-              </div>
+        ${events.length === 0 ? html`<p className="lc-muted">Nenhuma missão especial disponível no momento.</p>` : null}`
+        : !dashboard && !error ? html`<p role="status">Carregando missões…</p>`
+        : html`<div className="lc-missions-grid">
+          ${(missions || []).slice(0, 4).map(mission => html`<article key=${mission.id} className="lc-mission-row">
+            <div><h2>${mission.titulo}</h2><p>${mission.descricao}</p>
+              ${mission.ctaHref && !mission.concluida ? html`<${AppLink} href=${mission.ctaHref}>
+                ${mission.ctaLabel || "Ir para missão"} →
+              <//>` : null}
             </div>
-          `,
-        )}
-      </section>
-    </main>
-  `;
+            <div className="lc-mission-meta">
+              <strong>+${mission.xpRecompensa} XP</strong>
+              <span>${mission.concluida ? "Concluída" : `${mission.progressoAtual}/${mission.metaValor}`}</span>
+            </div>
+          </article>`)}
+        </div>`}
+    </section>
+  </main>`;
 }
 
 function Footer() {
@@ -1994,6 +1980,7 @@ function App() {
   };
   const [homeData, setHomeData] = useState(null);
   const [auth, setAuth] = useState({ authenticated: false, ready: false });
+  const [address, setAddress] = useState(null);
   const [notice, setNotice] = useState(null);
   const [notificationBox, setNotificationBox] = useState(null);
   const toastTimer = useRef(null);
@@ -2036,6 +2023,13 @@ function App() {
     return () => window.clearInterval(interval);
   }, [auth.authenticated, path]);
 
+  useEffect(() => {
+    if (!auth.authenticated) return;
+    let active = true;
+    getJson("/api/account/address").then(data => { if (active) setAddress(data); }).catch(() => {});
+    return () => { active = false; };
+  }, [auth.authenticated]);
+
   const addToCartWithTracking = (product, quantity = 1) => {
     const existing = cart.items.find(item => item.id === product.id)?.quantity || 0;
     if (existing + quantity > product.estoque) {
@@ -2057,6 +2051,13 @@ function App() {
 
   const currentScreen = useMemo(() => {
     if (path === "/conta") return html`<${AccountPage} auth=${auth} />`;
+    if (path === "/conta/endereco") {
+      if (auth.ready && !auth.authenticated) return html`<main className="lc-page">
+        <${AppLink} href=${buildLoginUrl(path)} className="lc-btn lc-btn-primary">Entrar para salvar endereço<//>
+      </main>`;
+      if (!auth.ready) return null;
+      return html`<${AddressPage} address=${address} onSaved=${setAddress} notify=${notify} />`;
+    }
     if (path === "/conta/beneficios")
       return html`<${BenefitsPage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
     if (path === "/passe") return html`<${PassPage} auth=${auth} notify=${notify} />`;
@@ -2079,6 +2080,7 @@ function App() {
       return html`<${CheckoutPage}
         items=${immediateCheckout ? immediateItem ? [immediateItem] : [] : cart.items}
         auth=${auth}
+        address=${auth.authenticated ? address : null}
         clearCart=${immediateCheckout ? clearImmediateCheckout : cart.clearCart}
       />`;
     }
@@ -2100,7 +2102,6 @@ function App() {
         <${CatalogPage}
           route=${route}
           onAddToCart=${addToCartWithTracking}
-          onBuyNow=${buyNow}
         />
       `;
     }
@@ -2113,6 +2114,7 @@ function App() {
           onBuyNow=${buyNow}
           auth=${auth}
           notify=${notify}
+          address=${auth.authenticated ? address : null}
         />
       `;
     }
@@ -2127,7 +2129,7 @@ function App() {
         auth=${auth}
       />
     `;
-  }, [path, route, homeData, auth, cart, immediateItem]);
+  }, [path, route, homeData, auth, cart, immediateItem, address]);
 
   const searchAndNavigate = (searchTerm) => {
     const params = new URLSearchParams();
@@ -2147,6 +2149,7 @@ function App() {
         path=${path}
         dark=${dark}
         toggleTheme=${toggleTheme}
+        address=${auth.authenticated ? address : null}
         notificationProps=${{
           box: notificationBox, refresh: refreshNotifications, openLink: navigate,
           readAll: (id) => postJson(`/api/account/notifications/read/${id}`, {})

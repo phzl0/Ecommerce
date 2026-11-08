@@ -204,7 +204,7 @@ O backend é um monólito modular em **Java 17 e Spring Boot**, com **PostgreSQL
 | Conta | Cadastro, login, perfil e pedidos privados |
 | Pedidos | Preços recalculados no banco, frete por faixa, estoque reservado e cancelamento |
 | Pagamento | Integração Checkout Pro, retorno, Webhook validado e conciliação administrativa |
-| Passe | Temporadas, trilha gratuita, premium por temporada e histórico de XP |
+| Passe | Temporadas, trilha gratuita, Premium mensal de R$ 79 no teste local e histórico de XP |
 | Missões | Check-in, produtos distintos, sacola, avaliações e compras aprovadas |
 | Benefícios | Cupom pessoal de uso único, avatar/badge, wallpaper e tema |
 | Administração | Produtos, imagens, categorias, pedidos, estados e consulta de pagamento no provedor |
@@ -221,14 +221,14 @@ Não basta colocar um token e considerar a loja validada: antes de ativar vendas
 ## Regras iniciais de gamificação
 
 - Temporadas existentes mantêm os níveis e XP cadastrados; o padrão inicial é 30 níveis de 100 XP.
-- O premium custa R$ 197 por temporada por padrão, sem renovação automática; o preço é configurável para novos pedidos.
-- A recompensa final exige R$ 1.200 em produtos aprovados na temporada, por padrão. Frete, descontos e compra do premium não contam nesse gasto.
-- Compras e valores gastos só avançam missões após confirmação financeira no servidor.
+- O Passe Premium custa R$ 79 por mês no teste local. O mês de acesso começa com a aprovação simulada no painel.
+- Os prêmios Premium exigem acesso ativo e o nível indicado, inclusive a recompensa final.
+- Compras só avançam missões após confirmação financeira no servidor.
 - Avaliações exigem compra aprovada; editar a mesma avaliação não dá um novo prêmio.
 - Cupons são individuais, vinculados à conta, de uso único e com condições registradas no resgate. O padrão é R$ 10 de desconto em produtos a partir de R$ 100.
 - A coleção permite resgatar e utilizar os benefícios digitais. Não há sorteio nem entrega física automática de prêmios nesta beta.
 
-As variáveis de níveis, preço, XP, cupons, fuso e gasto mínimo estão descritas no [guia de regras e operação](https://github.com/phzl0/Ecommerce/blob/develop/docs/PAGAMENTOS_E_PASSE.md).
+As regras de níveis, assinatura, XP, cupons e fuso estão descritas no [guia de regras e operação](https://github.com/phzl0/Ecommerce/blob/develop/docs/PAGAMENTOS_E_PASSE.md).
 
 ## Limites e próximos cuidados
 

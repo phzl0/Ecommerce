@@ -9,7 +9,7 @@
 - Checkout Pro do Mercado Pago com frete/desconto, URL de retorno, assinatura HMAC das notificações, consulta autenticada do pagamento e conferência de valor, moeda, conta recebedora e ambiente.
 - Tentativas repetidas reutilizam a preferência enquanto o pedido está válido. Eventos aprovados repetidos não concedem XP novamente nem reconfirmam o pedido.
 - Histórico de XP, missões, produtos distintos, resgate por temporada e coleção privada.
-- Premium comprado por temporada, sem renovação automática. O pagamento do premium não concede XP de compra nem entra no gasto mínimo de produtos.
+- Passe Premium mensal com aprovação simulada no ambiente local. O pagamento da assinatura não concede XP de compra.
 - Cupons pessoais de uso único, avatar/badge em SVG, wallpaper e tema aplicável à conta. Não há premiação física automática nesta versão.
 
 ## Demonstração e pagamento real são configurações diferentes
@@ -49,22 +49,20 @@ Pagamentos duplicados, reembolso parcial, aprovações tardias, estorno de benef
 
 ## Regras do passe
 
-O passe existente tem 30 níveis de 100 XP. As missões atuais incluem check-in, produtos distintos, sacola, avaliações e compras aprovadas. Compras e gastos só são registrados pelo backend após confirmação financeira. Avaliação exige compra aprovada do produto; editar a mesma avaliação não gera novo prêmio.
+O passe existente tem 30 níveis de 100 XP. As missões atuais incluem check-in, produtos distintos, sacola, avaliações e compras aprovadas. Compras só são registradas pelo backend após confirmação financeira. Avaliação exige compra aprovada do produto; editar a mesma avaliação não gera novo prêmio.
 
 O fuso padrão de negócio é `America/Sao_Paulo`, configurável por `APP_TIMEZONE`. Mudanças de fuso em um banco existente exigem avaliação dos registros históricos.
 
 | Variável | Padrão | Efeito |
 | --- | --- | --- |
-| `APP_PASS_PREMIUM_PRICE` | `197.00` | Preço dos novos pedidos premium |
 | `APP_PASS_TOTAL_LEVELS` | `30` | Quantidade de níveis para novas temporadas; permite configurar 50 |
 | `APP_PASS_XP_PER_LEVEL` | `100` | XP por nível para novas temporadas |
-| `APP_PASS_REQUIRED_SPEND` | `1200.00` | Gasto líquido mínimo em produtos aprovados para o resgate final |
 | `APP_PASS_COUPON_VALUE` | `10.00` | Desconto de cupom validado no checkout |
 | `APP_PASS_COUPON_MINIMUM` | `100.00` | Subtotal mínimo de produtos para usar cupom |
 
 Temporadas existentes mantêm quantidade de níveis e XP já definidos. O preço fica registrado no pedido premium. Valor e mínimo de compra de cada cupom são registrados no resgate: alterar os parâmetros afeta novas emissões, preservando cupons já emitidos. A beta ainda não oferece um editor administrativo dessas regras.
 
-A trilha gratuita libera níveis selecionados; os outros exigem premium aprovado da temporada. O resgate final também exige o gasto mínimo informado na tela. Frete, descontos e compra do próprio premium não aumentam esse gasto.
+A trilha gratuita libera níveis selecionados. As recompensas Premium, incluindo a última da trilha, exigem acesso Premium ativo e o nível correspondente. O Passe Premium custa R$ 79 por mês no ambiente de teste. A aprovação simulada libera um mês de acesso a partir do pagamento, inclusive se o mês atravessar uma troca de temporada. A integração de cobrança recorrente será feita separadamente.
 
 Cada recompensa é resgatada uma vez por usuário. Códigos pessoais são emitidos no resgate, não expostos antes do desbloqueio. Cupons têm validade até 30 dias após o fim da temporada, pertencem à conta e ficam reservados ao pedido que os usa. Cancelar esse pedido permite nova utilização, se o benefício continuar válido.
 

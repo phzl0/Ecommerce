@@ -35,10 +35,13 @@ test("catalog, private pass, checkout without live charges and profile", async (
     page.getByRole("heading", { name: "Passe LEVEL", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Adquirir premium" }),
+    page.getByRole("button", { name: "Liberar Premium" }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Minha coleção" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Níveis e recompensas do passe" })).toBeVisible();
+  await expect(page.getByText("Trilha Premium bloqueada")).toBeVisible();
+  await expect(page.getByText(/Faltam \d+ XP para o próximo nível/)).toBeVisible();
+  await expect(page.getByText(/Recompensa final ·/)).toHaveCount(0);
   await page.screenshot({
     path: "test-results/pass-desktop.png",
     fullPage: true,
@@ -54,6 +57,7 @@ test("catalog, private pass, checkout without live charges and profile", async (
   expect(sections.slice(0, 4)).toEqual([
     "Campanhas em destaque", "Chamadas promocionais demonstrativas", "Passe LEVEL", "Destaques da loja",
   ]);
+  await expect(home.getByRole("button", { name: "Pausar faixa" })).toHaveCount(0);
   const themeToggle = page.getByRole("button", { name: "Modo escuro" });
   await expect(themeToggle).toHaveAttribute("aria-pressed", "false");
   await page.screenshot({ path: "test-results/home-light-desktop.png" });

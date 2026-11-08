@@ -95,6 +95,7 @@ public class SecurityConfig {
                         "/sacola",
                         "/conta",
                         "/conta/beneficios",
+                        "/conta/endereco",
                         "/checkout",
                         "/login",
                         "/cadastro",

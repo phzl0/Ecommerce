@@ -21,6 +21,17 @@ public class Pedido extends BaseEntity {
 
   private Long temporadaPasseId;
 
+  @Column(nullable = false)
+  private boolean passeMensal;
+
+  public boolean isPasseMensal() {
+    return passeMensal;
+  }
+
+  public void setPasseMensal(boolean value) {
+    passeMensal = value;
+  }
+
   public Long getTemporadaPasseId() {
     return temporadaPasseId;
   }

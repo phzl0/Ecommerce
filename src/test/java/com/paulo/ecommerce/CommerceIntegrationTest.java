@@ -249,7 +249,7 @@ class CommerceIntegrationTest {
   }
 
   @Test
-  void finalRewardRequiresRealApprovedSpendEvenWithEnoughXp() {
+  void finalRewardRequiresPremiumAndLevelWithoutMinimumSpend() {
     var u = account();
     var dashboard = passes.carregarDashboard(u.getEmail());
     var state =
@@ -267,6 +267,18 @@ class CommerceIntegrationTest {
     assertThrows(
         IllegalStateException.class,
         () -> passes.reclamarRecompensa(u.getEmail(), reward.recompensaId()));
+    var order = orders.findById(passes.criarPedidoPremium(u.getEmail())).orElseThrow();
+    assertEquals(0, new BigDecimal("79.00").compareTo(order.getTotal()));
+    assertTrue(order.isPasseMensal());
+    var payment = new Pagamento();
+    payment.setPedido(order);
+    payment.setStatus(Pagamento.StatusPagamento.APROVADO);
+    payment.setPagoEm(java.time.LocalDateTime.now());
+    order.setPagamento(payment);
+    order.setStatus(Pedido.Status.CONFIRMADO);
+    orders.saveAndFlush(order);
+    assertTrue(passes.carregarDashboard(u.getEmail()).premiumAtivo());
+    assertNotNull(passes.reclamarRecompensa(u.getEmail(), reward.recompensaId()).codigo());
   }
 
   @Test

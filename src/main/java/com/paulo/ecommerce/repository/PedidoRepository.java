@@ -11,17 +11,16 @@ import org.springframework.data.repository.query.Param;
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
   java.util.Optional<Pedido> findByUsuarioIdAndCheckoutKey(Long usuarioId, String checkoutKey);
 
-  @Query(
-      "select coalesce(sum(p.subtotal-p.desconto),0) from Pedido p where p.usuario.id=:usuario and"
-          + " p.temporadaPasseId is null and p.status <> 'CANCELADO' and"
-          + " p.pagamento.status='APROVADO' and p.pagamento.pagoEm >= :inicio and"
-          + " p.pagamento.pagoEm < :fim")
-  BigDecimal gastoAprovado(
-      @Param("usuario") Long usuario,
-      @Param("inicio") LocalDateTime inicio,
-      @Param("fim") LocalDateTime fim);
+  java.util.Optional<Pedido> findFirstByUsuarioIdAndPasseMensalTrueAndStatusAndDataPedidoAfterOrderByIdDesc(
+      Long usuarioId, Pedido.Status status, LocalDateTime limite);
 
-  List<Pedido> findByUsuarioIdAndTemporadaPasseId(Long usuarioId, Long temporadaPasseId);
+  @Query("""
+      select p from Pedido p join fetch p.pagamento pg
+      where p.usuario.id = :usuarioId and p.temporadaPasseId is not null
+        and p.status <> 'CANCELADO' and pg.status = 'APROVADO'
+        and (p.temporadaPasseId = :temporadaId or (p.passeMensal = true and pg.pagoEm >= :limite))
+      """)
+  List<Pedido> pagamentosPasse(Long usuarioId, Long temporadaId, LocalDateTime limite);
 
   List<Pedido> findTop100ByStatusAndDataPedidoBeforeOrderByIdAsc(
       Pedido.Status status, LocalDateTime limite);
