@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import java.sql.DriverManager;
 import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
@@ -19,15 +20,14 @@ class MigrationIntegrationTest {
     String schema = "migration_" + java.util.UUID.randomUUID().toString().replace("-", "");
     try (var conn = DriverManager.getConnection(url, user, password);
         var sql = conn.createStatement()) {
-      var flyway =
+      var migrations =
           Flyway.configure()
               .dataSource(url, user, password)
               .schemas(schema)
               .defaultSchema(schema)
               .baselineOnMigrate(true)
-              .baselineVersion("1")
-              .load();
-      flyway.migrate();
+              .baselineVersion("1");
+      migrations.target("4").load().migrate();
       sql.execute("set search_path to " + schema);
       sql.execute(
           "insert into usuarios(nome,email,senha,role) values"
@@ -35,15 +35,16 @@ class MigrationIntegrationTest {
       sql.execute("drop table flyway_schema_history");
       sql.execute("drop table passe_eventos");
       sql.execute("alter table pagamentos drop column checkout_url");
-      flyway.migrate();
+      migrations.target(MigrationVersion.LATEST).load().migrate();
       try (var result =
           sql.executeQuery("select count(*) from usuarios where email='preserved@example.test'")) {
         assertTrue(result.next());
         assertEquals(1, result.getInt(1));
       }
-      try (var result = sql.executeQuery("select checkout_url from pagamentos limit 0")) {
-        assertNotNull(result);
-      }
+      assertTrue(sql.execute("select checkout_url from pagamentos limit 0"));
+      assertTrue(sql.execute("select id from eventos_semanais limit 0"));
+      assertTrue(sql.execute("select id from notificacoes limit 0"));
+      assertTrue(sql.execute("select usuario_id from recuperacao_senha limit 0"));
     } finally {
       try (var conn = DriverManager.getConnection(url, user, password);
           var sql = conn.createStatement()) {
