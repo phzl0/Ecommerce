@@ -162,6 +162,23 @@ public class EmailService {
     enviar(pedido.getUsuario().getEmail(), assunto, corpo);
   }
 
+  @Async
+  public void enviarRecuperacaoSenha(String destinatario, String token) {
+    if (mailSender == null) return;
+    try {
+      var mensagem = new org.springframework.mail.SimpleMailMessage();
+      mensagem.setFrom(remetente);
+      mensagem.setTo(destinatario);
+      mensagem.setSubject("Redefina sua senha | LEVEL COMMERCE");
+      mensagem.setText("Abra o link em até 15 minutos para redefinir sua senha:\n"
+          + appUrl + "/redefinir-senha#token=" + token);
+      mailSender.send(mensagem);
+    } catch (org.springframework.mail.MailException error) {
+      org.slf4j.LoggerFactory.getLogger(EmailService.class)
+          .warn("Falha ao enviar mensagem de recuperação: {}", error.getClass().getSimpleName());
+    }
+  }
+
   private void enviar(String destinatario, String assunto, String corpo) {
     if (mailSender == null) {
       System.out.println("Email desativado - JavaMailSender não configurado");

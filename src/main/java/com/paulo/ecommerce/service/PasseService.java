@@ -44,6 +44,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PasseService {
+  @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
 
   private static final Locale LOCALE_PT_BR = Locale.forLanguageTag("pt-BR");
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
@@ -461,7 +462,8 @@ public class PasseService {
                   novo.setRecompensa(recompensa);
                   return novo;
                 });
-    if (resgate.getCodigoEntrega() == null)
+    boolean primeiroResgate = resgate.getCodigoEntrega() == null;
+    if (primeiroResgate)
       resgate.setCodigoEntrega(
           "LC-"
               + java.util
@@ -480,6 +482,8 @@ public class PasseService {
       resgate.setMinimoCupom(minimoCupom);
     }
     recompensaResgateRepository.save(resgate);
+    if (primeiroResgate)
+      notificacoes.registrar(usuario.getId(), "Recompensa do passe resgatada", recompensa.getTitulo(), "/passe");
     return new PasseClaimResponse(
         resgate.getCodigoEntrega(), recompensa.getTitulo(), recompensa.getDescricao());
   }

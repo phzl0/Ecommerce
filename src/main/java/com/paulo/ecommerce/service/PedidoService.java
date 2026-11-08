@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PedidoService {
 
   @org.springframework.beans.factory.annotation.Autowired private PasseService passes;
+  @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
   private final PedidoRepository pedidoRepository;
   private final ProdutoRepository produtoRepository;
   private final UsuarioRepository usuarioRepository;
@@ -150,6 +151,9 @@ public class PedidoService {
       salvo.setTotal(salvo.getSubtotal().add(salvo.getFrete()).subtract(salvo.getDesconto()));
       salvo = pedidoRepository.save(salvo);
     }
+    String mensagem = "Acompanhe o pedido " + salvo.getNumero() + " na sua conta.";
+    if (salvo.getDesconto().signum() > 0) mensagem += " Cupom aplicado.";
+    notificacoes.registrar(usuario.getId(), "Pedido recebido", mensagem, "/pedidos/" + salvo.getId());
     emailService.enviarConfirmacaoPedido(salvo);
     return salvo;
   }
@@ -233,6 +237,14 @@ public class PedidoService {
     }
     pedido.setStatus(status);
     pedidoRepository.save(pedido);
+    String titulo = switch (status) {
+      case CONFIRMADO -> "Pagamento confirmado";
+      case ENVIADO -> "Pedido enviado";
+      case ENTREGUE -> "Pedido entregue";
+      case CANCELADO -> "Pedido cancelado";
+      case PENDENTE -> throw new IllegalStateException("Transição de pedido inválida.");
+    };
+    notificarStatus(pedido, titulo);
     emailService.enviarAtualizacaoStatus(pedido);
   }
 
@@ -259,6 +271,7 @@ public class PedidoService {
 
     pedido.setStatus(Pedido.Status.CANCELADO);
     pedidoRepository.save(pedido);
+    notificarStatus(pedido, "Pedido cancelado");
   }
 
   @org.springframework.cache.annotation.CacheEvict(
@@ -275,6 +288,12 @@ public class PedidoService {
     devolverEstoque(pedido);
     pedido.setStatus(Pedido.Status.CANCELADO);
     pedidoRepository.save(pedido);
+    notificarStatus(pedido, "Reserva do pedido expirada");
+  }
+
+  private void notificarStatus(Pedido pedido, String titulo) {
+    notificacoes.registrar(pedido.getUsuario().getId(), titulo,
+        "Pedido " + pedido.getNumero(), "/pedidos/" + pedido.getId());
   }
 
   private void devolverEstoque(Pedido pedido) {

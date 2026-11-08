@@ -20,6 +20,8 @@ public class PagamentoService {
   private final PedidoService pedidoService;
   private final EmailService emailService;
   private final PasseService passeService;
+  private final EventoSemanalService eventos;
+  private final org.springframework.core.env.Environment environment;
 
   @Value("${app.url:http://localhost:8080}")
   private String appUrl;
@@ -40,11 +42,15 @@ public class PagamentoService {
       PagamentoRepository pagamentoRepository,
       PedidoService pedidoService,
       EmailService emailService,
-      PasseService passeService) {
+      PasseService passeService,
+      EventoSemanalService eventos,
+      org.springframework.core.env.Environment environment) {
     this.pagamentoRepository = pagamentoRepository;
     this.pedidoService = pedidoService;
     this.emailService = emailService;
     this.passeService = passeService;
+    this.eventos = eventos;
+    this.environment = environment;
   }
 
   public java.util.Map<String, Boolean> configuracaoPublica() {
@@ -190,14 +196,7 @@ public class PagamentoService {
             throw new IllegalStateException(
                 "Pagamento recebido após encerramento do pedido; requer conciliação.");
           pagamento.setMpPaymentId(paymentId);
-          pagamento.setStatus(StatusPagamento.APROVADO);
-          pagamento.setPagoEm(LocalDateTime.now());
-          pedidoService.atualizarStatus(pedidoId, Pedido.Status.CONFIRMADO);
-          if (pedido.getTemporadaPasseId() == null)
-            passeService.registrarXpCompraAprovada(
-                pedido.getUsuario().getEmail(),
-                pedidoId,
-                pedido.getSubtotal().subtract(pedido.getDesconto()));
+          confirmar(pedido, pagamento);
         }
         case "refunded", "charged_back" -> {
           if (pagamento.getStatus() == StatusPagamento.REEMBOLSADO) return;
@@ -226,6 +225,40 @@ public class PagamentoService {
     } catch (com.mercadopago.exceptions.MPException | com.mercadopago.exceptions.MPApiException e) {
       throw new IllegalStateException(
           "Não foi possível consultar o pagamento; a notificação precisa ser repetida.", e);
+    }
+  }
+
+  public boolean simulacaoDisponivel() {
+    return !paymentsEnabled && environment.matchesProfiles("local & !prod")
+        && environment.getProperty("app.local-demo-enabled", Boolean.class, false);
+  }
+
+  @Transactional
+  public void simularAprovacao(Long pedidoId) {
+    if (!simulacaoDisponivel()) throw new IllegalStateException("Simulação indisponível.");
+    Pedido pedido = pedidoService.bloquearPedidoParaConciliacao(pedidoId);
+    if (pedido.getStatus() != Pedido.Status.PENDENTE
+        || pedido.getDataPedido().isBefore(LocalDateTime.now().minusHours(24)))
+      throw new IllegalStateException("O pedido não tem uma reserva válida para simular.");
+    if (pagamentoRepository.findByPedidoId(pedidoId).isPresent())
+      throw new IllegalStateException("Este pedido já possui uma tentativa de pagamento.");
+    Pagamento pagamento = new Pagamento();
+    pagamento.setPedido(pedido);
+    pagamento.setMetodo(MetodoPagamento.PIX);
+    pagamento.setValor(pedido.getTotal());
+    pedido.setPagamento(pagamento);
+    confirmar(pedido, pagamento);
+  }
+
+  private void confirmar(Pedido pedido, Pagamento pagamento) {
+    pagamento.setStatus(StatusPagamento.APROVADO);
+    pagamento.setPagoEm(LocalDateTime.now());
+    pagamentoRepository.save(pagamento);
+    pedidoService.atualizarStatus(pedido.getId(), Pedido.Status.CONFIRMADO);
+    if (pedido.getTemporadaPasseId() == null) {
+      var valor = pedido.getSubtotal().subtract(pedido.getDesconto());
+      passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(), pedido.getId(), valor);
+      eventos.notificarMeta(pedido.getUsuario().getId(), pagamento.getPagoEm(), valor);
     }
   }
 

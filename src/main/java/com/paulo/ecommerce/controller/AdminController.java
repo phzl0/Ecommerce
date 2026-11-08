@@ -162,7 +162,19 @@ public class AdminController {
   public String detalharPedido(@PathVariable Long id, Model model) {
     model.addAttribute("pedido", pedidoService.buscarPorId(id));
     model.addAttribute("statusOpcoes", Pedido.Status.values());
+    model.addAttribute("simulacaoDisponivel", payments.simulacaoDisponivel());
     return "admin/pedidos/detalhe";
+  }
+
+  @PostMapping("/pedidos/{id}/simular")
+  public String simularPagamento(@PathVariable Long id, RedirectAttributes flash) {
+    try {
+      payments.simularAprovacao(id);
+      flash.addFlashAttribute("msg", "Pagamento simulado. Nenhuma cobrança foi realizada.");
+    } catch (IllegalStateException error) {
+      flash.addFlashAttribute("erro", error.getMessage());
+    }
+    return "redirect:/admin/pedidos/" + id;
   }
 
   @PostMapping("/pedidos/{id}/status")

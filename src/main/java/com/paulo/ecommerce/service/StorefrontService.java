@@ -37,28 +37,20 @@ public class StorefrontService {
                 "Uma loja pensada para conversao, com curadoria forte e visual de marca.",
                 List.of(
                         new StoreBannerResponse(
-                                "Passe mensal LEVEL",
-                                "Ganhe XP com compras, check-ins e missoes recorrentes.",
-                                "30 niveis e recompensas digitais",
-                                "Ver passe",
-                                "/passe",
-                                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1400&q=80"
-                        ),
-                        new StoreBannerResponse(
-                                "Semana de setup premium",
-                                "Monitores, notebooks e audio com visual mais limpo de loja real.",
-                                "Frete gratis a partir de R$ 299",
-                                "Ver catalogo",
-                                "/catalogo?categoriaId=1",
+                                "Tecnologia para o seu dia",
+                                "Encontre acessórios, áudio e equipamentos para trabalho e lazer.",
+                                "DESTAQUES DA LOJA",
+                                "Explorar catálogo",
+                                "/catalogo",
                                 "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1400&q=80"
                         ),
                         new StoreBannerResponse(
-                                "Casa e produtividade",
-                                "Automacao, mobilidade e bem-estar em destaque.",
-                                "Curadoria LEVEL COMMERCE",
-                                "Explorar colecoes",
-                                "/catalogo",
-                                "https://images.unsplash.com/photo-1486946255434-2466348c2166?auto=format&fit=crop&w=1400&q=80"
+                                "Descubra os eventos da LEVEL",
+                                "Acompanhe as campanhas da semana e desbloqueie selos na sua conta.",
+                                "LEVEL REWARDS",
+                                "Ver eventos",
+                                "/eventos",
+                                "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1400&q=80"
                         )
                 ),
                 categoriaService.listarTodas().stream().map(this::toCategory).toList(),

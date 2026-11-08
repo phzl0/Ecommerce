@@ -26,6 +26,15 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
   List<Pedido> findTop100ByStatusAndDataPedidoBeforeOrderByIdAsc(
       Pedido.Status status, LocalDateTime limite);
 
+  @Query("""
+      select p.subtotal - p.desconto from Pedido p join p.pagamento pg
+      where p.usuario.id = :usuario and p.temporadaPasseId is null
+        and p.status <> 'CANCELADO' and pg.status = 'APROVADO'
+        and pg.pagoEm >= :inicio and pg.pagoEm < :fim
+        and p.subtotal - p.desconto >= :minimo
+      """)
+  List<BigDecimal> comprasEvento(Long usuario, LocalDateTime inicio, LocalDateTime fim, BigDecimal minimo);
+
   @Query("select p.usuario.email from Pedido p where p.id = :id")
   java.util.Optional<String> findOwnerEmail(@Param("id") Long id);
 

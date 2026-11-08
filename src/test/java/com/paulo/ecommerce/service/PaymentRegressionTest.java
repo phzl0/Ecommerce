@@ -17,7 +17,8 @@ class PaymentRegressionTest {
     var repo = mock(PagamentoRepository.class);
     var orders = mock(PedidoService.class);
     var passes = mock(PasseService.class);
-    var service = spy(new PagamentoService(repo, orders, mock(EmailService.class), passes));
+    var service = spy(new PagamentoService(repo, orders, mock(EmailService.class), passes,
+        mock(EventoSemanalService.class), new org.springframework.mock.env.MockEnvironment()));
     ReflectionTestUtils.setField(service, "paymentsEnabled", true);
     ReflectionTestUtils.setField(service, "collectorId", "123");
     var order = new Pedido();

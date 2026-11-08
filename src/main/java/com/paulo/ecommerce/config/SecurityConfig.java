@@ -31,7 +31,8 @@ public class SecurityConfig {
   }
 
   @Bean
-  public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+  public SecurityFilterChain filterChain(HttpSecurity http,
+      org.springframework.security.core.session.SessionRegistry sessions) throws Exception {
 
     CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
     requestHandler.setCsrfRequestAttributeName(null);
@@ -76,7 +77,7 @@ public class SecurityConfig {
                         csp ->
                             csp.policyDirectives(
                                 "default-src 'self'; "
-                                    + "script-src 'self' 'unsafe-inline' https:; "
+                                    + "script-src 'self' 'unsafe-inline' https://esm.sh; "
                                     + "style-src 'self' 'unsafe-inline' https:; "
                                     + "img-src 'self' data: https:; "
                                     + "font-src 'self' data: https:; "
@@ -96,6 +97,9 @@ public class SecurityConfig {
                         "/checkout",
                         "/login",
                         "/cadastro",
+                        "/recuperar-senha",
+                        "/redefinir-senha",
+                        "/eventos",
                         "/pagamento/retorno",
                         "/passe",
                         "/passe/missoes")
@@ -111,7 +115,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/store/products/*/reviews")
                     .hasAnyRole("CLIENTE", "ADMIN")
-                    .requestMatchers("/api/cep/**", "/api/store/**", "/api/auth/me")
+                    .requestMatchers("/api/cep/**", "/api/store/**", "/api/auth/me", "/api/auth/register",
+                        "/api/auth/password/forgot", "/api/auth/password/reset", "/api/events")
                     .permitAll()
                     .requestMatchers("/api/checkout/**")
                     .hasAnyRole("CLIENTE", "ADMIN")
@@ -176,12 +181,17 @@ public class SecurityConfig {
                     .deleteCookies("JSESSIONID", "XSRF-TOKEN")
                     .permitAll())
         // ── Sessão ────────────────────────────────────
-        .sessionManagement(session -> session.maximumSessions(2).maxSessionsPreventsLogin(false))
+        .sessionManagement(session -> session.maximumSessions(2).maxSessionsPreventsLogin(false)
+            .sessionRegistry(sessions))
         .exceptionHandling(
             ex ->
                 ex.defaultAuthenticationEntryPointFor(
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                    new AntPathRequestMatcher("/api/**")))
+                    new AntPathRequestMatcher("/api/**"))
+                    .defaultAuthenticationEntryPointFor(
+                        new org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint(
+                            "/login?returnUrl=%2Fadmin"),
+                        new AntPathRequestMatcher("/admin/**")))
         .userDetailsService(usuarioDetailsService);
 
     return http.build();
@@ -192,8 +202,17 @@ public class SecurityConfig {
         && path.startsWith("/")
         && !path.startsWith("//")
         && !path.contains("\\")
-        && !path.contains("\r")
-        && !path.contains("\n");
+        && path.chars().noneMatch(c -> Character.isISOControl(c) || Character.isWhitespace(c));
+  }
+
+  @Bean
+  public org.springframework.security.core.session.SessionRegistry sessionRegistry() {
+    return new org.springframework.security.core.session.SessionRegistryImpl();
+  }
+
+  @Bean
+  public org.springframework.security.web.session.HttpSessionEventPublisher httpSessionEventPublisher() {
+    return new org.springframework.security.web.session.HttpSessionEventPublisher();
   }
 
   @Bean

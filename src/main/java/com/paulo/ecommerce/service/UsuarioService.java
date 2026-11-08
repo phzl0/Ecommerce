@@ -26,14 +26,26 @@ public class UsuarioService {
 
   @Transactional
   public Usuario cadastrar(Usuario usuario) {
-    if (usuarioRepository.existsByEmail(usuario.getEmail())) {
+    usuario.setNome(usuario.getNome().trim());
+    usuario.setEmail(usuario.getEmail().trim().toLowerCase(java.util.Locale.ROOT));
+    validarSenha(usuario.getSenha());
+    if (usuario.getNome().length() < 2 || usuario.getNome().length() > 100)
+      throw new IllegalArgumentException("Informe um nome de 2 a 100 caracteres.");
+    if (com.paulo.ecommerce.config.LocalDevelopmentConfig.ADMIN_EMAIL.equals(usuario.getEmail())
+        || usuarioRepository.existsByEmailIgnoreCase(usuario.getEmail())) {
       throw new EmailJaCadastradoException(usuario.getEmail());
     }
     usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
     usuario.setRole(Usuario.Role.CLIENTE);
     emailService.enviarBoasVindas(usuario);
 
-    return usuarioRepository.save(usuario);
+    return usuarioRepository.saveAndFlush(usuario);
+  }
+
+  public static void validarSenha(String senha) {
+    if (senha == null || senha.isBlank() || senha.length() < 12
+        || senha.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72)
+      throw new IllegalArgumentException("Use uma senha com pelo menos 12 caracteres e até 72 bytes.");
   }
 
   public Usuario buscarPorEmail(String email) {
@@ -58,8 +70,7 @@ public class UsuarioService {
       usuario.setNome(nome);
     }
     if (novaSenha != null && !novaSenha.isBlank()) {
-      if (novaSenha.length() < 12 || novaSenha.length() > 72)
-        throw new IllegalArgumentException("A nova senha deve ter entre 12 e 72 caracteres.");
+      validarSenha(novaSenha);
       usuario.setSenha(passwordEncoder.encode(novaSenha));
     }
     return usuarioRepository.save(usuario);

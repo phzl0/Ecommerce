@@ -7,4 +7,5 @@ public record AuthStatusResponse(
     String tema,
     Long avatarPasse,
     Long badgePasse,
-    String role) {}
+    String role,
+    boolean ambienteLocal) {}
