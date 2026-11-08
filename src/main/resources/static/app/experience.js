@@ -7,6 +7,8 @@ const reais = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
 
 export function Icon({ name }) {
   const paths = {
+    moon: "M20.8 14.7A9 9 0 0 1 9.3 3.2 9 9 0 1 0 20.8 14.7Z",
+    sun: "M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z",
     search: "M21 21l-4.4-4.4M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z",
     user: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2m12-14a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z",
     bag: "M4 8h16l1 13H3L4 8Zm4 1V6a4 4 0 0 1 8 0v3",
@@ -21,7 +23,7 @@ export function Icon({ name }) {
 }
 
 export function Brand() {
-  return html`<a href="/" className="lc-brand"><span className="lc-brand-badge" aria-hidden="true">L<span>.</span></span>
+  return html`<a href="/" className="lc-brand" aria-label="LEVEL COMMERCE, início"><span className="lc-brand-badge" aria-hidden="true">L<span>.</span></span>
     <strong>LEVEL<span> COMMERCE</span></strong></a>`;
 }
 

@@ -107,7 +107,7 @@ body a {
   align-items: center;
   gap: 8px;
   padding: 4px;
-  background: white;
+  background: var(--lc-surface);
   border: 1px solid var(--lc-border);
   border-radius: 999px;
   box-shadow: 0 8px 18px rgba(8, 17, 11, 0.04);
@@ -163,7 +163,7 @@ body a {
 .lc-nav-links-side a:not(.lc-cart-pill) {
   padding: 8px 12px;
   border-radius: 999px;
-  background: white;
+  background: var(--lc-surface);
   border: 1px solid var(--lc-border);
 }
 
@@ -191,7 +191,7 @@ body a {
   display: grid;
   gap: 3px;
   padding: 10px 14px;
-  background: white;
+  background: var(--lc-surface);
   border: 1px solid var(--lc-border);
   border-radius: 14px;
   font-size: 0.8rem;
@@ -207,139 +207,19 @@ body a {
   min-width: 0;
 }
 
-.lc-banner-shell {
-  position: relative;
-  overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid var(--lc-border);
-  box-shadow: var(--lc-shadow);
-  background: white;
-}
-
-.lc-banner-track {
-  display: flex;
-  transition: transform 0.45s ease;
-}
-
-.lc-banner-slide {
-  position: relative;
-  min-width: 100%;
-  height: 360px;
-}
-
-.lc-banner-slide img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.lc-banner-overlay {
-  position: absolute;
-  inset: 0;
-  padding: 32px;
-  display: grid;
-  align-content: center;
-  gap: 12px;
-  color: white;
-  background: linear-gradient(
-    90deg,
-    rgba(8, 17, 11, 0.8) 0%,
-    rgba(8, 17, 11, 0.38) 48%,
-    rgba(8, 17, 11, 0.12) 100%
-  );
-}
-
-.lc-banner-overlay h2 {
-  margin: 0;
-  font-size: clamp(1.8rem, 4vw, 3rem);
-}
-
-.lc-banner-overlay p {
-  margin: 0;
-  max-width: 540px;
-  color: rgba(255, 255, 255, 0.86);
-}
-
-.lc-banner-dots {
-  position: absolute;
-  left: 24px;
-  bottom: 18px;
-  display: flex;
-  gap: 8px;
-}
-
-.lc-banner-dots button {
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  border: 0;
-  background: rgba(255, 255, 255, 0.42);
-  cursor: pointer;
-}
-
-.lc-banner-dots button.active {
-  background: white;
-}
-
-.lc-hero {
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 18px;
-}
-
-.lc-hero-copy,
-.lc-hero-panel,
 .lc-filter-card,
 .lc-product-card,
 .lc-detail-shell,
-.lc-dark-panel,
 .lc-category-pill {
   border: 1px solid var(--lc-border);
   box-shadow: var(--lc-shadow);
-}
-
-.lc-hero-copy {
-  background: linear-gradient(
-    135deg,
-    rgba(29, 122, 72, 0.96),
-    rgba(13, 66, 37, 0.94)
-  );
-  color: white;
-  border-radius: 22px;
-  padding: 34px;
-}
-
-.lc-kicker {
-  display: inline-flex;
-  margin-bottom: 16px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  font-size: 0.74rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.lc-hero-copy h1 {
-  margin: 0 0 14px;
-  font-size: clamp(2.1rem, 4vw, 3.8rem);
-  line-height: 0.95;
-}
-
-.lc-hero-copy p {
-  margin: 0 0 24px;
-  max-width: 560px;
-  color: rgba(255, 255, 255, 0.86);
-  line-height: 1.65;
 }
 
 .lc-hero-actions,
 .lc-detail-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .lc-btn {
@@ -363,32 +243,16 @@ body a {
   color: white;
 }
 .lc-btn-secondary {
-  background: white;
-  color: var(--lc-black);
+  background: var(--lc-surface);
+  color: var(--lc-text);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 .lc-btn-ghost {
-  background: white;
+  background: var(--lc-surface);
   color: var(--lc-green-dark);
   border: 1px solid rgba(29, 122, 72, 0.18);
 }
 
-.lc-hero-panel {
-  background: white;
-  border-radius: 22px;
-  padding: 16px;
-  display: grid;
-  gap: 12px;
-}
-
-.lc-stat-card {
-  border-radius: 18px;
-  background: linear-gradient(180deg, #ffffff 0%, #f0f7f2 100%);
-  padding: 18px;
-  border: 1px solid rgba(29, 122, 72, 0.12);
-}
-
-.lc-stat-card strong,
 .lc-product-copy h3,
 .lc-detail-copy h1,
 .lc-section-header h2 {
@@ -404,7 +268,7 @@ body a {
 }
 
 .lc-category-pill {
-  background: white;
+  background: var(--lc-surface);
   border-radius: 16px;
   padding: 12px;
   display: grid;
@@ -424,29 +288,6 @@ body a {
 
 .lc-section {
   margin-top: 24px;
-}
-
-.lc-dark-panel {
-  background: linear-gradient(
-    180deg,
-    rgba(8, 17, 11, 0.96),
-    rgba(13, 66, 37, 0.98)
-  );
-  color: white;
-  border-radius: 22px;
-  padding: 22px;
-}
-
-.lc-dark-panel .lc-section-header p,
-.lc-dark-panel .lc-product-copy p,
-.lc-dark-panel .lc-product-meta span,
-.lc-dark-panel .lc-product-brand {
-  color: rgba(255, 255, 255, 0.72);
-}
-
-.lc-dark-panel .lc-product-card {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .lc-section-header {
@@ -481,7 +322,7 @@ body a {
   display: flex;
   flex-direction: column;
   border-radius: 16px;
-  background: white;
+  background: var(--lc-surface);
   overflow: hidden;
 }
 
@@ -591,7 +432,7 @@ body a {
   position: sticky;
   top: 102px;
   border-radius: 18px;
-  background: white;
+  background: var(--lc-surface);
   padding: 18px;
   display: grid;
   gap: 12px;
@@ -611,14 +452,14 @@ body a {
   border-radius: 10px;
   border: 1px solid var(--lc-border);
   padding: 0 12px;
-  background: #f8fbf9;
+  background: var(--lc-surface-alt);
 }
 
 .lc-detail-shell {
   display: grid;
   grid-template-columns: 1fr 0.95fr;
   gap: 20px;
-  background: white;
+  background: var(--lc-surface);
   border-radius: 22px;
   padding: 20px;
 }
@@ -666,7 +507,7 @@ body a {
 .lc-cart-summary,
 .lc-account-card,
 .lc-checkout-card {
-  background: white;
+  background: var(--lc-surface);
   border-radius: 16px;
   border: 1px solid var(--lc-border);
   padding: 16px;
@@ -697,7 +538,7 @@ body a {
 .lc-empty-state {
   padding: 16px;
   border-radius: 16px;
-  background: white;
+  background: var(--lc-surface);
   border: 1px dashed rgba(8, 17, 11, 0.12);
 }
 
@@ -733,7 +574,7 @@ body a {
 .lc-order-card {
   display: grid;
   gap: 14px;
-  background: white;
+  background: var(--lc-surface);
   border-radius: 16px;
   border: 1px solid var(--lc-border);
   padding: 16px;
@@ -865,7 +706,7 @@ body a {
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--lc-border);
-  background: #fbfdfb;
+  background: var(--lc-surface-alt);
 }
 
 .lc-review-card-top {
@@ -890,7 +731,7 @@ body a {
   min-height: 44px;
   border-radius: 12px;
   border: 1px solid var(--lc-border);
-  background: #f9fbfa;
+  background: var(--lc-surface-alt);
   text-align: left;
   padding: 0 14px;
   font: inherit;
@@ -920,7 +761,7 @@ body a {
   min-height: 28px;
   border-radius: 999px;
   border: 1px solid var(--lc-border);
-  background: white;
+  background: var(--lc-surface);
   cursor: pointer;
 }
 
@@ -946,265 +787,15 @@ body a {
   min-width: 0;
 }
 
-.lc-pass-preview-levels,
-.lc-pass-level-row {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-}
-
-.lc-pass-chip,
-.lc-pass-level-card {
-  min-width: 190px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid var(--lc-border);
-  background: #fbfdfb;
-  display: grid;
-  gap: 4px;
-}
-
-.lc-pass-chip.unlocked,
-.lc-pass-level-card.unlocked {
-  background: rgba(29, 122, 72, 0.08);
-  border-color: rgba(29, 122, 72, 0.28);
-}
-
-.lc-pass-preview {
-  display: grid;
-  gap: 14px;
-  padding: 20px;
-  border-radius: 18px;
-  background: white;
-  border: 1px solid var(--lc-border);
-  box-shadow: var(--lc-shadow);
-}
-
-.lc-pass-preview-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 18px;
-}
-
-.lc-pass-topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: center;
-  padding: 20px;
-  border-radius: 18px;
-  background: white;
-  border: 1px solid var(--lc-border);
-  box-shadow: var(--lc-shadow);
-}
-
-.lc-pass-topbar h2 {
-  margin: 6px 0;
-}
-
-.lc-pass-topbar p {
-  margin: 0;
-  color: var(--lc-muted);
-}
-
-.lc-pass-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.lc-pass-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 18px;
-  margin-bottom: 18px;
-  min-width: 0;
-}
-
-.lc-pass-side,
-.lc-pass-progress,
-.lc-pass-hero > div:first-child {
-  background: white;
-  border-radius: 18px;
-  border: 1px solid var(--lc-border);
-  box-shadow: var(--lc-shadow);
-  padding: 20px;
-}
-
-.lc-pass-side {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
-  gap: 16px;
-  align-items: start;
-  min-width: 0;
-}
-
-.lc-pass-progress {
-  align-self: start;
-  padding: 0;
-  border: 0;
-  box-shadow: none;
-  background: transparent;
-}
-
-.lc-pass-progress-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.lc-pass-bar {
-  width: 100%;
-  height: 12px;
-  background: rgba(29, 122, 72, 0.12);
-  border-radius: 999px;
-  overflow: hidden;
-  margin: 10px 0 8px;
-}
-
-.lc-pass-bar > div {
-  height: 100%;
-  background: linear-gradient(90deg, var(--lc-green), #2cc36f);
-  border-radius: 999px;
-}
-
-.lc-pass-track {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 6px;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
-  overscroll-behavior-x: contain;
-  overscroll-behavior-y: none;
-  touch-action: pan-x;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
-
-.lc-pass-track-shell {
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden;
-  min-width: 0;
-  padding-bottom: 4px;
-}
-
-.lc-pass-column-card {
-  min-width: 248px;
-  flex: 0 0 248px;
-  display: grid;
-  gap: 12px;
-}
-
-.lc-pass-lane-card,
 .lc-pass-mission {
   display: grid;
-  gap: 14px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid var(--lc-border);
-  background: #fbfdfb;
-}
-
-.lc-pass-lane-card small {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--lc-muted);
-}
-
-.lc-pass-lane-card.premium {
-  background: linear-gradient(
-    180deg,
-    rgba(8, 17, 11, 0.96),
-    rgba(13, 66, 37, 0.96)
-  );
-  color: white;
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.lc-pass-lane-card.premium small,
-.lc-pass-lane-card.premium span {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.lc-pass-lane-card strong,
-.lc-pass-lane-card span {
-  min-width: 0;
-}
-
-.lc-pass-lane-card.free.empty {
-  background: #f2f5f3;
-  border-style: dashed;
-}
-
-.lc-pass-lane-card.unlocked {
-  border-color: rgba(29, 122, 72, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(29, 122, 72, 0.08);
-}
-
-.lc-pass-progress-node {
-  display: grid;
   gap: 8px;
-  align-items: center;
-  justify-items: center;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--lc-border);
+  background: var(--lc-surface-alt);
 }
 
-.lc-pass-progress-node span {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--lc-muted);
-}
-
-.lc-pass-thin-bar {
-  width: 100%;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(8, 17, 11, 0.1);
-  overflow: hidden;
-}
-
-.lc-pass-thin-bar > div {
-  height: 100%;
-  background: linear-gradient(90deg, var(--lc-green), #2cc36f);
-  border-radius: 999px;
-}
-
-.lc-pass-mission {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-}
-
-.lc-pass-lane-progress {
-  width: 100%;
-  height: 8px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(8, 17, 11, 0.12);
-}
-
-.lc-pass-lane-progress div,
-.lc-pass-thin-bar div {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #26ae66, #8ef0b3);
-}
-
-.lc-pass-lane-card.free .lc-pass-lane-progress {
-  background: rgba(29, 122, 72, 0.14);
-}
-
-.lc-pass-lane-card.free .lc-pass-lane-progress div {
-  background: linear-gradient(90deg, #1d7a48, #56c685);
-}
-
-.lc-pass-claim-btn,
 .lc-pass-mini-btn {
   display: inline-flex;
   align-items: center;
@@ -1213,7 +804,7 @@ body a {
   padding: 0 12px;
   border-radius: 10px;
   border: 1px solid var(--lc-border);
-  background: white;
+  background: var(--lc-surface);
   color: var(--lc-text);
   font-weight: 700;
   font-size: 0.82rem;
@@ -1224,28 +815,6 @@ body a {
     background 0.2s ease;
 }
 
-.lc-pass-claim-btn.available {
-  background: var(--lc-green);
-  color: white;
-  border-color: rgba(29, 122, 72, 0.5);
-}
-
-.lc-pass-lane-card.premium .lc-pass-claim-btn {
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
-  border-color: rgba(255, 255, 255, 0.15);
-}
-
-.lc-pass-lane-card.premium .lc-pass-claim-btn.available {
-  background: white;
-  color: var(--lc-black);
-}
-
-.lc-pass-claim-btn:disabled {
-  opacity: 0.72;
-  cursor: not-allowed;
-}
-
 .lc-pass-mini-btn {
   min-height: 30px;
   padding: 0 10px;
@@ -1253,13 +822,11 @@ body a {
   border-color: rgba(29, 122, 72, 0.24);
 }
 
-.lc-pass-mini-btn:hover,
-.lc-pass-claim-btn:hover:not(:disabled) {
+.lc-pass-mini-btn:hover {
   transform: translateY(-1px);
 }
 
-.lc-pass-mission span,
-.lc-pass-progress small {
+.lc-pass-mission span {
   color: var(--lc-muted);
 }
 
@@ -1271,28 +838,6 @@ body a {
 
 .lc-pass-mission-action {
   margin-top: 10px;
-}
-
-.lc-pass-history-card {
-  display: grid;
-  gap: 12px;
-}
-
-.lc-pass-history-card h3 {
-  margin: 0;
-}
-
-.lc-inline-feedback {
-  margin: 8px 0 0;
-  font-size: 0.84rem;
-}
-
-.lc-inline-feedback.success {
-  color: var(--lc-green-dark);
-}
-
-.lc-inline-feedback.error {
-  color: #b42318;
 }
 
 .lc-footer {
@@ -1314,12 +859,7 @@ body a {
   .lc-nav-top,
   .lc-nav-bottom,
   .lc-benefits-bar,
-  .lc-pass-preview-head,
-  .lc-pass-topbar,
-  .lc-hero,
   .lc-catalog-shell,
-  .lc-pass-hero,
-  .lc-pass-side,
   .lc-profile-grid,
   .lc-detail-shell,
   .lc-review-grid,
@@ -1368,21 +908,12 @@ body[data-tema="azul"] {
 }
 
 @media (max-width: 640px) {
-  .lc-pass-topbar,
   .lc-section-header {
     flex-direction: column;
     align-items: stretch;
   }
-  .lc-pass-topbar > div,
   .lc-section-header > div {
     width: 100%;
     min-width: 0;
-  }
-  .lc-pass-topbar > .lc-btn {
-    align-self: flex-start;
-  }
-  .lc-pass-actions {
-    justify-content: flex-start;
-    flex-wrap: wrap;
   }
 }

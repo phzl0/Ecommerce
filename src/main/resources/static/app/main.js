@@ -265,11 +265,12 @@ function requireLogin(
   navigate(buildLoginUrl(navigateTo));
 }
 
-function AppLink({ href, className = "", children }) {
+function AppLink({ href, className = "", current, children }) {
   return html`
     <a
       href=${href}
       className=${className}
+      aria-current=${current ? "page" : undefined}
       onClick=${(event) => {
         if (href.startsWith("/") && !event.metaKey && !event.ctrlKey
             && !event.shiftKey && !event.altKey && event.button === 0) {
@@ -283,7 +284,7 @@ function AppLink({ href, className = "", children }) {
   `;
 }
 
-function NavBar({ totalItems, onSearch, auth, categories, notificationProps }) {
+function NavBar({ totalItems, onSearch, auth, categories, notificationProps, path, dark, toggleTheme }) {
   const [search, setSearch] = useState(() => parseCatalogFilters(location.pathname + location.search).busca || "");
   return html`
     <header className="lc-nav-shell">
@@ -299,6 +300,10 @@ function NavBar({ totalItems, onSearch, auth, categories, notificationProps }) {
           <button type="submit" aria-label="Buscar"><${Icon} name="search" /><span>Buscar</span></button>
         </form>
         <nav className="lc-nav-tools" aria-label="Sua conta e compras">
+          <button className="lc-theme-toggle" type="button" aria-label="Modo escuro"
+            aria-pressed=${dark} title=${dark ? "Ativar tema claro" : "Ativar tema escuro"} onClick=${toggleTheme}>
+            <${Icon} name=${dark ? "sun" : "moon"} />
+          </button>
           <${AppLink} href=${auth.authenticated ? "/conta" : "/login"} className="lc-nav-tool">
             <${Icon} name="user" /><span>${auth.authenticated ? "Minha conta" : "Entrar"}</span>
           <//>
@@ -309,6 +314,7 @@ function NavBar({ totalItems, onSearch, auth, categories, notificationProps }) {
         </nav>
       </div>
       <nav className="lc-nav-bottom" aria-label="Navegação da loja">
+        <${AppLink} href="/" current=${path === "/"}>Início<//>
         <details className="lc-nav-popover lc-categories-menu">
           <summary><${Icon} name="menu" /> Categorias</summary>
           <div className="lc-popover-panel">
@@ -316,54 +322,15 @@ function NavBar({ totalItems, onSearch, auth, categories, notificationProps }) {
             ${categories.map(category => html`<a key=${category.id} href=${`/catalogo?categoriaId=${category.id}`}>${category.nome}</a>`)}
           </div>
         </details>
-        <${AppLink} href="/catalogo">Catálogo<//>
+        <${AppLink} href="/catalogo" current=${path === "/catalogo"}>Catálogo<//>
         <${AppLink} href=${auth.authenticated ? "/pedidos" : buildLoginUrl("/pedidos")}>Meus pedidos<//>
-        <${AppLink} href="/passe">Passe LEVEL<//>
-        <${AppLink} href="/eventos">Eventos<//>
+        <${AppLink} href="/passe" current=${path.startsWith("/passe")}>Passe LEVEL<//>
+        <${AppLink} href="/eventos" current=${path === "/eventos"}>Eventos<//>
         ${auth.role === "ADMIN" || (!auth.authenticated && auth.ambienteLocal)
           ? html`<a className="lc-admin-link" href=${auth.authenticated ? "/admin" : buildLoginUrl("/admin")}>Administração</a>`
           : null}
       </nav>
     </header>
-  `;
-}
-
-function Hero({ headline, subheadline }) {
-  return html`
-    <section className="lc-hero">
-      <div className="lc-hero-copy">
-        <span className="lc-kicker">LEVEL COMMERCE EXPERIENCE</span>
-        <h1>${headline}</h1>
-        <p>${subheadline}</p>
-        <div className="lc-hero-actions">
-          <${AppLink} href="/catalogo" className="lc-btn lc-btn-primary"
-            >Explorar catalogo<//
-          >
-          <${AppLink} href="/conta" className="lc-btn lc-btn-secondary"
-            >Entrar ou criar conta<//
-          >
-        </div>
-      </div>
-      <div className="lc-hero-panel">
-        <div className="lc-stat-card">
-          <strong>Visual mais profissional</strong>
-          <span>Home mais enxuta, leitura mais rapida e foco em produto.</span>
-        </div>
-        <div className="lc-stat-card">
-          <strong>Compra sem quebra</strong>
-          <span
-            >O login guarda o retorno e o checkout segue para o pagamento
-            correto.</span
-          >
-        </div>
-        <div className="lc-stat-card">
-          <strong>Conta unificada</strong>
-          <span
-            >Perfil, pedidos e pagamento agora fazem parte da mesma SPA.</span
-          >
-        </div>
-      </div>
-    </section>
   `;
 }
 
@@ -377,7 +344,7 @@ function SectionHeader({
     <div className="lc-section-header">
       <div>
         <h2>${title}</h2>
-        <p>${description}</p>
+        ${description ? html`<p>${description}</p>` : null}
       </div>
       <${AppLink} href=${actionHref}>${actionLabel}<//>
     </div>
@@ -386,127 +353,82 @@ function SectionHeader({
 
 function BannerCarousel({ banners }) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (!banners?.length) {
-      return undefined;
-    }
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return undefined;
-    const interval = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % banners.length);
-    }, 4500);
+    if (banners.length < 2 || focused || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const interval = window.setInterval(() => setActiveIndex(index => (index + 1) % banners.length), 5500);
     return () => window.clearInterval(interval);
-  }, [banners]);
+  }, [banners.length, focused]);
 
-  if (!banners?.length) {
-    return null;
-  }
+  const banner = banners[activeIndex];
+  if (!banner) return null;
 
   return html`
-    <section className="lc-banner-shell">
-      <div
-        className="lc-banner-track"
-        style=${{ transform: `translateX(-${activeIndex * 100}%)` }}
-      >
-        ${banners.map(
-          (banner) => html`
-            <article key=${banner.titulo} className="lc-banner-slide">
-              <img src=${banner.imagemUrl} alt=${banner.titulo} />
-              <div className="lc-banner-overlay">
-                <span className="lc-kicker">${banner.destaque}</span>
-                <h2>${banner.titulo}</h2>
-                <p>${banner.subtitulo}</p>
-                <${AppLink}
-                  href=${banner.ctaHref}
-                  className="lc-btn lc-btn-secondary"
-                  >${banner.ctaLabel}<//
-                >
-              </div>
-            </article>
-          `,
-        )}
-      </div>
-      <div className="lc-banner-dots">
-        ${banners.map(
-          (banner, index) => html`
-            <button
-              key=${banner.titulo}
-              type="button"
-              className=${index === activeIndex ? "active" : ""}
-              aria-label=${`Mostrar destaque ${index + 1}`}
+    <section className="lc-hero-full" aria-label="Campanhas em destaque"
+      onFocus=${() => setFocused(true)}
+      onBlur=${(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setFocused(false); }}>
+      <img key=${banner.imagemUrl} src=${banner.imagemUrl} alt="" fetchPriority="high"
+        onError=${event => { event.currentTarget.hidden = true; }} />
+      <div className="lc-hero-inner">
+        <span className="lc-eyebrow">${banner.destaque}</span>
+        <h1>${banner.titulo}</h1>
+        <p>${banner.subtitulo}</p>
+        <${AppLink} href=${banner.ctaHref} className="lc-btn lc-neon-btn">${banner.ctaLabel}<//>
+        <div className="lc-hero-dots">
+          ${banners.map((item, index) => html`
+            <button key=${item.titulo} type="button"
+              aria-label=${`Mostrar destaque ${index + 1}: ${item.titulo}`}
               aria-pressed=${index === activeIndex}
-              onClick=${() => setActiveIndex(index)}
-            ></button>
-          `,
-        )}
+              onClick=${() => setActiveIndex(index)}></button>
+          `)}
+        </div>
       </div>
-    </section>
-  `;
+    </section>`;
+}
+
+function PromoTicker() {
+  const headlines = ["Compre agora!", "Desconto de até 50%!", "Ganhe XP nas suas compras", "Confira os eventos da semana"];
+  const [paused, setPaused] = useState(false);
+  return html`<section className="lc-ticker" aria-label="Chamadas promocionais demonstrativas">
+    <span className="lc-ticker-label">DEMO</span>
+    <div className="lc-ticker-window" data-paused=${paused}>
+      <div className="lc-ticker-track">
+        ${[false, true].map(copy => html`<ul key=${String(copy)} aria-hidden=${copy}>
+          ${headlines.map(text => html`<li key=${text}>${text}</li>`)}
+        </ul>`)}
+      </div>
+    </div>
+    <button type="button" className="lc-ticker-control" aria-label=${paused ? "Retomar faixa" : "Pausar faixa"}
+      onClick=${() => setPaused(!paused)}>${paused ? "▶" : "Ⅱ"}</button>
+  </section>`;
 }
 
 function PassPreview({ auth }) {
   const [dashboard, setDashboard] = useState(null);
 
   useEffect(() => {
-    if (!auth.authenticated) {
-      return;
-    }
-    trackPassAction("CHECKIN")
-      .then(() => getJson("/api/pass/current"))
-      .then(setDashboard)
-      .catch(() => null);
+    if (!auth.authenticated) return;
+    let active = true;
+    trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
+      .then(data => { if (active) setDashboard(data); }).catch(() => {});
+    return () => { active = false; };
   }, [auth.authenticated]);
 
-  if (!auth.authenticated || !dashboard) {
-    return null;
-  }
-
-  const previewLevels = dashboard.niveis.slice(0, 6);
-  const progressPercent = Math.min(
-    100,
-    (dashboard.xpNoNivelAtual / dashboard.xpPorNivel) * 100,
-  );
-
-  return html`
-    <section className="lc-section">
-      <div className="lc-pass-preview">
-        <div className="lc-pass-preview-head">
-          <div>
-            <span className="lc-kicker">PASSE EM ANDAMENTO</span>
-            <h2>${dashboard.temporadaNome}</h2>
-            <p>
-              Nivel ${dashboard.nivelAtual}, ${dashboard.xpTotal} XP e missoes
-              sempre ativas para aumentar recorrencia.
-            </p>
-          </div>
-          <div className="lc-pass-progress compact">
-            <strong
-              >${dashboard.xpParaProximoNivel} XP para o proximo nivel</strong
-            >
-            <div className="lc-pass-bar">
-              <div style=${{ width: `${progressPercent}%` }}></div>
-            </div>
-            <${AppLink} href="/passe" className="lc-btn lc-btn-primary"
-              >Abrir passe<//
-            >
-          </div>
-        </div>
-        <div className="lc-pass-preview-levels">
-          ${previewLevels.map(
-            (reward) => html`
-              <div
-                key=${reward.nivel}
-                className=${`lc-pass-chip ${reward.desbloqueado ? "unlocked" : ""}`}
-              >
-                <strong>Nivel ${reward.nivel}</strong>
-                <span>${reward.tipoDigital}</span>
-              </div>
-            `,
-          )}
-        </div>
-      </div>
-    </section>
-  `;
+  const pass = auth.authenticated ? dashboard : null;
+  return html`<section className="lc-pass-spotlight" aria-labelledby="home-pass">
+    <div>
+      <span className="lc-eyebrow">LEVEL REWARDS</span>
+      <h2 id="home-pass">Passe LEVEL</h2>
+      <p>${pass ? pass.temporadaNome : "Ganhe XP e desbloqueie recompensas a cada nível."}</p>
+    </div>
+    ${pass ? html`<div className="lc-spotlight-progress">
+      <strong>Nível ${pass.nivelAtual} · ${pass.xpTotal} XP</strong>
+      <progress aria-label="Progresso da temporada" value=${Math.min(pass.xpTotal, pass.totalNiveis * pass.xpPorNivel)}
+        max=${pass.totalNiveis * pass.xpPorNivel}></progress>
+    </div>` : null}
+    <${AppLink} href="/passe" className="lc-btn lc-neon-btn">Ver passe<//>
+  </section>`;
 }
 
 function CategoryStrip({ categories }) {
@@ -578,50 +500,52 @@ function ProductCard({ product, onAddToCart, onBuyNow }) {
   `;
 }
 
-function HomePage({ data, onAddToCart, onBuyNow, auth }) {
+function HomeProductShelf({ title, products, onAddToCart }) {
+  if (!products.length) return null;
+  return html`<section className="lc-section lc-home-shelf">
+    <${SectionHeader} title=${title} actionLabel="Ver catálogo" />
+    <div className="lc-home-products">
+      ${products.slice(0, 6).map(product => html`
+        <article className="lc-home-product" key=${product.id}>
+          <${AppLink} href=${`/produto/${product.id}`} className="lc-home-product-photo">
+            <img src=${product.imagemUrl || "/images/sem-foto.png"} alt=${product.nome} loading="lazy"
+              onError=${event => {
+                if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
+              }} />
+          <//>
+          <div className="lc-home-product-info">
+            <h3><${AppLink} href=${`/produto/${product.id}`}>${product.nome}<//></h3>
+            <strong>${currency(product.preco)}</strong>
+            <button type="button" className="lc-btn lc-btn-ghost" disabled=${product.estoque <= 0}
+              onClick=${() => onAddToCart(product)}>${product.estoque > 0 ? "Adicionar" : "Esgotado"}</button>
+          </div>
+        </article>`)}
+    </div>
+  </section>`;
+}
+
+function HomePage({ data, onAddToCart, auth }) {
   return html`
-    <main className="lc-page">
+    <main className="lc-home">
       <${BannerCarousel} banners=${data.banners} />
-      <${CategoryStrip} categories=${data.categorias} />
-      <section className="lc-section">
-        <${SectionHeader}
-          title="Destaques da loja"
-          description="Encontre os produtos selecionados para esta semana."
-          actionLabel="Ver catálogo"
-          actionHref="/catalogo"
-        />
-        <div className="lc-product-grid">
-          ${data.destaques.map(
-            (product) => html`
-              <${ProductCard}
-                key=${product.id}
-                product=${product}
-                onAddToCart=${onAddToCart}
-                onBuyNow=${onBuyNow}
-              />
-            `,
-          )}
-        </div>
-      </section>
-      <section className="lc-section lc-home-recent">
-        <${SectionHeader}
-          title="Novidades"
-          description="Produtos que acabaram de chegar."
-        />
-        <div className="lc-product-grid compact">
-          ${data.novidades.map(
-            (product) => html`
-              <${ProductCard}
-                key=${product.id}
-                product=${product}
-                onAddToCart=${onAddToCart}
-                onBuyNow=${onBuyNow}
-              />
-            `,
-          )}
-        </div>
-      </section>
-      <${PassPreview} auth=${auth} />
+      <${PromoTicker} />
+      <div className="lc-page lc-home-content">
+        <${PassPreview} auth=${auth} />
+        <${HomeProductShelf} title="Destaques da loja" products=${data.destaques} onAddToCart=${onAddToCart} />
+        <section className="lc-home-campaigns" aria-label="Campanhas da LEVEL">
+          <${AppLink} href="/eventos" className="lc-home-campaign rewards">
+            <span>LEVEL REWARDS</span><strong>Eventos da semana</strong><small>Veja as campanhas e conquiste selos →</small>
+          <//>
+          <${AppLink} href="/catalogo" className="lc-home-campaign catalog">
+            <span>EXPLORE A LOJA</span><strong>Encontre seu próximo upgrade</strong><small>Explorar catálogo →</small>
+          <//>
+        </section>
+        <section className="lc-section lc-home-categories">
+          <${SectionHeader} title="Compre por categoria" actionLabel="Todas as categorias" />
+          <${CategoryStrip} categories=${data.categorias} />
+        </section>
+        <${HomeProductShelf} title="Novidades" products=${data.novidades} onAddToCart=${onAddToCart} />
+      </div>
     </main>
   `;
 }
@@ -653,6 +577,10 @@ function AccountPage({ auth }) {
                   <${AppLink} href="/passe" className="lc-account-card">
                     <strong>Passe mensal</strong>
                     <span>Suba de nivel com XP de compras e missoes.</span>
+                  <//>
+                  <${AppLink} href="/conta/beneficios" className="lc-account-card">
+                    <strong>Cupons e recompensas</strong>
+                    <span>Consulte e use os benefícios que você já resgatou.</span>
                   <//>
                   <${AppLink} href="/perfil" className="lc-account-card">
                     <strong>Meu perfil</strong>
@@ -1766,354 +1694,189 @@ function PaymentResultPage({ route }) {
   `;
 }
 
-function PassPage({ notify }) {
-  const [collection, setCollection] = useState([]);
-  useEffect(() => {
-    getJson("/api/pass/rewards")
-      .then(setCollection)
-      .catch(() => {});
-  }, []);
+function PassPage({ auth, notify }) {
   const [dashboard, setDashboard] = useState(null);
-  const [claimState, setClaimState] = useState({
-    loadingId: null,
-    message: "",
-    error: "",
-  });
-  const trackRef = useRef(null);
-
-  const loadDashboard = () => {
-    trackPassAction("CHECKIN")
-      .then(() => getJson("/api/pass/current"))
-      .then(setDashboard)
-      .catch((error) => {
-        if (error.code === "AUTH_REQUIRED") {
-          requireLogin("/passe");
-        }
-      });
-  };
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(null);
+  const track = useRef(null);
 
   useEffect(() => {
-    loadDashboard();
-  }, []);
+    if (!auth.authenticated) return;
+    let active = true;
+    trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
+      .then(data => { if (active) setDashboard(data); })
+      .catch(() => { if (active) setError("Não foi possível carregar o passe."); });
+    return () => { active = false; };
+  }, [auth.authenticated]);
 
-  if (!dashboard) {
-    return html`<main className="lc-page">
-      <p>Carregando passe mensal...</p>
-    </main>`;
-  }
-
-  const scrollTrack = (direction) => {
-    if (!trackRef.current) {
-      return;
-    }
-    trackRef.current.scrollBy({
-      left: direction * 420,
-      behavior: "smooth",
+  const pass = auth.authenticated ? dashboard : null;
+  const moveTrack = (direction) => {
+    const rail = track.current;
+    rail?.scrollBy({
+      left: direction * rail.clientWidth * 0.8,
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
     });
   };
 
-  const premiumLevels = dashboard.niveis;
-  const freeLevels = dashboard.niveis.map((reward) => {
-    const hasReward = !reward.premium;
-    return {
-      ...reward,
-      titulo: hasReward ? reward.titulo : "Sem recompensa neste nivel",
-      tipoDigital: hasReward ? reward.tipoDigital : "Nivel vazio",
-      descricao: hasReward
-        ? reward.descricao
-        : "A trilha gratuita libera recompensas em niveis selecionados.",
-      hasReward,
-    };
-  });
-  const progressPercent = Math.min(
-    100,
-    (dashboard.xpTotal / (dashboard.totalNiveis * dashboard.xpPorNivel)) * 100,
-  );
-
-  const handleClaimReward = async (reward) => {
-    if (!reward.disponivelParaResgate || claimState.loadingId) {
-      return;
-    }
-    setClaimState({ loadingId: reward.recompensaId, message: "", error: "" });
+  async function claim(reward) {
+    if (busy !== null || !reward.disponivelParaResgate) return;
+    setBusy(reward.recompensaId);
+    setError("");
     try {
       const result = await claimPassReward(reward.recompensaId);
       notify("Recompensa resgatada", result.titulo);
-      setClaimState({
-        loadingId: null,
-        message: `${result.titulo} liberada com o codigo ${result.codigo}.`,
-        error: "",
-      });
-      loadDashboard();
-      getJson("/api/pass/rewards")
-        .then(setCollection)
-        .catch(() => {});
-    } catch (error) {
-      if (error.code === "AUTH_REQUIRED") {
-        requireLogin("/passe");
-        return;
-      }
-      setClaimState({
-        loadingId: null,
-        message: "",
-        error: error.message || "Nao foi possivel reclamar a recompensa.",
-      });
+      setDashboard(await getJson("/api/pass/current"));
+    } catch (failure) {
+      if (failure.code === "AUTH_REQUIRED") requireLogin("/passe");
+      else setError(failure.message || "Não foi possível atualizar o passe.");
+    } finally {
+      setBusy(null);
     }
+  }
+
+  async function buyPremium() {
+    if (busy !== null) return;
+    setBusy("premium");
+    setError("");
+    try {
+      const response = await postJson("/api/pass/premium", {});
+      window.location.assign(response.redirectUrl);
+    } catch (failure) {
+      setError(failure.message || "Não foi possível iniciar a compra do passe.");
+      setBusy(null);
+    }
+  }
+
+  const rewardCell = (reward, premium) => {
+    if (reward.premium !== premium) return html`<div className="lc-rail-reward empty" aria-hidden="true">—</div>`;
+    const available = reward.disponivelParaResgate && !reward.resgatado;
+    return html`<div className=${`lc-rail-reward ${available ? "available" : ""}`}>
+      <span>${reward.tipoDigital}</span>
+      <strong title=${reward.descricao}>${reward.titulo}</strong>
+      ${available ? html`<button type="button" className="lc-btn lc-btn-primary"
+        disabled=${busy !== null} aria-label=${`Resgatar nível ${reward.nivel}: ${reward.titulo}`}
+        onClick=${() => claim(reward)}>${busy === reward.recompensaId ? "Resgatando…" : "Resgatar"}</button>`
+        : html`<small>${reward.resgatado ? "Resgatado" : premium && !pass.premiumAtivo ? "Passe premium" : "Bloqueado"}</small>`}
+    </div>`;
   };
 
-  return html`
-    <main className="lc-page">
-      <section className="lc-pass-shell">
-        <div className="lc-checkout-card">
-          <h3>Minha coleção</h3>
-          <p>
-            Cupons pessoais de uso único. Confira o desconto e o mínimo de
-            compra em cada benefício.
-          </p>
-          ${
-            collection.length
-              ? collection.map(
-                  (r) =>
-                    html`<div key=${r.id} className="lc-summary-line">
-                      <span>${r.titulo} · ${r.tipo}</span>${
-                        !r.ativo
-                          ? html`<span>Indisponível</span>`
-                          : r.tipo === "Cupom"
-                            ? html`<span
-                                ><code
-                                  >${r.usado ? "Utilizado / reservado" : r.codigo}</code
-                                >
-                                · ${currency(r.valor)} em produtos a partir de
-                                ${currency(r.minimo)} · até ${r.validade}</span
-                              >`
-                            : ["Tema", "Avatar", "Badge"].includes(r.tipo)
-                              ? html`<button
-                                  onClick=${async () => {
-                                    await postJson(
-                                      `/api/pass/rewards/${r.id}/apply`,
-                                      {},
-                                    );
-                                    window.location.reload();
-                                  }}
-                                >
-                                  Aplicar benefício
-                                </button>`
-                              : html`<a
-                                  href=${`/api/pass/rewards/${r.id}/download`}
-                                  >Baixar benefício</a
-                                >`
-                      }
-                    </div>`,
-                )
-              : html`<p>Resgate uma recompensa para vê-la aqui.</p>`
-          }
+  return html`<main className="lc-page lc-level-pass">
+    <header className="lc-level-pass-header">
+      <span className="lc-eyebrow">LEVEL REWARDS</span>
+      <h1>Passe LEVEL</h1>
+      ${pass ? html`<p className="lc-pass-season">${pass.temporadaNome} <span>· ${pass.temporadaPeriodo}</span></p>`
+        : html`<p>Suba de nível com suas compras e missões e desbloqueie recompensas na temporada.</p>`}
+      ${pass ? html`<div className="lc-level-pass-progress">
+        <div>
+          <strong>Nível ${pass.nivelAtual} de ${pass.totalNiveis} <span>· ${pass.xpTotal} XP</span></strong>
+          <progress aria-label="Progresso para o próximo nível" value=${Math.min(pass.xpNoNivelAtual, pass.xpPorNivel)}
+            max=${pass.xpPorNivel}></progress>
+          <small>${pass.nivelAtual >= pass.totalNiveis ? "Último nível alcançado" : `${pass.xpParaProximoNivel} XP para o próximo nível`}</small>
         </div>
-        <div className="lc-pass-topbar">
-          <div>
-            <span className="lc-kicker">PASSE MENSAL</span>
-            <h2>${dashboard.temporadaNome}</h2>
-            <p>
-              ${dashboard.temporadaPeriodo} · acompanhe niveis, XP e recompensas
-              como em um passe de jogo.
-            </p>
-            <p>
-              Recompensa final: ${currency(dashboard.gastoAprovado)} de
-              ${currency(dashboard.gastoMinimoFinal)} em produtos aprovados.
-              Frete e premium não entram.
-            </p>
-          </div>
-          <${AppLink} href="/passe/missoes" className="lc-btn lc-btn-primary"
-            >Ver missões<//
-          >
+        <${AppLink} href="/passe/missoes" className="lc-btn lc-btn-ghost">Ver missões<//>
+      </div>` : auth.ready && !auth.authenticated
+        ? html`<${AppLink} href=${buildLoginUrl("/passe")} className="lc-btn lc-neon-btn">Entrar para ver meu passe<//>`
+        : null}
+    </header>
+    ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
+    ${auth.authenticated && !pass && !error ? html`<p role="status">Carregando temporada…</p>` : null}
+    ${pass ? html`<section className="lc-level-trail" aria-labelledby="level-trail-title">
+      <div className="lc-level-trail-heading">
+        <div>
+          <h2 id="level-trail-title">Trilha de recompensas</h2>
+          <p>${pass.premiumAtivo ? "Premium ativo nesta temporada"
+            : `Premium por ${currency(pass.precoPremium)} nesta temporada, sem renovação automática.`}</p>
         </div>
+        ${!pass.premiumAtivo ? html`<button type="button" className="lc-btn lc-btn-primary"
+          disabled=${busy !== null} onClick=${buyPremium}>Adquirir premium</button>` : null}
+      </div>
+      <div className="lc-rail-toolbar">
+        <span>Deslize a trilha para explorar os níveis.</span>
+        <div>
+          <button type="button" className="lc-btn lc-btn-ghost" aria-label="Níveis anteriores" onClick=${() => moveTrack(-1)}>←</button>
+          <button type="button" className="lc-btn lc-btn-ghost" aria-label="Próximos níveis" onClick=${() => moveTrack(1)}>→</button>
+        </div>
+      </div>
+      <div className="lc-rail">
+        <div className="lc-rail-labels" aria-hidden="true"><strong>Premium</strong><span>Nível</span><strong>Gratuito</strong></div>
+        <div className="lc-rail-track" ref=${track} tabIndex="0" role="region" aria-label="Níveis e recompensas do passe">
+          ${pass.niveis.map(reward => html`
+            <div className=${`lc-rail-level ${reward.desbloqueado ? "unlocked" : ""}`}
+              key=${reward.nivel} aria-label=${`Nível ${reward.nivel}, trilha ${reward.premium ? "premium" : "gratuita"}`}>
+              ${rewardCell(reward, true)}
+              <span className="lc-rail-node" aria-current=${reward.nivel === pass.nivelAtual ? "step" : undefined}>${reward.nivel}</span>
+              ${rewardCell(reward, false)}
+            </div>`)}
+        </div>
+      </div>
+      <p className="lc-level-pass-footnote">Recompensa final · ${currency(pass.gastoAprovado)} de ${currency(pass.gastoMinimoFinal)} em produtos aprovados.</p>
+      ${pass.historico.length ? html`<details className="lc-pass-xp-history">
+        <summary>Últimos ganhos de XP</summary>
+        ${pass.historico.map((item, index) => html`<div className="lc-summary-line" key=${index}>
+          <span>${item.descricao}</span><strong>+${item.xpGanho} XP</strong>
+        </div>`)}
+      </details>` : null}
+    </section>` : null}
+  </main>`;
+}
 
-        <div className="lc-pass-hero">
-          <div>
-            <strong
-              >Nivel ${dashboard.nivelAtual}/${dashboard.totalNiveis}</strong
-            >
-            <p>
-              Ganhe XP com compras aprovadas, exploracao da loja, avaliacoes e
-              missoes recorrentes.
-            </p>
-          </div>
-          <div className="lc-pass-side">
-            <div className="lc-pass-progress">
-              <span>${dashboard.xpTotal} XP acumulado</span>
-              <div className="lc-pass-bar">
-                <div
-                  style=${{ width: `${Math.min(100, (dashboard.xpNoNivelAtual / dashboard.xpPorNivel) * 100)}%` }}
-                ></div>
-              </div>
-              <div className="lc-pass-progress-actions">
-                <small
-                  >${dashboard.xpParaProximoNivel} XP para o proximo
-                  nivel</small
-                >
-                <${AppLink}
-                  href="/passe/missoes"
-                  className="lc-btn lc-btn-primary"
-                  >Ver missões<//
-                >
-              </div>
-              ${claimState.message ? html`<p className="lc-inline-feedback success">${claimState.message}</p>` : null}
-              ${claimState.error ? html`<p className="lc-inline-feedback error">${claimState.error}</p>` : null}
-            </div>
-            <div className="lc-pass-history-card">
-              <h3>Ultimos ganhos de XP</h3>
-              <div className="lc-pass-history">
-                ${dashboard.historico.map(
-                  (item, index) => html`
-                    <div key=${index} className="lc-summary-line">
-                      <span>${item.descricao}</span>
-                      <strong>+${item.xpGanho} XP</strong>
-                    </div>
-                  `,
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+function BenefitsPage({ auth, onAuthRefresh, notify }) {
+  const [collection, setCollection] = useState(null);
+  const [error, setError] = useState("");
+  const [applying, setApplying] = useState(null);
+  useEffect(() => {
+    if (!auth.authenticated) return;
+    let active = true;
+    getJson("/api/pass/rewards").then(data => { if (active) setCollection(data); })
+      .catch(() => { if (active) setError("Não foi possível carregar seus benefícios."); });
+    return () => { active = false; };
+  }, [auth.authenticated]);
 
-        <div className="lc-checkout-card">
-          <div className="lc-section-header">
-            <div>
-              <h3>Trilha do passe</h3>
-              <p>
-                ${dashboard.premiumAtivo ? "Premium ativo nesta temporada" : `Premium: ${currency(dashboard.precoPremium)} por temporada, sem renovação automática`}
-              </p>
-              ${
-                !dashboard.premiumAtivo
-                  ? html`<button
-                      className="lc-btn lc-btn-primary"
-                      onClick=${async () => {
-                        try {
-                          const r = await postJson("/api/pass/premium", {});
-                          window.location.href = r.redirectUrl;
-                        } catch (e) {
-                          setClaimState({
-                            loadingId: null,
-                            message: "",
-                            error: e.message,
-                          });
-                        }
-                      }}
-                    >
-                      Adquirir premium
-                    </button>`
-                  : null
-              }
-              <p>
-                Premium em cima, progresso no meio e gratuito embaixo, em uma
-                unica trilha horizontal.
-              </p>
-            </div>
-            <div className="lc-pass-actions">
-              <button
-                type="button"
-                className="lc-btn lc-btn-ghost"
-                onClick=${() => scrollTrack(-1)}
-              >
-                Anterior
-              </button>
-              <button
-                type="button"
-                className="lc-btn lc-btn-ghost"
-                onClick=${() => scrollTrack(1)}
-              >
-                Proximo
-              </button>
-            </div>
-          </div>
-          <div className="lc-pass-track-shell">
-            <div className="lc-pass-track" ref=${trackRef}>
-              ${premiumLevels.map((premiumReward, index) => {
-                const freeReward = freeLevels[index];
-                const premiumButtonLabel = premiumReward.resgatado
-                  ? "Resgatada"
-                  : premiumReward.disponivelParaResgate
-                    ? claimState.loadingId === premiumReward.recompensaId
-                      ? "Reclamando..."
-                      : "Reclamar"
-                    : "Bloqueado";
-                const freeButtonLabel = freeReward.hasReward
-                  ? freeReward.desbloqueado
-                    ? "Liberado"
-                    : "Bloqueado"
-                  : "Sem premio";
-                return html`
-                  <div
-                    key=${premiumReward.nivel}
-                    className="lc-pass-column-card"
-                  >
-                    <div
-                      className=${`lc-pass-lane-card premium ${premiumReward.desbloqueado ? "unlocked" : ""}`}
-                    >
-                      <small>Premium</small>
-                      <strong>Nivel ${premiumReward.nivel}</strong>
-                      <span
-                        >${premiumReward.premium ? premiumReward.tipoDigital : "Sem recompensa premium"}</span
-                      >
-                      <div className="lc-pass-lane-progress">
-                        <div
-                          style=${{ width: `${premiumReward.progressoPercentual}%` }}
-                        ></div>
-                      </div>
-                      <button
-                        type="button"
-                        className=${`lc-pass-claim-btn ${premiumReward.disponivelParaResgate ? "available" : ""}`}
-                        disabled=${!premiumReward.premium || premiumReward.resgatado || !premiumReward.disponivelParaResgate || claimState.loadingId === premiumReward.recompensaId}
-                        onClick=${() => handleClaimReward(premiumReward)}
-                      >
-                        ${premiumButtonLabel}
-                      </button>
-                    </div>
-                    <div className="lc-pass-progress-node">
-                      <span>${premiumReward.nivel}</span>
-                      <div className="lc-pass-thin-bar">
-                        <div
-                          style=${{ width: `${premiumReward.progressoPercentual}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div
-                      className=${`lc-pass-lane-card free ${freeReward.desbloqueado ? "unlocked" : ""} ${freeReward.hasReward ? "" : "empty"}`}
-                    >
-                      <small>Gratuito</small>
-                      <strong>Nivel ${freeReward.nivel}</strong>
-                      <span
-                        >${freeReward.hasReward ? freeReward.tipoDigital : "Sem recompensa"}</span
-                      >
-                      <div className="lc-pass-lane-progress">
-                        <div
-                          style=${{ width: `${freeReward.progressoPercentual}%` }}
-                        ></div>
-                      </div>
-                      <button
-                        type="button"
-                        className="lc-pass-claim-btn"
-                        disabled=${!freeReward.hasReward || freeReward.resgatado || !freeReward.disponivelParaResgate || !!claimState.loadingId}
-                        onClick=${() => handleClaimReward(freeReward)}
-                      >
-                        ${freeReward.resgatado ? "Resgatada" : freeReward.hasReward && freeReward.disponivelParaResgate ? "Resgatar" : freeButtonLabel}
-                      </button>
-                    </div>
-                  </div>
-                `;
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-  `;
+  async function apply(reward) {
+    if (applying !== null) return;
+    setApplying(reward.id);
+    setError("");
+    try {
+      await postJson(`/api/pass/rewards/${reward.id}/apply`, {});
+      onAuthRefresh();
+      notify("Benefício aplicado", reward.titulo);
+    } catch (failure) {
+      setError(failure.message || "Não foi possível aplicar o benefício.");
+    } finally {
+      setApplying(null);
+    }
+  }
+
+  return html`<main className="lc-page">
+    <div className="lc-section-header">
+      <h1>Cupons e recompensas</h1><${AppLink} href="/conta">Voltar à conta<//>
+    </div>
+    ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
+    ${auth.ready && !auth.authenticated ? html`<${AppLink} href=${buildLoginUrl("/conta/beneficios")}
+      className="lc-btn lc-btn-primary">Entrar para ver meus benefícios<//>` : null}
+    ${auth.authenticated && !collection && !error ? html`<p role="status">Carregando benefícios…</p>` : null}
+    ${auth.authenticated && collection ? html`<section className="lc-checkout-card lc-benefit-list">
+      ${collection.length === 0 ? html`<p>Você ainda não tem benefícios resgatados.</p><${AppLink} href="/passe">Ver passe →<//>` : null}
+      ${collection.map(reward => html`<div key=${reward.id} className="lc-summary-line">
+        <strong>${reward.titulo} · ${reward.tipo}</strong>
+        ${!reward.ativo ? html`<span>Indisponível</span>`
+          : reward.tipo === "Cupom" ? html`<span>
+            <code>${reward.usado ? "Utilizado / reservado" : reward.codigo}</code>
+            · ${currency(reward.valor)} em produtos a partir de ${currency(reward.minimo)} · até ${reward.validade}
+          </span>`
+          : ["Tema", "Avatar", "Badge"].includes(reward.tipo)
+            ? html`<button type="button" className="lc-btn lc-btn-ghost" disabled=${applying !== null}
+                onClick=${() => apply(reward)}>${applying === reward.id ? "Aplicando…" : "Aplicar benefício"}</button>`
+            : html`<a href=${`/api/pass/rewards/${reward.id}/download`}>Baixar benefício</a>`}
+      </div>`)}
+    </section>` : null}
+  </main>`;
 }
 
 function PassMissionsPage() {
   const [dashboard, setDashboard] = useState(null);
-  const [collection, setCollection] = useState([]);
 
   useEffect(() => {
-    getJson("/api/pass/rewards").then(setCollection).catch(() => {});
     trackPassAction("CHECKIN")
       .then(() => getJson("/api/pass/current"))
       .then(setDashboard)
@@ -2137,50 +1900,6 @@ function PassMissionsPage() {
   return html`
     <main className="lc-page">
       <section className="lc-pass-shell">
-        <div className="lc-checkout-card">
-          <h3>Minha coleção</h3>
-          <p>
-            Cupons pessoais de uso único. Confira o desconto e o mínimo de
-            compra em cada benefício.
-          </p>
-          ${
-            collection.length
-              ? collection.map(
-                  (r) =>
-                    html`<div key=${r.id} className="lc-summary-line">
-                      <span>${r.titulo} · ${r.tipo}</span>${
-                        !r.ativo
-                          ? html`<span>Indisponível</span>`
-                          : r.tipo === "Cupom"
-                            ? html`<span
-                                ><code
-                                  >${r.usado ? "Utilizado / reservado" : r.codigo}</code
-                                >
-                                · ${currency(r.valor)} em produtos a partir de
-                                ${currency(r.minimo)} · até ${r.validade}</span
-                              >`
-                            : ["Tema", "Avatar", "Badge"].includes(r.tipo)
-                              ? html`<button
-                                  onClick=${async () => {
-                                    await postJson(
-                                      `/api/pass/rewards/${r.id}/apply`,
-                                      {},
-                                    );
-                                    window.location.reload();
-                                  }}
-                                >
-                                  Aplicar benefício
-                                </button>`
-                              : html`<a
-                                  href=${`/api/pass/rewards/${r.id}/download`}
-                                  >Baixar benefício</a
-                                >`
-                      }
-                    </div>`,
-                )
-              : html`<p>Resgate uma recompensa para vê-la aqui.</p>`
-          }
-        </div>
         <div className="lc-section-header">
           <div>
             <h2>Missões do passe</h2>
@@ -2259,6 +1978,13 @@ function Footer() {
 function App() {
   const route = useRoute();
   const { path } = parseRoute(route);
+  const [dark, setDark] = useState(() => document.documentElement.dataset.colorMode === "dark");
+  const toggleTheme = () => {
+    const mode = dark ? "light" : "dark";
+    document.documentElement.dataset.colorMode = mode;
+    try { localStorage.setItem("level-commerce-color-mode", mode); } catch {}
+    setDark(!dark);
+  };
   const cart = useLocalCart();
   const [immediateItem, setImmediateItem] = useState(() => readStorage(BUY_NOW_KEY, null, sessionStorage));
   const immediateCheckout = parseRoute(route).params.get("modo") === "imediato";
@@ -2331,7 +2057,9 @@ function App() {
 
   const currentScreen = useMemo(() => {
     if (path === "/conta") return html`<${AccountPage} auth=${auth} />`;
-    if (path === "/passe") return html`<${PassPage} notify=${notify} />`;
+    if (path === "/conta/beneficios")
+      return html`<${BenefitsPage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
+    if (path === "/passe") return html`<${PassPage} auth=${auth} notify=${notify} />`;
     if (path === "/passe/missoes") return html`<${PassMissionsPage} />`;
     if (path === "/eventos")
       return html`<${EventsPage} auth=${auth} getJson=${getJson} postJson=${postJson} notify=${notify} />`;
@@ -2396,7 +2124,6 @@ function App() {
       <${HomePage}
         data=${homeData}
         onAddToCart=${addToCartWithTracking}
-        onBuyNow=${buyNow}
         auth=${auth}
       />
     `;
@@ -2417,6 +2144,9 @@ function App() {
         totalItems=${cart.totalItems}
         onSearch=${searchAndNavigate}
         categories=${homeData?.categorias || []}
+        path=${path}
+        dark=${dark}
+        toggleTheme=${toggleTheme}
         notificationProps=${{
           box: notificationBox, refresh: refreshNotifications, openLink: navigate,
           readAll: (id) => postJson(`/api/account/notifications/read/${id}`, {})

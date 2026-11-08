@@ -32,15 +32,46 @@ test("catalog, private pass, checkout without live charges and profile", async (
   });
   await page.goto("/passe");
   await expect(
-    page.getByRole("heading", { name: "Minha coleção" }),
+    page.getByRole("heading", { name: "Passe LEVEL", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Adquirir premium" }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Minha coleção" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Níveis e recompensas do passe" })).toBeVisible();
   await page.screenshot({
     path: "test-results/pass-desktop.png",
     fullPage: true,
   });
+  const navigation = page.getByRole("navigation", { name: "Navegação da loja" });
+  await navigation.getByRole("link", { name: "Início", exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  const home = page.getByRole("main");
+  await expect(home.getByRole("heading", { name: "Passe LEVEL" })).toBeVisible();
+  await expect(home.getByRole("heading", { name: "Destaques da loja" })).toBeVisible();
+  const sections = await home.locator("section").evaluateAll(sections =>
+    sections.map(section => section.getAttribute("aria-label") || section.querySelector("h2")?.textContent));
+  expect(sections.slice(0, 4)).toEqual([
+    "Campanhas em destaque", "Chamadas promocionais demonstrativas", "Passe LEVEL", "Destaques da loja",
+  ]);
+  const themeToggle = page.getByRole("button", { name: "Modo escuro" });
+  await expect(themeToggle).toHaveAttribute("aria-pressed", "false");
+  await page.screenshot({ path: "test-results/home-light-desktop.png" });
+  await themeToggle.click();
+  await page.reload();
+  await expect(themeToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("html")).toHaveAttribute("data-color-mode", "dark");
+  await expect(home.getByRole("heading", { name: "Destaques da loja" })).toBeVisible();
+  await page.screenshot({ path: "test-results/home-dark-desktop.png" });
+  await themeToggle.click();
+
+  await page.goto("/conta");
+  await page.getByRole("link", { name: /Cupons e recompensas/ }).click();
+  await expect(page.getByRole("heading", { name: "Cupons e recompensas" })).toBeVisible();
+  await expect(page.getByText("Você ainda não tem benefícios resgatados.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Cupons e recompensas" })).toBeVisible();
+
   const catalog = await (await page.request.get("/api/store/catalog")).json();
   expect(catalog.produtos.length).toBeGreaterThan(0);
   const product =
@@ -122,8 +153,10 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/passe");
   await expect(
-    page.getByRole("heading", { name: "Minha coleção" }),
+    page.getByRole("heading", { name: "Passe LEVEL", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Níveis e recompensas do passe" })).toBeVisible();
+  await page.getByRole("button", { name: "Modo escuro" }).click();
   await page.screenshot({
     path: "test-results/pass-mobile.png",
     fullPage: true,

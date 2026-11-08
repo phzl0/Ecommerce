@@ -94,6 +94,7 @@ public class SecurityConfig {
                         "/produto/**",
                         "/sacola",
                         "/conta",
+                        "/conta/beneficios",
                         "/checkout",
                         "/login",
                         "/cadastro",
