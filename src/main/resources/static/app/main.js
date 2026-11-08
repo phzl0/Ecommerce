@@ -28,6 +28,39 @@ function shouldShowPassGuide(accountId) {
   return true;
 }
 
+const reviewReminderIntervals = [3, 6, 12].map(hours => hours * 60 * 60 * 1000);
+const reviewReminderMemory = new Map();
+
+function takeReviewReminder(accountId, missions, now = Date.now()) {
+  let due = false;
+  for (const mission of missions) {
+    const key = `level-commerce-review-reminder-${accountId}-${mission.id}`;
+    const previous = readStorage(key, reviewReminderMemory.get(key), localStorage);
+    const current = previous?.period === mission.resetaEm && previous.nextAt > now;
+    if (current) continue;
+
+    const step = previous?.period === mission.resetaEm
+      ? ((previous.step + 1) % reviewReminderIntervals.length) : 0;
+    const state = { period: mission.resetaEm, step, nextAt: now + reviewReminderIntervals[step] };
+    reviewReminderMemory.set(key, state);
+    try { localStorage.setItem(key, JSON.stringify(state)); } catch {}
+    due = true;
+  }
+  return due;
+}
+
+function pendingReviewMissions(dashboard) {
+  if (!dashboard) return [];
+  return [...dashboard.missoesDiarias, ...dashboard.missoesSemanais, ...dashboard.missoesMensais]
+    .filter(mission => mission.acao === "REVIEW_SUBMITTED" && !mission.concluida);
+}
+
+function reviewMissionLabel(missions) {
+  const xp = missions.filter(mission => mission.progressoAtual + 1 >= mission.metaValor)
+    .reduce((total, mission) => total + mission.xpRecompensa, 0);
+  return xp ? `Avalie e ganhe ${xp} XP` : "Avalie e avance na missão";
+}
+
 function useRoute() {
   const getRoute = () =>
     `${window.location.pathname}${window.location.search || ""}`;
@@ -220,7 +253,7 @@ function trackPassAction(acao, valor = 1, referencia = "") {
     acao,
     valor,
     referencia,
-  }).catch(() => null);
+  }).then(() => window.dispatchEvent(new Event("level-pass-action"))).catch(() => null);
 }
 
 function claimPassReward(rewardId) {
@@ -342,7 +375,8 @@ function NavBar({ totalItems, onSearch, auth, categories, notificationProps, pat
         </details>
         <${AppLink} href="/catalogo" current=${path === "/catalogo"}>Catálogo<//>
         <${AppLink} href=${auth.authenticated ? "/pedidos" : buildLoginUrl("/pedidos")}>Meus pedidos<//>
-        <${AppLink} href="/passe" current=${path.startsWith("/passe")}>Passe LEVEL<//>
+        <${AppLink} href="/passe" current=${path === "/passe"}>Passe mensal<//>
+        <${AppLink} href="/passe/missoes" current=${path === "/passe/missoes"}>Missões<//>
         <${AppLink} href="/eventos" current=${path === "/eventos"}>Eventos<//>
         ${auth.role === "ADMIN" || (!auth.authenticated && auth.ambienteLocal)
           ? html`<a className="lc-admin-link" href=${auth.authenticated ? "/admin" : buildLoginUrl("/admin")}>Administração</a>`
@@ -760,22 +794,52 @@ function CatalogPage({ route, onAddToCart }) {
   `;
 }
 
-function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, address }) {
+function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, reviewRequested, address }) {
   const [product, setProduct] = useState(null);
   const [reviewForm, setReviewForm] = useState({ nota: "5", comentario: "" });
   const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewMissions, setReviewMissions] = useState([]);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const reviewSection = useRef(null);
+  const reviewSubmitted = useRef(false);
 
   useEffect(() => {
-    getJson(`/api/store/products/${productId}`).then(setProduct);
+    let active = true;
+    getJson(`/api/store/products/${productId}`).then(data => { if (active) setProduct(data); })
+      .catch(() => { if (active) setProduct(false); });
+    return () => { active = false; };
   }, [productId]);
 
   useEffect(() => {
+    if (!auth.authenticated || !product) return;
     trackPassAction("VIEW_PRODUCT", 1, `product-${productId}`);
-  }, [productId]);
+  }, [auth.authenticated, product?.id, productId]);
+
+  useEffect(() => {
+    if (!auth.authenticated || !product) return;
+    let active = true;
+    getJson(`/api/pass/missions/review/${productId}`).then(missions => {
+      if (!active || reviewSubmitted.current) return;
+      setReviewMissions(missions);
+      if (!reviewRequested && takeReviewReminder(auth.id, missions)) {
+        notify("Missão de avaliação", reviewMissionLabel(missions),
+          false, "mission", `/produto/${productId}?avaliar=1`);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [auth.authenticated, auth.id, product?.id, productId, reviewRequested]);
+
+  useEffect(() => {
+    if (reviewRequested && reviewSection.current) {
+      reviewSection.current.focus({ preventScroll: true });
+      reviewSection.current.scrollIntoView({ block: "start" });
+    }
+  }, [reviewRequested, product?.id]);
 
   const submitReview = async (event) => {
     event.preventDefault();
     setReviewMessage("");
+    setSubmittingReview(true);
     try {
       const response = await postJson(
         `/api/store/products/${productId}/reviews`,
@@ -784,7 +848,9 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, add
           comentario: reviewForm.comentario,
         },
       );
+      reviewSubmitted.current = true;
       setProduct(response);
+      setReviewMissions([]);
       setReviewForm({ nota: "5", comentario: "" });
       notify("Avaliação enviada");
     } catch (error) {
@@ -792,12 +858,16 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, add
         requireLogin(`/produto/${productId}`);
         return;
       }
-      setReviewMessage("Nao foi possivel enviar a avaliacao.");
+      setReviewMessage(error.message || "Não foi possível enviar a avaliação.");
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
   if (!product)
-    return html`<main className="lc-page"><p>Carregando produto...</p></main>`;
+    return html`<main className="lc-page"><p role=${product === false ? "alert" : "status"}>
+      ${product === false ? "Não foi possível carregar o produto." : "Carregando produto…"}
+    </p></main>`;
 
   return html`
     <main className="lc-page lc-product-page">
@@ -893,8 +963,9 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, add
             }
           </div>
         </div>
-        <div className="lc-checkout-card">
+        <div className="lc-checkout-card lc-review-form" ref=${reviewSection} tabIndex="-1">
           <h3>Avaliar produto</h3>
+          ${reviewMissions.length ? html`<p className="lc-mission-product-tag">${reviewMissionLabel(reviewMissions)}</p>` : null}
           ${
             auth.authenticated
               ? html`
@@ -922,9 +993,9 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, add
                         />
                       </label>
                     </div>
-                    ${reviewMessage ? html`<p className="lc-checkout-note">${reviewMessage}</p>` : null}
-                    <button type="submit" className="lc-btn lc-btn-primary">
-                      Enviar avaliacao
+                    ${reviewMessage ? html`<p className="lc-checkout-note" role="alert">${reviewMessage}</p>` : null}
+                    <button type="submit" className="lc-btn lc-btn-primary" disabled=${submittingReview}>
+                      Enviar avaliação
                     </button>
                   </form>
                 `
@@ -1721,7 +1792,41 @@ function PaymentResultPage({ route }) {
   `;
 }
 
-function PassPage({ auth, notify }) {
+function moveCarousel(track, direction) {
+  track?.scrollBy({
+    left: direction * track.clientWidth * 0.8,
+    behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+  });
+}
+
+function RewardHighlights({ lastLevel }) {
+  const track = useRef(null);
+  const highlights = [
+    ["/app/level-premium.webp", `Alcance o nível ${lastLevel} e ganhe`],
+    ["/app/level-free.webp", "Explore os prêmios do Passe Premium"],
+    ["/app/level-hero.svg", "Complete missões e ganhe recompensas"],
+  ];
+  return html`<section className="lc-reward-highlights" aria-labelledby="reward-highlights">
+    <div className="lc-rail-toolbar">
+      <div className="lc-reward-highlights-heading"><h2 id="reward-highlights">Prêmios em destaque</h2>
+        <small>Exemplos da vitrine</small></div>
+      <div>
+        <button type="button" className="lc-btn lc-btn-ghost" aria-label="Destaques anteriores"
+          onClick=${() => moveCarousel(track.current, -1)}>←</button>
+        <button type="button" className="lc-btn lc-btn-ghost" aria-label="Próximos destaques"
+          onClick=${() => moveCarousel(track.current, 1)}>→</button>
+      </div>
+    </div>
+    <div className="lc-reward-highlights-track" ref=${track} tabIndex="0" role="region" aria-label="Destaques ilustrativos">
+      ${highlights.map(([image, label]) => html`<article className="lc-reward-highlight" key=${label}>
+        <img src=${image} alt="" />
+        <strong>${label}</strong>
+      </article>`)}
+    </div>
+  </section>`;
+}
+
+function PassPage({ auth, notify, notifyGain }) {
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
@@ -1751,22 +1856,18 @@ function PassPage({ auth, notify }) {
       notify("Você alcançou o último nível", "Confira as recompensas da temporada.");
     }
   }, [pass, notify, auth.id]);
-  const moveTrack = (direction) => {
-    const rail = track.current;
-    rail?.scrollBy({
-      left: direction * rail.clientWidth * 0.8,
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
-    });
-  };
-
   async function claim(reward) {
     if (busy !== null || !reward.disponivelParaResgate) return;
     setBusy(reward.recompensaId);
     setError("");
     try {
       const result = await claimPassReward(reward.recompensaId);
-      notify("Recompensa resgatada", result.titulo);
-      setDashboard(await getJson("/api/pass/current"));
+      notifyGain("Recompensa recebida", result.titulo, "prize");
+      setDashboard(current => ({ ...current, niveis: current.niveis.map(item =>
+        item.recompensaId === reward.recompensaId
+          ? { ...item, resgatado: true, disponivelParaResgate: false }
+          : item
+      ) }));
     } catch (failure) {
       if (failure.code === "AUTH_REQUIRED") requireLogin("/passe");
       else setError(failure.message || "Não foi possível atualizar o passe.");
@@ -1791,18 +1892,22 @@ function PassPage({ auth, notify }) {
   const rewardCell = (reward, premium) => {
     if (reward.premium !== premium) return html`<div className=${`lc-rail-reward ${premium ? "premium" : "free"} empty`} aria-hidden="true">—</div>`;
     const available = reward.disponivelParaResgate && !reward.resgatado;
+    const blockedReason = premium && !pass.premiumAtivo ? "Requer Premium" : `Requer ${reward.xpNecessario} XP`;
     return html`<div className=${`lc-rail-reward ${premium ? "premium" : "free"} ${available ? "available" : ""}`}>
       <span>${reward.tipoDigital}</span>
       <strong title=${reward.descricao}>${reward.titulo}</strong>
-      ${available ? html`<button type="button" className="lc-btn lc-btn-primary"
-        disabled=${busy !== null} aria-label=${`Resgatar nível ${reward.nivel}: ${reward.titulo}`}
-        onClick=${() => claim(reward)}>${busy === reward.recompensaId ? "Resgatando…" : "Resgatar"}</button>`
-        : html`<small>${reward.resgatado ? "Resgatado" : premium && !pass.premiumAtivo ? "Passe premium" : "Bloqueado"}</small>`}
+      <button type="button" className=${`lc-reward-state ${available ? "available" : reward.resgatado ? "received" : "locked"}`}
+        disabled=${!available || busy !== null} aria-label=${`${available ? "Receber" : reward.resgatado ? "Recebido" : "Bloqueado"} · nível ${reward.nivel} · ${reward.titulo}${!available && !reward.resgatado ? ` · ${blockedReason}` : ""}`}
+        onClick=${() => claim(reward)}>
+        ${busy === reward.recompensaId ? "Recebendo…" : available ? "Receber" : reward.resgatado ? "Recebido" : "Bloqueado"}
+      </button>
+      ${!available && !reward.resgatado ? html`<small>${blockedReason}</small>` : null}
     </div>`;
   };
 
-  return html`<main className="lc-page lc-level-pass">
-    <header className="lc-level-pass-header">
+  return html`<main className="lc-level-pass">
+    <header className="lc-rewards-banner lc-level-pass-header">
+      <div className="lc-page lc-rewards-banner-content">
       <span className="lc-eyebrow">LEVEL REWARDS</span>
       <h1>Passe LEVEL</h1>
       ${pass ? html`<p className="lc-pass-season">${pass.temporadaNome} <span>· ${pass.temporadaPeriodo}</span></p>`
@@ -1814,11 +1919,14 @@ function PassPage({ auth, notify }) {
             max=${pass.xpPorNivel}></progress>
           <small>${pass.nivelAtual >= pass.totalNiveis ? "Último nível alcançado" : `${pass.xpParaProximoNivel} XP para o próximo nível`}</small>
         </div>
-        <${AppLink} href="/passe/missoes" className="lc-btn lc-btn-ghost">Ver missões<//>
+        <${AppLink} href="/passe/missoes" className="lc-btn lc-neon-btn">Ver missões<//>
       </div>` : auth.ready && !auth.authenticated
         ? html`<${AppLink} href=${buildLoginUrl("/passe")} className="lc-btn lc-neon-btn">Entrar para ver meu passe<//>`
         : null}
+      </div>
     </header>
+    <div className="lc-page lc-rewards-content">
+    <${RewardHighlights} lastLevel=${pass?.totalNiveis || 30} />
     ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
     ${auth.authenticated && !pass && !error ? html`<p role="status">Carregando temporada…</p>` : null}
     ${pass ? html`<section className="lc-level-trail" aria-labelledby="level-trail-title">
@@ -1837,8 +1945,8 @@ function PassPage({ auth, notify }) {
       <div className="lc-rail-toolbar">
         <span>Deslize a trilha para explorar os níveis.</span>
         <div>
-          <button type="button" className="lc-btn lc-btn-ghost" aria-label="Níveis anteriores" onClick=${() => moveTrack(-1)}>←</button>
-          <button type="button" className="lc-btn lc-btn-ghost" aria-label="Próximos níveis" onClick=${() => moveTrack(1)}>→</button>
+          <button type="button" className="lc-btn lc-btn-ghost" aria-label="Níveis anteriores" onClick=${() => moveCarousel(track.current, -1)}>←</button>
+          <button type="button" className="lc-btn lc-btn-ghost" aria-label="Próximos níveis" onClick=${() => moveCarousel(track.current, 1)}>→</button>
         </div>
       </div>
       <div className=${`lc-rail ${pass.premiumAtivo ? "" : "lc-rail-locked"}`}>
@@ -1860,6 +1968,7 @@ function PassPage({ auth, notify }) {
         </div>`)}
       </details>` : null}
     </section>` : null}
+    </div>
   </main>`;
 }
 
@@ -1916,7 +2025,35 @@ function BenefitsPage({ auth, onAuthRefresh, notify }) {
   </main>`;
 }
 
-function PassMissionsPage() {
+function MissionProductShelf({ dashboard, demoProducts }) {
+  const reviewMissions = pendingReviewMissions(dashboard);
+  const reviews = dashboard?.produtosParaAvaliar || [];
+  const demos = demoProducts.filter(product => !reviews.some(review => review.id === product.id))
+    .slice(0, 2);
+  if (!reviews.length && !demos.length) return null;
+
+  const items = [
+    ...reviews.map(product => ({ product, label: reviewMissionLabel(reviewMissions), review: true })),
+    ...demos.map(product => ({ product, label: "XP extra · exemplo", review: false })),
+  ];
+  return html`<section className="lc-mission-products" aria-labelledby="mission-products">
+    <h2 id="mission-products">Produtos e missões</h2>
+    <div className="lc-mission-product-grid">
+      ${items.map(({ product, label, review }) => html`<article className="lc-mission-product" key=${product.id}>
+        <${AppLink} href=${`/produto/${product.id}${review ? "?avaliar=1" : ""}`}>
+          <img src=${product.imagemUrl || "/images/sem-foto.png"} alt="" loading="lazy"
+            onError=${event => {
+              if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
+            }} />
+          <span className="lc-mission-product-tag">${label}</span>
+          <strong>${product.nome}</strong>
+        <//>
+      </article>`)}
+    </div>
+  </section>`;
+}
+
+function PassMissionsPage({ auth, demoProducts }) {
   const [dashboard, setDashboard] = useState(null);
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(0);
@@ -1924,24 +2061,37 @@ function PassMissionsPage() {
   const tabs = ["Diárias", "Semanais", "Mensais", "Especiais"];
 
   useEffect(() => {
+    if (!auth.authenticated) return;
+    let active = true;
     trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
-      .then(setDashboard)
+      .then(data => { if (active) setDashboard(data); })
       .catch(failure => {
+        if (!active) return;
         if (failure.code === "AUTH_REQUIRED") requireLogin("/passe/missoes");
         else setError("Não foi possível carregar as missões.");
       });
+    return () => { active = false; };
+  }, [auth.authenticated]);
+
+  useEffect(() => {
     getJson("/api/events")
       .then(data => setEvents(data.filter(event => event.estado !== "Encerrado").slice(0, 4)))
       .catch(() => {});
   }, []);
 
   const missions = dashboard ? [dashboard.missoesDiarias, dashboard.missoesSemanais, dashboard.missoesMensais][selected] : [];
-  return html`<main className="lc-page lc-missions-page">
-    <header className="lc-store-heading">
-      <${AppLink} href="/passe">‹ Passe LEVEL<//>
-      <h1>Missões do passe</h1>
-      <p>Confira seus objetivos e acompanhe o XP que cada um rende.</p>
+  return html`<main className="lc-missions-page">
+    <header className="lc-rewards-banner lc-missions-banner">
+      <div className="lc-page lc-rewards-banner-content">
+        <span className="lc-eyebrow">LEVEL REWARDS</span>
+        <h1>Missões do passe</h1>
+        <p>Escolha uma missão, acompanhe o progresso e ganhe XP.</p>
+        <${AppLink} href="/passe" className="lc-btn lc-neon-btn">Ver passe mensal<//>
+      </div>
     </header>
+    <div className="lc-page lc-rewards-content">
+    ${auth.ready && !auth.authenticated ? html`<p><${AppLink} href=${buildLoginUrl("/passe/missoes")}
+      className="lc-btn lc-btn-primary">Entrar para ver minhas missões<//></p>` : null}
     ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
     <div className="lc-mission-tabs" role="tablist" aria-label="Tipos de missão">
       ${tabs.map((label, index) => html`<button key=${label} type="button" role="tab"
@@ -1957,31 +2107,37 @@ function PassMissionsPage() {
           event.currentTarget.parentElement.querySelectorAll("button")[next].focus();
         }}>${label}</button>`)}
     </div>
-    <section id="mission-panel" role="tabpanel" aria-labelledby=${`mission-tab-${selected}`}>
+    <section id="mission-panel" className="lc-mission-panel" role="tabpanel" aria-labelledby=${`mission-tab-${selected}`}>
       ${selected === 3 ? html`
         <div className="lc-missions-grid">
           ${events.map(event => html`<article key=${event.id} className="lc-mission-row">
             <div><h2>${event.titulo}</h2><p>${event.descricao}</p></div>
             <div className="lc-mission-meta"><strong>${event.estado}</strong>
-              <${AppLink} href="/eventos">Ver evento →<//></div>
+              <${AppLink} href="/eventos" className="lc-btn lc-btn-ghost lc-mission-cta">Ver evento<//></div>
           </article>`)}
         </div>
         ${events.length === 0 ? html`<p className="lc-muted">Nenhuma missão especial disponível no momento.</p>` : null}`
-        : !dashboard && !error ? html`<p role="status">Carregando missões…</p>`
+        : auth.ready && !auth.authenticated ? html`<p>Entre para acompanhar seu progresso.</p>`
+        : !dashboard ? !error ? html`<p role="status">Carregando missões…</p>` : null
         : html`<div className="lc-missions-grid">
           ${(missions || []).slice(0, 4).map(mission => html`<article key=${mission.id} className="lc-mission-row">
             <div><h2>${mission.titulo}</h2><p>${mission.descricao}</p>
-              ${mission.ctaHref && !mission.concluida ? html`<${AppLink} href=${mission.ctaHref}>
-                ${mission.ctaLabel || "Ir para missão"} →
-              <//>` : null}
+              <progress aria-label=${`Progresso de ${mission.titulo}`} value=${mission.progressoAtual}
+                max=${mission.metaValor}></progress>
+              <small>Renova em ${mission.resetaEm}</small>
             </div>
             <div className="lc-mission-meta">
               <strong>+${mission.xpRecompensa} XP</strong>
               <span>${mission.concluida ? "Concluída" : `${mission.progressoAtual}/${mission.metaValor}`}</span>
+              ${!mission.concluida && mission.ctaHref ? html`<${AppLink} href=${mission.ctaHref}
+                className="lc-btn lc-btn-ghost lc-mission-cta">${mission.ctaLabel}<//>`
+                : !mission.concluida && mission.ctaLabel ? html`<small>${mission.ctaLabel}</small>` : null}
             </div>
           </article>`)}
         </div>`}
     </section>
+    <${MissionProductShelf} dashboard=${dashboard} demoProducts=${demoProducts} />
+    </div>
   </main>`;
 }
 
@@ -1996,11 +2152,26 @@ function Footer() {
         <${AppLink} href="/">Início<//>
         <${AppLink} href="/catalogo">Catálogo<//>
         <${AppLink} href="/passe">Passe mensal<//>
+        <${AppLink} href="/passe/missoes">Missões<//>
         <${AppLink} href="/conta">Conta<//>
         <${AppLink} href="/eventos">Eventos<//>
       </div>
     </footer>
   `;
+}
+
+function GainToast({ item, dismiss }) {
+  useEffect(() => {
+    const timer = window.setTimeout(() => dismiss(item.id), 6500);
+    return () => window.clearTimeout(timer);
+  }, [item.id, dismiss]);
+  return html`<div className="lc-toast lc-gain-toast">
+    <span className="lc-gain-mark" aria-hidden="true">
+      ${item.kind === "xp" ? "XP" : html`<${Icon} name="check" />`}
+    </span>
+    <div><strong>${item.title}</strong><span>${item.text}</span></div>
+    <button type="button" aria-label="Fechar aviso" onClick=${() => dismiss(item.id)}>×</button>
+  </div>`;
 }
 
 function App() {
@@ -2024,6 +2195,10 @@ function App() {
   const [auth, setAuth] = useState({ authenticated: false, ready: false });
   const [address, setAddress] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [gains, setGains] = useState([]);
+  const gainSerial = useRef(0);
+  const gainCursor = useRef(new Map());
+  const dismissGain = useMemo(() => id => setGains(items => items.filter(item => item.id !== id)), []);
   const [notificationBox, setNotificationBox] = useState(null);
   const toastTimer = useRef(null);
   const authPageTypes = {
@@ -2044,12 +2219,33 @@ function App() {
       getJson("/api/account/notifications").then(setNotificationBox).catch(() => {});
   };
 
-  const notify = (title, text = "", error = false) => {
-    setNotice({ title, text, error });
+  const notify = (title, text = "", error = false, kind, href) => {
+    setNotice({ title, text, error, kind, href });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setNotice(null), 4500);
+    toastTimer.current = window.setTimeout(() => setNotice(null), href ? 8000 : 4500);
+    if (kind !== "mission") refreshNotifications();
+  };
+
+  const notifyGain = (title, text, kind) => {
+    const item = { id: `gain-${++gainSerial.current}`, title, text, kind };
+    setGains(items => [...items, item].slice(-3));
     refreshNotifications();
   };
+
+  useEffect(() => {
+    if (!auth.authenticated || !notificationBox?.itens?.length) return;
+    const key = `level-commerce-xp-cursor-${auth.id}`;
+    const previous = Math.max(gainCursor.current.get(key) || 0, readStorage(key, 0));
+    const latest = Math.max(previous, ...notificationBox.itens.map(item => item.id));
+    if (latest === previous) return;
+    gainCursor.current.set(key, latest);
+    try { localStorage.setItem(key, String(latest)); } catch {}
+    const updates = notificationBox.itens
+      .filter(item => item.id > previous && !item.lida && item.titulo === "XP recebido")
+      .slice(0, 3).reverse()
+      .map(item => ({ id: `xp-${item.id}`, title: item.titulo, text: item.mensagem, kind: "xp" }));
+    if (updates.length) setGains(items => [...items, ...updates].slice(-3));
+  }, [auth.id, auth.authenticated, notificationBox]);
 
   useEffect(() => {
     refreshAuth();
@@ -2062,7 +2258,11 @@ function App() {
     if (!auth.authenticated) return;
     refreshNotifications();
     const interval = window.setInterval(refreshNotifications, 45_000);
-    return () => window.clearInterval(interval);
+    window.addEventListener("level-pass-action", refreshNotifications);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("level-pass-action", refreshNotifications);
+    };
   }, [auth.authenticated, path]);
 
   useEffect(() => {
@@ -2102,10 +2302,11 @@ function App() {
     }
     if (path === "/conta/beneficios")
       return html`<${BenefitsPage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
-    if (path === "/passe") return html`<${PassPage} auth=${auth} notify=${notify} />`;
-    if (path === "/passe/missoes") return html`<${PassMissionsPage} />`;
+    if (path === "/passe") return html`<${PassPage} auth=${auth} notify=${notify} notifyGain=${notifyGain} />`;
+    if (path === "/passe/missoes") return html`<${PassMissionsPage} auth=${auth} demoProducts=${homeData?.destaques || []} />`;
     if (path === "/eventos")
-      return html`<${EventsPage} auth=${auth} getJson=${getJson} postJson=${postJson} notify=${notify} />`;
+      return html`<${EventsPage} auth=${auth} getJson=${getJson} postJson=${postJson}
+        notify=${(title, text) => notifyGain(title, text, "prize")} />`;
     if (path === "/sacola") {
       return html`
         <${CartPage}
@@ -2151,7 +2352,9 @@ function App() {
       const productId = path.split("/")[2];
       return html`
         <${ProductDetailPage}
+          key=${productId}
           productId=${productId}
+          reviewRequested=${parseRoute(route).params.get("avaliar") === "1"}
           onAddToCart=${addToCartWithTracking}
           onBuyNow=${buyNow}
           auth=${auth}
@@ -2201,10 +2404,19 @@ function App() {
       />
       ${currentScreen}
       <${Footer} />
+      <div className="lc-gain-region" role="status" aria-label="Ganhos de XP e prêmios">
+        ${gains.map(item => html`<${GainToast} key=${item.id} item=${item} dismiss=${dismissGain} />`)}
+      </div>
       <div className="lc-toast-region" role="status">
         ${notice ? html`<div className=${`lc-toast ${notice.error ? "error" : ""}`}>
           ${notice.error ? null : html`<${Icon} name="check" />`}
-          <div><strong>${notice.title}</strong>${notice.text ? html`<span>${notice.text}</span>` : null}</div>
+          <div><strong>${notice.title}</strong>${notice.text ? html`<span>${notice.text}</span>` : null}
+            ${notice.href ? html`<a href=${notice.href} className="lc-toast-link" onClick=${event => {
+              if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+              event.preventDefault();
+              setNotice(null);
+              navigate(notice.href);
+            }}>Ir para avaliação →</a>` : null}</div>
           <button type="button" aria-label="Fechar aviso" onClick=${() => setNotice(null)}>×</button>
         </div>` : null}
       </div>

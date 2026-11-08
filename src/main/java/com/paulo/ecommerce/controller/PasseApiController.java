@@ -3,6 +3,8 @@ package com.paulo.ecommerce.controller;
 import com.paulo.ecommerce.dto.api.PasseAcaoRequest;
 import com.paulo.ecommerce.dto.api.PasseClaimResponse;
 import com.paulo.ecommerce.dto.api.PasseDashboardResponse;
+import com.paulo.ecommerce.dto.api.PasseMissaoResponse;
+import java.util.List;
 import com.paulo.ecommerce.model.PasseAcaoTipo;
 import com.paulo.ecommerce.service.PasseService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,6 +32,12 @@ public class PasseApiController {
   @GetMapping("/current")
   public PasseDashboardResponse current(@AuthenticationPrincipal UserDetails userDetails) {
     return passeService.carregarDashboard(userDetails.getUsername());
+  }
+
+  @GetMapping("/missions/review/{produtoId}")
+  public List<PasseMissaoResponse> reviewMissions(
+      @PathVariable Long produtoId, @AuthenticationPrincipal UserDetails user) {
+    return passeService.missoesDeAvaliacao(user.getUsername(), produtoId);
   }
 
   @PostMapping("/rewards/{id}/apply")

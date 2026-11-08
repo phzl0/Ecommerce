@@ -46,6 +46,20 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
   long countByAtivoTrue();
 
+  @Query("""
+      select produto from Produto produto
+      where produto.ativo = true and (:produtoId is null or produto.id = :produtoId)
+        and exists (
+          select 1 from Pedido pedido join pedido.itens item join pedido.pagamento pagamento
+          where pedido.usuario.id = :usuarioId and item.produto.id = produto.id
+            and pedido.status <> 'CANCELADO' and pagamento.status = 'APROVADO')
+        and not exists (
+          select 1 from Avaliacao avaliacao
+          where avaliacao.usuario.id = :usuarioId and avaliacao.produto.id = produto.id)
+      order by produto.id
+      """)
+  List<Produto> buscarParaAvaliar(Long usuarioId, Long produtoId, Pageable limite);
+
   @EntityGraph(attributePaths = {"categoria"})
   @Query("""
       select p from Produto p where p.ativo = true

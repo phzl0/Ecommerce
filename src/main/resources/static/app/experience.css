@@ -203,3 +203,38 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   .lc-card-actions .lc-btn { padding-inline: 8px; font-size: .75rem; }
   .lc-footer { flex-direction: column; }
 }
+
+.lc-gain-region {
+  position: fixed;
+  z-index: 45;
+  inset: max(12px, env(safe-area-inset-top)) 0 auto;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.lc-gain-toast {
+  pointer-events: auto;
+  background: #0a1d12;
+  border-color: #65d95a;
+  animation: lc-gain-enter 220ms ease-out both;
+}
+.lc-gain-toast .lc-gain-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: #79ff57;
+  color: #08110a;
+  font-weight: 800;
+}
+.lc-toast-link { color: #b3ff9a; font-size: .85rem; font-weight: 750; text-decoration: underline; }
+@keyframes lc-gain-enter {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lc-gain-toast { animation: none; }
+}

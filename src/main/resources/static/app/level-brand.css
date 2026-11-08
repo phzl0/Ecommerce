@@ -259,7 +259,6 @@
 .lc-rail-toolbar { padding-block: 8px; font-size: .875rem; }
 .lc-rail-toolbar > div { display: flex; gap: 8px; }
 .lc-rail {
-  --lc-reward-height: 128px;
   --lc-rail-rows: var(--lc-reward-height) 40px var(--lc-reward-height);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -606,4 +605,137 @@
   .lc-profile-account { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .lc-profile-shortcuts { border-left: 0; padding-left: 0; }
   .lc-profile-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+
+.lc-level-pass { --lc-reward-width: 144px; --lc-reward-height: 128px; }
+.lc-rewards-banner {
+  color: #f2fff3;
+  background: linear-gradient(90deg, #021007 0%, #07170de6 40%, #06180c63 100%),
+    var(--lc-rewards-banner-image) center 45% / cover no-repeat, #07180c;
+}
+.lc-level-pass-header { --lc-rewards-banner-image: url("/app/level-premium.webp"); padding: 0; }
+.lc-missions-banner { --lc-rewards-banner-image: url("/app/level-free.webp"); }
+.lc-rewards-banner-content {
+  min-height: clamp(212px, 24vw, 312px);
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  padding-block: 32px;
+}
+.lc-rewards-banner .lc-eyebrow, .lc-rewards-banner strong span { color: #a4ff8b; }
+.lc-rewards-banner h1 {
+  margin: 8px 0;
+  font-size: clamp(2.25rem, 7vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+.lc-rewards-banner p { color: #e3f1e5; margin: 8px 0 16px; }
+.lc-rewards-banner small { color: #d0e8d4; }
+.lc-rewards-banner progress { accent-color: #79ff57; }
+.lc-rewards-content { padding-top: 24px; }
+.lc-reward-highlights { max-width: 422px; margin-bottom: 24px; }
+.lc-reward-highlights .lc-rail-toolbar { align-items: center; }
+.lc-rail-toolbar .lc-reward-highlights-heading { display: grid; gap: 2px; }
+.lc-reward-highlights-heading h2, .lc-mission-products h2 { color: var(--lc-text); margin: 0; font-size: 1.125rem; }
+.lc-reward-highlights-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--lc-reward-width);
+  overflow-x: auto;
+  gap: 8px;
+  scrollbar-width: thin;
+  scroll-snap-type: x mandatory;
+}
+.lc-reward-highlight {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: end;
+  overflow: hidden;
+  min-height: var(--lc-reward-height);
+  border-radius: 8px;
+  scroll-snap-align: start;
+  padding: 8px;
+  background: #0b1c10;
+  color: #fff;
+  font-size: .82rem;
+}
+.lc-reward-highlight img, .lc-reward-highlight::before {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+}
+.lc-reward-highlight img { object-fit: cover; }
+.lc-reward-highlight::before { content: ""; z-index: -1; background: linear-gradient(transparent 10%, #000e 90%); }
+.lc-rail {
+  --lc-surface: #000;
+  --lc-surface-alt: #101312;
+  --lc-line: #3c4540;
+  --lc-muted: #bdc8bf;
+  --lc-green: #79ff57;
+  --lc-green-dark: #a9ff92;
+  color: #f5fff6;
+  color-scheme: dark;
+}
+.lc-rail-track { grid-auto-columns: var(--lc-reward-width); }
+.lc-reward-state {
+  min-height: 30px;
+  padding-inline: 8px;
+  border: 1px solid #4c5750;
+  border-radius: 6px;
+  background: #202622;
+  color: #f3f8f3;
+  font: inherit;
+  font-weight: 750;
+}
+.lc-reward-state.available { background: #79ff57; border-color: #79ff57; color: #071108; cursor: pointer; }
+.lc-reward-state.received { background: #143e26; border-color: #34784b; color: #d1ffdf; }
+.lc-rail-reward .lc-reward-state { min-height: 30px; margin-top: 0; }
+.lc-rail-reward .lc-reward-state:focus-visible { outline-color: #fff; }
+.lc-rail-reward small { line-height: 1.2; }
+.lc-mission-panel {
+  padding: 12px 16px;
+  border: 1px solid var(--lc-line);
+  border-radius: 12px;
+  background: var(--lc-surface);
+}
+.lc-mission-panel > p { margin: 4px 0; }
+.lc-missions-grid { column-gap: 20px; }
+.lc-mission-row > div:first-child { min-width: 0; overflow-wrap: anywhere; }
+.lc-mission-row progress { display: block; margin: 8px 0 4px; width: min(100%, 180px); accent-color: var(--lc-green); }
+.lc-mission-row small { color: var(--lc-muted); font-size: .75rem; }
+.lc-mission-row .lc-mission-cta { min-height: 30px; padding: 4px 8px; font-size: .75rem; }
+.lc-missions-grid > :nth-last-child(-n+2) { border-bottom: 0; }
+.lc-mission-products { margin-top: 24px; }
+.lc-mission-product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 136px), 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.lc-mission-product {
+  min-width: 0;
+  border: 1px solid var(--lc-line);
+  border-radius: 8px;
+  background: var(--lc-surface);
+}
+.lc-mission-product a { display: grid; gap: 4px; padding: 8px; }
+.lc-mission-product img { width: 100%; height: 84px; object-fit: contain; }
+.lc-mission-product strong { font-size: .85rem; overflow-wrap: anywhere; }
+.lc-mission-product-tag {
+  margin: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--lc-green-soft);
+  color: var(--lc-green-dark);
+  font-size: .75rem;
+  font-weight: 750;
+}
+.lc-review-form { scroll-margin-top: 170px; }
+@media (max-width: 600px) {
+  .lc-level-pass { --lc-reward-width: 128px; }
+  .lc-missions-grid > :nth-last-child(2) { border-bottom: 1px solid var(--lc-line); }
+  .lc-review-form { scroll-margin-top: 225px; }
 }

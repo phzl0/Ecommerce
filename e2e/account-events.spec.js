@@ -58,8 +58,11 @@ test("registers, earns event XP from a local purchase and claims a badge", async
 
     const catalog = await (await page.request.get("/api/store/catalog")).json();
     const product = catalog.produtos.find((item) => item.estoque && item.preco >= 50);
-    await page.goto("/produto/" + product.id);
+    const productPath = "/produto/" + product.id;
+    const reviewEndpoint = "/api/pass/missions/review/" + product.id;
+    await page.goto(productPath);
     await expect(deliveryLink).toBeVisible();
+    expect(await (await page.request.get(reviewEndpoint)).json()).toEqual([]);
     await page.getByRole("button", { name: "Adicionar à sacola", exact: true }).click();
     await expect(page.getByText("Adicionado à sacola", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Comprar agora", exact: true }).first().click();
@@ -84,6 +87,49 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await admin.getByRole("link", { name: "Detalhes →" }).click();
     await admin.getByRole("button", { name: "Simular pagamento aprovado" }).click();
     await expect(admin.getByText("Pagamento simulado. Nenhuma cobrança foi realizada.")).toBeVisible();
+
+    await page.goto("/passe/missoes");
+    await expect(page.getByRole("link", { name: /Avalie e ganhe 90 XP/ }))
+      .toHaveAttribute("href", productPath + "?avaliar=1");
+    await expect(page.getByText("XP extra · exemplo").first()).toBeVisible();
+
+    const hour = 60 * 60 * 1000;
+    const start = Date.now();
+    const openProduct = async offset => {
+      await page.clock.setFixedTime(start + offset);
+      const response = page.waitForResponse(value => value.url().endsWith(reviewEndpoint));
+      await page.goto(productPath);
+      expect((await response).ok()).toBeTruthy();
+      await expect(page.locator(".lc-review-form").getByText("Avalie e ganhe 90 XP")).toBeVisible();
+    };
+    const reminder = page.locator(".lc-toast-region").getByText("Missão de avaliação", { exact: true });
+    await openProduct(0);
+    await expect(reminder).toBeVisible();
+    await openProduct(3 * hour - 1);
+    await expect(reminder).toHaveCount(0);
+    await openProduct(3 * hour);
+    await expect(reminder).toBeVisible();
+    await openProduct(9 * hour - 1);
+    await expect(reminder).toHaveCount(0);
+    await openProduct(9 * hour);
+    await expect(reminder).toBeVisible();
+    await openProduct(21 * hour - 1);
+    await expect(reminder).toHaveCount(0);
+    await openProduct(21 * hour);
+    await expect(reminder).toBeVisible();
+    await page.getByRole("link", { name: "Ir para avaliação →" }).click();
+    await expect(page.locator(".lc-review-form")).toBeFocused();
+    await page.getByRole("button", { name: "Enviar avaliação" }).click();
+    const gains = page.locator(".lc-gain-region");
+    await expect(gains.getByText(/\+90 XP/)).toBeVisible();
+    expect(await (await page.request.get(reviewEndpoint)).json()).toEqual([]);
+
+    await page.goto("/passe");
+    const claim = page.getByRole("button", { name: /^Receber · nível 1 ·/ });
+    await expect(claim).toBeEnabled();
+    await claim.click();
+    await expect(page.getByRole("button", { name: /^Recebido · nível 1 ·/ })).toBeDisabled();
+    await expect(gains.getByText("Recompensa recebida", { exact: true })).toBeVisible();
 
     await page.goto("/eventos");
     await event.getByRole("button", { name: "Resgatar selo" }).click();

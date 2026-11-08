@@ -40,13 +40,18 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(page.getByRole("heading", { name: "Minha coleção" })).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Níveis e recompensas do passe" })).toBeVisible();
   await expect(page.getByText("Trilha Premium bloqueada")).toBeVisible();
+  await expect(page.locator(".lc-rail")).toHaveCSS("background-color", "rgb(0, 0, 0)");
+  await expect(page.getByRole("button", { name: /^Bloqueado · nível 1 ·/ })).toBeDisabled();
+  await expect(page.getByRole("region", { name: "Destaques ilustrativos" }).getByRole("article")).toHaveCount(3);
+  await expect(page.getByRole("navigation", { name: "Navegação da loja" })
+    .getByRole("link", { name: "Missões", exact: true })).toBeVisible();
   await expect(page.getByText(/Faltam \d+ XP para o próximo nível/)).toBeVisible();
   await expect(page.getByText(/Recompensa final ·/)).toHaveCount(0);
   await expect(page.locator(".lc-rail-labels .premium")).toHaveCSS("background-image", /level-premium\.webp/);
   await expect(page.locator(".lc-rail-reward").first()).toHaveCSS("background-image", "none");
   await page.reload();
   await expect(page.getByRole("button", { name: "Liberar Premium" })).toBeVisible();
-  await expect(page.locator(".lc-toast")).toHaveCount(0);
+  await expect(page.locator(".lc-toast-region .lc-toast")).toHaveCount(0);
   const account = await (await page.request.get("/api/auth/me")).json();
   await page.evaluate(id => {
     localStorage.setItem(`level-commerce-pass-guide-${id}`, String(Date.now() - 301_000));

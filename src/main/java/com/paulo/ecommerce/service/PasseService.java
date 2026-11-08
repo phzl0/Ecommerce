@@ -2,6 +2,7 @@ package com.paulo.ecommerce.service;
 
 import com.paulo.ecommerce.dto.api.PasseClaimResponse;
 import com.paulo.ecommerce.dto.api.PasseDashboardResponse;
+import com.paulo.ecommerce.dto.api.PasseDashboardResponse.ProdutoAvaliavel;
 import com.paulo.ecommerce.dto.api.PasseHistoricoXpResponse;
 import com.paulo.ecommerce.dto.api.PasseMissaoResponse;
 import com.paulo.ecommerce.dto.api.PasseNivelResponse;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -187,12 +189,22 @@ public class PasseService {
                 })
             .toList();
 
+    boolean avaliacaoPendente = templates.stream()
+        .anyMatch(template -> template.getAcaoTipo() == PasseAcaoTipo.REVIEW_SUBMITTED
+            && !Boolean.TRUE.equals(progressoMap.get(template.getId()).getConcluida()));
+    List<ProdutoAvaliavel> produtosParaAvaliar = avaliacaoPendente
+        ? produtoRepository.buscarParaAvaliar(usuario.getId(), null, PageRequest.of(0, 4)).stream()
+            .map(produto -> new ProdutoAvaliavel(produto.getId(), produto.getNome(), produto.getImagemUrl()))
+            .toList()
+        : List.of();
+    Long produtoParaAvaliar = produtosParaAvaliar.isEmpty() ? null : produtosParaAvaliar.get(0).id();
+
     List<PasseMissaoResponse> missoesDiarias =
-        buildMissaoResponses(templates, progressoMap, PassePeriodicidade.DIARIA);
+        buildMissaoResponses(templates, progressoMap, PassePeriodicidade.DIARIA, produtoParaAvaliar);
     List<PasseMissaoResponse> missoesSemanais =
-        buildMissaoResponses(templates, progressoMap, PassePeriodicidade.SEMANAL);
+        buildMissaoResponses(templates, progressoMap, PassePeriodicidade.SEMANAL, produtoParaAvaliar);
     List<PasseMissaoResponse> missoesMensais =
-        buildMissaoResponses(templates, progressoMap, PassePeriodicidade.MENSAL);
+        buildMissaoResponses(templates, progressoMap, PassePeriodicidade.MENSAL, produtoParaAvaliar);
     List<PasseHistoricoXpResponse> historico =
         xpHistoricoRepository
             .findTop10ByUsuarioIdAndTemporadaIdOrderByCriadoEmDesc(
@@ -228,7 +240,33 @@ public class PasseService {
         missoesDiarias,
         missoesSemanais,
         missoesMensais,
-        historico);
+        historico,
+        produtosParaAvaliar);
+  }
+
+  @Transactional(readOnly = true)
+  public List<PasseMissaoResponse> missoesDeAvaliacao(String email, Long produtoId) {
+    Usuario usuario = usuarioRepository.findByEmail(email)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Usuário", 0L));
+    if (produtoRepository.buscarParaAvaliar(usuario.getId(), produtoId, PageRequest.of(0, 1)).isEmpty()) {
+      return List.of();
+    }
+
+    YearMonth mes = YearMonth.now();
+    var temporada = temporadaRepository.findByAnoAndMes(mes.getYear(), mes.getMonthValue());
+    if (temporada.isEmpty()) return List.of();
+    return missaoTemplateRepository
+        .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.get().getId())
+        .stream()
+        .filter(template -> template.getAcaoTipo() == PasseAcaoTipo.REVIEW_SUBMITTED)
+        .map(template -> {
+          var periodo = resolverPeriodo(template.getPeriodicidade());
+          var progresso = missaoProgressoRepository.findByUsuarioIdAndTemplateIdAndPeriodoInicio(
+              usuario.getId(), template.getId(), periodo.inicio());
+          return toMissaoResponse(template, progresso.orElse(null), periodo, produtoId);
+        })
+        .filter(missao -> !missao.concluida())
+        .toList();
   }
 
   @Transactional
@@ -651,31 +689,24 @@ public class PasseService {
   private List<PasseMissaoResponse> buildMissaoResponses(
       List<PasseMissaoTemplate> templates,
       Map<Long, PasseMissaoProgresso> progressoMap,
-      PassePeriodicidade periodicidade) {
+      PassePeriodicidade periodicidade,
+      Long produtoParaAvaliar) {
     return templates.stream()
         .filter(template -> template.getPeriodicidade() == periodicidade)
-        .map(
-            template -> {
-              PeriodoPeriodo periodo = resolverPeriodo(template.getPeriodicidade());
-              PasseMissaoProgresso progresso = progressoMap.get(template.getId());
-              int progressoAtual = progresso == null ? 0 : progresso.getProgressoAtual();
-              boolean concluida =
-                  progresso != null && Boolean.TRUE.equals(progresso.getConcluida());
-              CtaMissao cta = resolverCta(template);
-              return new PasseMissaoResponse(
-                  template.getId(),
-                  template.getPeriodicidade().name(),
-                  template.getTitulo(),
-                  template.getDescricao(),
-                  progressoAtual,
-                  template.getMetaValor(),
-                  template.getXpRecompensa(),
-                  concluida,
-                  periodo.fim().format(DATE_TIME_FORMATTER),
-                  cta.label(),
-                  cta.href());
-            })
+        .map(template -> toMissaoResponse(template, progressoMap.get(template.getId()),
+            resolverPeriodo(periodicidade), produtoParaAvaliar))
         .toList();
+  }
+
+  private PasseMissaoResponse toMissaoResponse(PasseMissaoTemplate template,
+      PasseMissaoProgresso progresso, PeriodoPeriodo periodo, Long produtoParaAvaliar) {
+    CtaMissao cta = resolverCta(template.getAcaoTipo(), produtoParaAvaliar);
+    return new PasseMissaoResponse(
+        template.getId(), template.getPeriodicidade().name(), template.getAcaoTipo().name(),
+        template.getTitulo(), template.getDescricao(),
+        progresso == null ? 0 : progresso.getProgressoAtual(), template.getMetaValor(),
+        template.getXpRecompensa(), progresso != null && Boolean.TRUE.equals(progresso.getConcluida()),
+        periodo.fim().format(DATE_TIME_FORMATTER), cta.label(), cta.href());
   }
 
   private Map<Long, PasseMissaoProgresso> carregarProgressoMissao(
@@ -775,6 +806,7 @@ public class PasseService {
         Math.min(
             temporada.getTotalNiveis() * temporada.getXpPorNivel(),
             progressoUsuario.getXpTotal() + xp);
+    int xpCreditado = xpTotal - progressoUsuario.getXpTotal();
     progressoUsuario.setXpTotal(xpTotal);
     progressoUsuario.setNivelAtual(
         Math.max(1, Math.min(temporada.getTotalNiveis(), xpTotal / temporada.getXpPorNivel())));
@@ -792,6 +824,9 @@ public class PasseService {
     historico.setXpGanho(xp);
     historico.setDescricao(descricao);
     xpHistoricoRepository.save(historico);
+    if (xpCreditado > 0) {
+      notificacoes.registrar(usuario.getId(), "XP recebido", "+" + xpCreditado + " XP · " + descricao, "/passe");
+    }
   }
 
   private PasseTemporada criarTemporada(YearMonth yearMonth) {
@@ -984,20 +1019,15 @@ public class PasseService {
     return text.substring(0, 1).toUpperCase(LOCALE_PT_BR) + text.substring(1);
   }
 
-  private CtaMissao resolverCta(PasseMissaoTemplate template) {
-    Produto produtoSugerido = produtoRepository.findAll().stream().findFirst().orElse(null);
-    return switch (template.getAcaoTipo()) {
-      case REVIEW_SUBMITTED -> produtoSugerido != null
-          ? new CtaMissao("Avaliar produto", "/produto/" + produtoSugerido.getId())
-          : new CtaMissao("Ver catalogo", "/catalogo");
-      case VIEW_PRODUCT -> produtoSugerido != null
-          ? new CtaMissao("Ver produto", "/produto/" + produtoSugerido.getId())
-          : new CtaMissao("Explorar catalogo", "/catalogo");
-      case ADD_TO_CART -> produtoSugerido != null
-          ? new CtaMissao("Adicionar item", "/produto/" + produtoSugerido.getId())
-          : new CtaMissao("Explorar catalogo", "/catalogo");
-      case PURCHASE_APPROVED, SPEND_APPROVED_CENTS -> new CtaMissao("Comprar agora", "/catalogo");
-      case CHECKIN -> new CtaMissao("Ir para inicio", "/");
+  private CtaMissao resolverCta(PasseAcaoTipo acao, Long produtoParaAvaliar) {
+    return switch (acao) {
+      case REVIEW_SUBMITTED -> produtoParaAvaliar != null
+          ? new CtaMissao("Avaliar", "/produto/" + produtoParaAvaliar + "?avaliar=1")
+          : new CtaMissao("Meus pedidos", "/pedidos");
+      case VIEW_PRODUCT -> new CtaMissao("Ver produtos", "/catalogo");
+      case ADD_TO_CART -> new CtaMissao("Ver catálogo", "/catalogo");
+      case PURCHASE_APPROVED, SPEND_APPROVED_CENTS -> new CtaMissao("Comprar", "/catalogo");
+      case CHECKIN -> new CtaMissao("Voltar amanhã", null);
     };
   }
 

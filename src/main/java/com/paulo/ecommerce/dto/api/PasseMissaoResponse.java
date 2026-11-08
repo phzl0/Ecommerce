@@ -3,6 +3,7 @@ package com.paulo.ecommerce.dto.api;
 public record PasseMissaoResponse(
         Long id,
         String periodicidade,
+        String acao,
         String titulo,
         String descricao,
         int progressoAtual,

@@ -18,4 +18,8 @@ public record PasseDashboardResponse(
     List<PasseMissaoResponse> missoesDiarias,
     List<PasseMissaoResponse> missoesSemanais,
     List<PasseMissaoResponse> missoesMensais,
-    List<PasseHistoricoXpResponse> historico) {}
+    List<PasseHistoricoXpResponse> historico,
+    List<ProdutoAvaliavel> produtosParaAvaliar) {
+
+  public record ProdutoAvaliavel(Long id, String nome, String imagemUrl) {}
+}
