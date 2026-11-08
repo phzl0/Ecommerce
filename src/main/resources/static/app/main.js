@@ -10,7 +10,6 @@ import htm from "https://esm.sh/htm@3.1.1";
 const html = htm.bind(React.createElement);
 const BRAND = "LEVEL COMMERCE";
 const CART_KEY = "level-commerce-cart";
-const CHECKOUT_KEY = "level-commerce-checkout";
 
 function useRoute() {
   const getRoute = () =>
@@ -66,12 +65,8 @@ function getCsrfToken() {
   return decodeURIComponent(getCookie("XSRF-TOKEN") || "");
 }
 
-function saveCheckoutDraft(data) {
-  localStorage.setItem(CHECKOUT_KEY, JSON.stringify(data));
-}
-
-function loadCheckoutDraft() {
-  return readStorage(CHECKOUT_KEY, {
+function initialCheckoutForm() {
+  return {
     nome: "",
     telefone: "",
     cep: "",
@@ -82,12 +77,8 @@ function loadCheckoutDraft() {
     cidade: "",
     estado: "",
     pagamento: "pix",
-  });
-}
-
-function clearCheckoutDraft() {
-  localStorage.removeItem(CHECKOUT_KEY);
-  localStorage.removeItem("level-commerce-checkout-request");
+    cupom: "",
+  };
 }
 
 function useLocalCart() {
@@ -187,6 +178,7 @@ async function requestJson(url, options = {}) {
     } catch {}
     const error = new Error(message || "Falha ao processar a solicitacao.");
     error.code = "REQUEST_FAILED";
+    error.status = response.status;
     throw error;
   }
 
@@ -1273,7 +1265,7 @@ function CheckoutPage({ items, auth, clearCart }) {
         .then(setPaymentConfig)
         .catch(() => {});
   }, [auth.authenticated]);
-  const [form, setForm] = useState(loadCheckoutDraft());
+  const [form, setForm] = useState(initialCheckoutForm);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const subtotal = useMemo(
@@ -1284,12 +1276,11 @@ function CheckoutPage({ items, auth, clearCart }) {
     subtotal >= 299 ? 0 : subtotal >= 149 ? 14.9 : items.length ? 24.9 : 0;
   const total = subtotal + freight;
 
-  useEffect(() => {
-    saveCheckoutDraft(form);
-  }, [form]);
-
-  const checkoutRequestId = useRef(window.crypto.randomUUID());
+  const checkoutAttempt = useRef(null);
+  const requestInProgress = useRef(false);
   const submitCheckout = async () => {
+    if (requestInProgress.current) return;
+    requestInProgress.current = true;
     setSubmitting(true);
     setMessage("");
     try {
@@ -1297,19 +1288,11 @@ function CheckoutPage({ items, auth, clearCart }) {
         form,
         items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
       });
-      const previous = readStorage("level-commerce-checkout-request", {});
-      if (previous.fingerprint !== fingerprint)
-        checkoutRequestId.current = window.crypto.randomUUID();
-      const requestId =
-        previous.fingerprint === fingerprint
-          ? previous.id
-          : checkoutRequestId.current;
-      localStorage.setItem(
-        "level-commerce-checkout-request",
-        JSON.stringify({ fingerprint, id: requestId }),
-      );
+      if (checkoutAttempt.current?.fingerprint !== fingerprint) {
+        checkoutAttempt.current = { fingerprint, id: window.crypto.randomUUID() };
+      }
       const response = await postJson("/api/checkout/orders", {
-        idempotencyKey: requestId,
+        idempotencyKey: checkoutAttempt.current.id,
         nome: form.nome,
         telefone: form.telefone,
         cep: form.cep,
@@ -1327,15 +1310,17 @@ function CheckoutPage({ items, auth, clearCart }) {
         })),
       });
       clearCart();
-      clearCheckoutDraft();
       window.location.href = response.redirectUrl;
     } catch (error) {
       if (error.code === "AUTH_REQUIRED") {
         requireLogin("/checkout");
         return;
       }
-      setMessage("Nao foi possivel iniciar o pagamento agora.");
+      setMessage(
+        error.status === 400 ? error.message : "Não foi possível iniciar o pagamento agora.",
+      );
     } finally {
+      requestInProgress.current = false;
       setSubmitting(false);
     }
   };
@@ -1466,7 +1451,7 @@ function CheckoutPage({ items, auth, clearCart }) {
             ><strong>${freight === 0 ? "Gratis" : currency(freight)}</strong>
           </div>
           <strong className="lc-summary-total">${currency(total)}</strong>
-          ${message ? html`<p className="lc-checkout-note">${message}</p>` : null}
+          ${message ? html`<p className="lc-checkout-note" role="alert">${message}</p>` : null}
           ${
             auth.authenticated
               ? html`<button
@@ -2525,5 +2510,9 @@ function App() {
     </div>
   `;
 }
+
+// Clear personal data left in the browser by earlier versions.
+localStorage.removeItem("level-commerce-checkout");
+localStorage.removeItem("level-commerce-checkout-request");
 
 createRoot(document.getElementById("root")).render(html`<${App} />`);

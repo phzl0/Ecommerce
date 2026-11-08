@@ -26,6 +26,10 @@ test("catalog, private pass, checkout without live charges and profile", async (
     maxRedirects: 0,
   });
   expect(login.status()).toBe(302);
+  await page.evaluate(() => {
+    localStorage.setItem("level-commerce-checkout", "legacy-draft");
+    localStorage.setItem("level-commerce-checkout-request", "legacy-request");
+  });
   await page.goto("/passe");
   await expect(
     page.getByRole("heading", { name: "Minha coleção" }),
@@ -61,17 +65,49 @@ test("catalog, private pass, checkout without live charges and profile", async (
     ["Estado", "SP"],
   ]) {
     const input = page.getByLabel(label, { exact: true });
-    if (await input.count()) await input.fill(value);
+    await input.fill(value);
   }
   await page.screenshot({
     path: "test-results/checkout-desktop.png",
     fullPage: true,
   });
-  await page
-    .getByRole("button", {
-      name: /Ir para pagamento|Criar pedido de demonstração/,
-    })
-    .click();
+  const checkoutStorage = () =>
+    page.evaluate(() => ({
+      draft: localStorage.getItem("level-commerce-checkout"),
+      request: localStorage.getItem("level-commerce-checkout-request"),
+    }));
+  await expect.poll(checkoutStorage).toEqual({ draft: null, request: null });
+
+  const checkout = page.getByRole("button", {
+    name: /Ir para pagamento|Criar pedido de demonstração/,
+  });
+  const coupon = page.getByLabel("Cupom da sua coleção");
+  await coupon.fill("INVALIDO");
+  await checkout.click();
+  await expect(page.getByRole("alert")).toHaveText("Cupom não encontrado nesta conta.");
+  const stock = async () => {
+    const response = await page.request.get("/api/store/products/" + product.id);
+    return (await response.json()).estoque;
+  };
+  expect(await stock()).toBe(product.estoque);
+  await coupon.clear();
+
+  // The server accepts the first request, but the browser loses the response.
+  const endpoint = "**/api/checkout/orders";
+  let originalAttempt;
+  await page.route(endpoint, async (route) => {
+    originalAttempt = route.request().postDataJSON().idempotencyKey;
+    const response = await route.fetch();
+    expect(response.ok()).toBeTruthy();
+    await route.abort();
+  }, { times: 1 });
+  await checkout.click();
+  await expect(page.getByRole("alert")).toHaveText("Não foi possível iniciar o pagamento agora.");
+  expect(await checkoutStorage()).toEqual({ draft: null, request: null });
+
+  const retry = page.waitForRequest(endpoint);
+  await checkout.click();
+  expect((await retry).postDataJSON().idempotencyKey).toBe(originalAttempt);
   await expect(page).toHaveURL(/\/pedidos\/\d+/);
   await expect(
     page.getByText(/Pagamentos desativados neste ambiente/),
@@ -82,6 +118,7 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(
     page.getByText("Pedido cancelado com sucesso.", { exact: true }),
   ).toBeVisible();
+  expect(await stock()).toBe(product.estoque);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/passe");
   await expect(
