@@ -4,6 +4,8 @@ import com.paulo.ecommerce.model.Pedido;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -70,12 +72,26 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
   @Query("SELECT COUNT(p) FROM Pedido p WHERE p.status = :status")
   long countByStatus(@Param("status") Pedido.Status status);
 
+  long countByStatusAndTemporadaPasseIdIsNull(Pedido.Status status);
+
+  @EntityGraph(attributePaths = {"usuario"})
+  @Query("""
+      select p from Pedido p
+      where (:status is null or p.status = :status)
+        and (:envio = false or p.temporadaPasseId is null)
+        and (:busca = '' or locate(lower(:busca), lower(coalesce(p.numero, ''))) > 0
+          or locate(lower(:busca), lower(p.usuario.nome)) > 0
+          or locate(lower(:busca), lower(p.usuario.email)) > 0
+          or str(p.id) = :busca)
+      """)
+  Page<Pedido> buscarPedidosAdmin(Pedido.Status status, String busca, boolean envio, Pageable pagina);
+
   @Query(
       """
         SELECT p FROM Pedido p
         LEFT JOIN FETCH p.usuario
         WHERE p.dataPedido >= :inicio
-        ORDER BY p.dataPedido DESC
+        ORDER BY p.dataPedido DESC, p.id DESC
         """)
-  List<Pedido> findPedidosRecentes(@Param("inicio") LocalDateTime inicio);
+  List<Pedido> findPedidosRecentes(@Param("inicio") LocalDateTime inicio, Pageable pagina);
 }

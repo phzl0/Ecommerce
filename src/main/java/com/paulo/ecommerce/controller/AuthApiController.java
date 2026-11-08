@@ -33,11 +33,11 @@ public class AuthApiController {
   @GetMapping("/me")
   public AuthStatusResponse me(@AuthenticationPrincipal UserDetails userDetails) {
     if (userDetails == null) {
-      return new AuthStatusResponse(false, null, null, null, null, null, null, recuperacao.habilitada());
+      return new AuthStatusResponse(false, null, null, null, null, null, null, null, recuperacao.habilitada());
     }
 
     var usuario = usuarios.buscarPorEmail(userDetails.getUsername());
-    return new AuthStatusResponse(true, usuario.getNome(), usuario.getEmail(), usuario.getTemaPasse(),
+    return new AuthStatusResponse(true, usuario.getId(), usuario.getNome(), usuario.getEmail(), usuario.getTemaPasse(),
         usuario.getAvatarPasse(), usuario.getBadgePasse(), usuario.getRole().name(), recuperacao.habilitada());
   }
 

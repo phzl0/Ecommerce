@@ -42,6 +42,17 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(page.getByText("Trilha Premium bloqueada")).toBeVisible();
   await expect(page.getByText(/Faltam \d+ XP para o próximo nível/)).toBeVisible();
   await expect(page.getByText(/Recompensa final ·/)).toHaveCount(0);
+  await expect(page.locator(".lc-rail-labels .premium")).toHaveCSS("background-image", /level-premium\.webp/);
+  await expect(page.locator(".lc-rail-reward").first()).toHaveCSS("background-image", "none");
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Liberar Premium" })).toBeVisible();
+  await expect(page.locator(".lc-toast")).toHaveCount(0);
+  const account = await (await page.request.get("/api/auth/me")).json();
+  await page.evaluate(id => {
+    localStorage.setItem(`level-commerce-pass-guide-${id}`, String(Date.now() - 301_000));
+  }, account.id);
+  await page.reload();
+  await expect(page.getByText(/Faltam \d+ XP para o próximo nível/)).toBeVisible();
   await page.screenshot({
     path: "test-results/pass-desktop.png",
     fullPage: true,
@@ -78,6 +89,23 @@ test("catalog, private pass, checkout without live charges and profile", async (
 
   const catalog = await (await page.request.get("/api/store/catalog")).json();
   expect(catalog.produtos.length).toBeGreaterThan(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const longName = "Produto com título longo " + "SuperModelo".repeat(14);
+  await page.route("**/api/store/catalog?*", async route => {
+    const data = await (await route.fetch()).json();
+    data.produtos[0].nome = longName;
+    await route.fulfill({ json: data });
+  });
+  await page.goto("/catalogo");
+  const longTitle = page.locator(".lc-product-copy").getByRole("link", { name: longName, exact: true });
+  await expect(longTitle).toBeVisible();
+  expect(await longTitle.evaluate(link => {
+    const card = link.closest("article");
+    return card.scrollWidth <= card.clientWidth
+      && link.getBoundingClientRect().height <= parseFloat(getComputedStyle(link).lineHeight) * 2 + 1;
+  })).toBeTruthy();
+  await page.unroute("**/api/store/catalog?*");
+  await page.setViewportSize({ width: 1440, height: 1000 });
   const product =
     catalog.produtos.find((p) => p.nome === "Garrafa Thermal Elite") ||
     catalog.produtos[0];

@@ -5,35 +5,43 @@
 
 .admin-layout {
     display: grid;
-    grid-template-columns: 250px 1fr;
+    grid-template-columns: 220px minmax(0, 1fr);
     min-height: 100vh;
 }
 
 .admin-sidebar {
-    background: #08110b;
+    background: linear-gradient(155deg, #000, #0b2414);
     color: #f8fbf9;
     padding: 1.5rem 0;
     position: sticky;
     top: 0;
-    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
 }
 
 .sidebar-brand {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 0 16px 16px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #263c2d;
+    color: #f3fff4;
+    text-decoration: none;
+}
+
+.sidebar-brand strong, .sidebar-brand small { display: block; }
+.sidebar-brand strong { font-size: .87rem; letter-spacing: .045em; }
+.sidebar-brand small { color: #acc3b1; font-size: .75rem; }
+.sidebar-logo {
     display: grid;
-    gap: 4px;
-    padding: 0 1.5rem 1.5rem;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 1rem;
-}
-
-.sidebar-brand strong {
-    font-size: 1rem;
-    letter-spacing: 0.06em;
-}
-
-.sidebar-brand span {
-    color: rgba(248,251,249,0.62);
-    font-size: 0.82rem;
+    place-items: center;
+    flex: 0 0 32px;
+    height: 32px;
+    border-radius: 6px;
+    color: #0a130a;
+    background: #79ff57;
+    font-weight: 800;
 }
 
 .sidebar-nav {
@@ -46,7 +54,8 @@
 .sidebar-logout button {
     display: block;
     width: 100%;
-    padding: 11px 1.5rem;
+    padding: 8px 12px;
+    border-radius: 6px;
     color: rgba(248,251,249,0.74);
     text-decoration: none;
     background: none;
@@ -58,27 +67,28 @@
 
 .sidebar-nav a:hover,
 .sidebar-logout button:hover,
-.sidebar-nav a.ativo {
+.sidebar-nav a[aria-current="page"] {
     background: rgba(29,122,72,0.18);
     color: #fff;
 }
 
-.sidebar-divider {
-    border: 0;
-    border-top: 1px solid rgba(255,255,255,0.08);
-    margin: 1rem 1.5rem;
-}
+.sidebar-group { display: grid; gap: 4px; padding: 8px 12px; }
+.sidebar-group > span { padding-inline: 12px; color: #9fb5a4; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; }
+.sidebar-nav a[aria-current="page"] { box-shadow: inset 3px 0 #79ff57; font-weight: 700; }
+.sidebar-footer { border-top: 1px solid #263c2d; }
 
 .admin-main {
-    padding: 2rem;
-    overflow-y: auto;
+    padding: 24px 32px;
+    min-width: 0;
 }
 
 .admin-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
 }
 
 .admin-header h1 {
@@ -94,16 +104,16 @@
 
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
 }
 
 .metric-card {
     background: #fff;
     border: 1px solid rgba(8,17,11,0.07);
     border-radius: 14px;
-    padding: 1.1rem 1.2rem;
+    padding: 16px;
+    min-width: 0;
     box-shadow: 0 12px 30px rgba(8,17,11,0.04);
 }
 
@@ -121,7 +131,8 @@
 
 .metric-value {
     margin: 0;
-    font-size: 1.55rem;
+    font-size: clamp(1rem, 2.15vw, 1.55rem);
+    overflow-wrap: anywhere;
     font-weight: 700;
 }
 
@@ -138,8 +149,7 @@
     background: #fff;
     border-radius: 14px;
     border-collapse: collapse;
-    overflow: hidden;
-    box-shadow: 0 12px 30px rgba(8,17,11,0.04);
+    box-shadow: none;
 }
 
 .admin-table th {
@@ -217,21 +227,6 @@
     margin-top: 4px;
 }
 
-@media (max-width: 980px) {
-    .admin-layout {
-        grid-template-columns: 1fr;
-    }
-
-    .admin-sidebar {
-        position: static;
-        height: auto;
-    }
-
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-}
-
 .lc-admin-event-form {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -259,4 +254,77 @@
 .lc-admin-simulation { margin-top: 24px; padding-top: 16px; border-top: 1px solid #dce0e6; }
 @media (max-width: 640px) {
     .lc-admin-event-form { grid-template-columns: 1fr; }
+}
+
+.admin-eyebrow { display: block; margin-bottom: 6px; font-size: .72rem; font-weight: 750; color: #246d40; letter-spacing: .1em; }
+.admin-actions, .admin-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.admin-section-heading { margin-bottom: 12px; }
+.admin-section-heading h2 { margin: 0 0 4px; }
+.admin-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 36px; padding: 8px 12px; border-radius: 6px;
+    color: white; background: #146737; border: 1px solid #146737;
+    text-decoration: none; font: inherit; font-size: .85rem; font-weight: 650; cursor: pointer;
+}
+.admin-button:hover { background: #0e522a; }
+.admin-button.secondary { background: #fff; color: #12572f; border-color: #c8d9ce; }
+.admin-button.secondary:hover { background: #e9f5eb; }
+.metric-card small { color: #637066; display: block; margin-top: 8px; font-size: .75rem; }
+.admin-priorities { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-priorities a {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 12px; border: 1px solid #d5e3d8; border-radius: 8px;
+    color: #173622; background: #fff; text-decoration: none;
+}
+.admin-priorities a:hover { border-color: #267944; }
+.admin-priorities strong { color: #126435; font-size: 1.25rem; }
+.admin-table-wrap {
+    width: 100%; max-width: 100%; min-width: 0; overflow-x: auto;
+    border: 1px solid #dce6df; border-radius: 8px; background: #fff;
+}
+.admin-table-wrap .admin-table { min-width: 560px; border-radius: 0; }
+.admin-table .admin-empty { padding: 24px 16px; color: #53665a; text-align: center; }
+.admin-table .acoes { display: table-cell; white-space: nowrap; }
+.admin-table .acoes form { display: inline; margin-left: 8px; }
+.admin-product-image { width: 40px; height: 40px; object-fit: contain; border-radius: 6px; }
+.admin-filter {
+    display: flex; align-items: flex-end; flex-wrap: wrap; gap: 12px;
+    padding: 12px; margin-bottom: 12px;
+    background: #fff; border: 1px solid #dce6df; border-radius: 8px;
+}
+.admin-filter label { display: grid; gap: 4px; color: #2c4635; font-size: .82rem; font-weight: 650; }
+.admin-filter input:not([type="checkbox"]), .admin-filter select {
+    min-height: 36px; width: 100%; padding-inline: 8px; border: 1px solid #bacdc0;
+    border-radius: 6px; background: #fff; color: #152119; font: inherit;
+}
+.admin-filter input:not([type="checkbox"]) { min-width: min(220px, 100%); }
+.admin-filter .admin-filter-check { display: flex; align-items: center; min-height: 36px; }
+.admin-filter > .btn-link { align-self: center; }
+.admin-payment-tools { margin-top: 16px; padding: 12px; background: #fff; border: 1px solid #dce6df; border-radius: 8px; }
+.admin-payment-tools summary { cursor: pointer; font-weight: 700; }
+.admin-payment-tools p { margin-block: 8px; }
+.admin-payment-tools .admin-filter { padding: 0; border: 0; margin: 0; }
+.admin-pagination { display: flex; gap: 12px; align-items: center; margin-top: 12px; font-size: .875rem; }
+.admin-pagination a { color: #12572f; }
+.admin-main :focus-visible, .admin-sidebar :focus-visible { outline: 2px solid #2a8a4e; outline-offset: 2px; }
+.admin-main .pedido-admin-layout { min-width: 0; }
+.admin-main .pedido-admin-layout > * { min-width: 0; }
+
+@media (max-width: 1024px) {
+    .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .admin-main { padding: 16px 24px; }
+}
+@media (max-width: 800px) {
+    .admin-layout { grid-template-columns: minmax(0, 1fr); }
+    .admin-sidebar { position: static; height: auto; padding: 8px 0; }
+    .sidebar-brand { padding-bottom: 8px; margin: 0; }
+    .sidebar-nav { flex-direction: row; flex-wrap: wrap; gap: 0; padding: 0 8px; }
+    .sidebar-group { display: contents; }
+    .sidebar-group > span { display: none; }
+    .sidebar-nav a, .sidebar-logout button { width: auto; padding: 8px; font-size: .8rem; }
+    .admin-main { padding: 16px; }
+}
+@media (max-width: 540px) {
+    .admin-priorities, .form-row { grid-template-columns: minmax(0, 1fr); }
+    .admin-main .pedido-admin-layout { grid-template-columns: minmax(0, 1fr); }
 }

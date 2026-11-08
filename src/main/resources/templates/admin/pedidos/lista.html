@@ -1,20 +1,35 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pedidos — Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
 </head>
 <body class="admin-body">
 <div class="admin-layout">
-    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='pedidos'"></div>
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='pedidos')}"></div>
 
     <main class="admin-main">
-        <div class="admin-header">
-            <h1>Pedidos</h1>
-        </div>
-
+        <header class="admin-header"><div>
+            <span class="admin-eyebrow">OPERAÇÃO</span><h1>Pedidos</h1>
+            <p class="admin-subtitle">Busque por pedido ou cliente e acompanhe cada etapa.</p>
+        </div></header>
+        <p th:if="${msg}" class="alert alert-sucesso" role="status" th:text="${msg}"></p>
+        <p th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></p>
+        <form th:action="@{/admin/pedidos}" method="get" class="admin-filter">
+            <label>Buscar pedidos<input name="busca" th:value="${busca}" placeholder="Número, cliente ou e-mail"></label>
+            <label>Status<select name="status">
+                <option value="">Todos</option>
+                <option th:each="opcao : ${statusOpcoes}" th:value="${opcao}" th:text="${opcao}"
+                        th:selected="${filtroStatus == opcao}"></option>
+            </select></label>
+            <label class="admin-filter-check"><input type="checkbox" name="envio" value="true" th:checked="${envio}"> Apenas pedidos físicos</label>
+            <button type="submit" class="admin-button">Filtrar</button>
+            <a th:href="@{/admin/pedidos}" class="btn-link">Limpar</a>
+        </form>
+        <div class="admin-table-wrap" tabindex="0" role="region" aria-label="Tabela de dados">
         <table class="admin-table">
             <thead>
             <tr>
@@ -27,8 +42,9 @@
             </tr>
             </thead>
             <tbody>
+            <tr th:if="${pedidos.isEmpty()}"><td colspan="6" class="admin-empty">Nenhum pedido encontrado.</td></tr>
             <tr th:each="pedido : ${pedidos}">
-                <td th:text="'#' + ${pedido.id}"></td>
+                <td th:text="${pedido.numero != null ? pedido.numero : '#' + pedido.id}"></td>
                 <td th:text="${pedido.usuario.nome}"></td>
                 <td th:text="'R$ ' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 2, 'COMMA')}"></td>
                 <td>
@@ -46,8 +62,21 @@
             </tr>
             </tbody>
         </table>
+        </div>
+        <nav class="admin-pagination" aria-label="Páginas dos pedidos" th:if="${pagina.totalPages > 1 || pagina.hasPrevious()}">
+            <a th:if="${pagina.hasPrevious()}" th:href="@{/admin/pedidos(busca=${busca},status=${filtroStatus},envio=${envio},pagina=${pagina.number - 1})}">‹ Anterior</a>
+            <span th:text="'Página ' + ${pagina.number + 1}"></span>
+            <a th:if="${pagina.hasNext()}" th:href="@{/admin/pedidos(busca=${busca},status=${filtroStatus},envio=${envio},pagina=${pagina.number + 1})}">Próxima ›</a>
+        </nav>
+        <details class="admin-payment-tools">
+            <summary>Conciliar pagamento</summary>
+            <p class="admin-subtitle">Consulte o status pelo ID do pagamento no Mercado Pago.</p>
+            <form th:action="@{/admin/pagamentos/conciliar}" method="post" class="admin-filter">
+                <label>ID do pagamento<input name="paymentId" inputmode="numeric" pattern="[0-9]{1,20}" required></label>
+                <button type="submit" class="admin-button">Consultar provedor</button>
+            </form>
+        </details>
     </main>
 </div>
-<section class="container"><h3>Conciliar pagamento</h3><p>Informe o ID obtido no painel do Mercado Pago. Esta ação consulta o provedor; não aprova pagamentos manualmente.</p><form th:action="@{/admin/pagamentos/conciliar}" method="post"><input name="paymentId" pattern="[0-9]{1,20}" required placeholder="ID do pagamento"><button type="submit">Consultar provedor</button></form></section>
 </body>
 </html>

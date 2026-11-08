@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pedido — Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
 </head>
 <body class="admin-body">
 <div class="admin-layout">
-    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='pedidos'"></div>
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='pedidos')}"></div>
 
     <main class="admin-main">
         <div class="admin-header">
@@ -34,7 +35,8 @@
                     </div>
                 </div>
 
-                <table class="admin-table">
+                <div class="admin-table-wrap" tabindex="0" role="region" aria-label="Tabela de dados">
+        <table class="admin-table">
                     <thead>
                     <tr>
                         <th>Produto</th>
@@ -60,6 +62,7 @@
                     </tr>
                     </tfoot>
                 </table>
+        </div>
             </div>
 
             <aside class="form-card" style="height:fit-content;">

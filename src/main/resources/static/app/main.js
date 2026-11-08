@@ -13,6 +13,20 @@ const html = htm.bind(React.createElement);
 const BRAND = "LEVEL COMMERCE";
 const CART_KEY = "level-commerce-cart";
 const BUY_NOW_KEY = "level-commerce-buy-now";
+const PASS_GUIDE_INTERVAL = 5 * 60 * 1000;
+const passGuideSeenAt = new Map();
+
+function shouldShowPassGuide(accountId) {
+  if (accountId == null) return false;
+  const now = Date.now();
+  const key = `level-commerce-pass-guide-${accountId}`;
+  let previous = passGuideSeenAt.get(accountId) || 0;
+  try { previous = Math.max(previous, Number(localStorage.getItem(key)) || 0); } catch {}
+  if (previous <= now && now - previous < PASS_GUIDE_INTERVAL) return false;
+  passGuideSeenAt.set(accountId, now);
+  try { localStorage.setItem(key, String(now)); } catch {}
+  return true;
+}
 
 function useRoute() {
   const getRoute = () =>
@@ -1249,117 +1263,144 @@ function CheckoutPage({ items, auth, clearCart, address }) {
   `;
 }
 
-function ProfilePage({ auth, onAuthRefresh, notify }) {
+function ProfileProgress() {
+  const [dashboard, setDashboard] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    getJson("/api/pass/current")
+      .then(data => { if (active) setDashboard(data); })
+      .catch(() => { if (active) setError("Não foi possível carregar seu progresso."); });
+    return () => { active = false; };
+  }, []);
+
+  if (error) return html`<p role="alert" className="lc-form-notice error">${error}</p>`;
+  if (!dashboard) return html`<p role="status">Carregando progresso…</p>`;
+
+  const completed = [
+    ...dashboard.missoesDiarias, ...dashboard.missoesSemanais, ...dashboard.missoesMensais,
+  ].filter(mission => mission.concluida).length;
+  const rewards = dashboard.niveis.filter(reward => reward.disponivelParaResgate && !reward.resgatado).length;
+  const history = dashboard.historico.slice(0, 6);
+  const maxXp = Math.max(1, ...history.map(entry => entry.xpGanho));
+
+  return html`<div className="lc-profile-progress">
+    <div className="lc-profile-progress-heading">
+      <div><h2>Seu progresso</h2><p>${dashboard.temporadaNome} · ${dashboard.temporadaPeriodo}</p></div>
+      <${AppLink} href="/passe" className="lc-btn lc-btn-primary">Abrir passe<//>
+    </div>
+    <dl className="lc-profile-metrics">
+      <div><dt>XP na temporada</dt><dd>${dashboard.xpTotal}</dd></div>
+      <div><dt>Nível atual</dt><dd>${dashboard.nivelAtual}<small> / ${dashboard.totalNiveis}</small></dd></div>
+      <div><dt>Missões concluídas</dt><dd>${completed}</dd></div>
+      <div><dt>Prêmios disponíveis</dt><dd>${rewards}</dd></div>
+    </dl>
+    <div className="lc-profile-level-progress">
+      <strong>${dashboard.nivelAtual >= dashboard.totalNiveis ? "Último nível alcançado" : `Faltam ${dashboard.xpParaProximoNivel} XP para o próximo nível`}</strong>
+      <progress aria-label="Progresso para o próximo nível" max=${dashboard.xpPorNivel}
+        value=${Math.min(dashboard.xpNoNivelAtual, dashboard.xpPorNivel)}></progress>
+      <${AppLink} href="/passe/missoes">Ver missões →<//>
+    </div>
+    <section className="lc-profile-history" aria-labelledby="profile-xp-title">
+      <h2 id="profile-xp-title">Últimos ganhos de XP</h2>
+      ${history.length === 0 ? html`<p>Seu histórico aparece quando você ganha XP.</p>`
+        : html`<ul>${history.map((entry, index) => html`<li key=${index}>
+            <div><strong>${entry.descricao}</strong><small>${entry.criadoEm}</small></div>
+            <div className="lc-profile-xp-track" aria-hidden="true"><span style=${{width: `${entry.xpGanho / maxXp * 100}%`}}></span></div>
+            <strong>${entry.xpGanho > 0 ? "+" : ""}${entry.xpGanho} XP</strong>
+          </li>`)}</ul>`}
+    </section>
+    <${EventBadges} getJson=${getJson} />
+  </div>`;
+}
+
+function ProfilePage({ auth, route, onAuthRefresh, notify }) {
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState({ nome: "", senha: "" });
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const active = parseRoute(route).params.get("aba") === "progresso" ? "progresso" : "conta";
 
   useEffect(() => {
+    let active = true;
     getJson("/api/account/profile")
-      .then((response) => {
+      .then(response => {
+        if (!active) return;
         setProfile(response);
         setForm({ nome: response.nome || "", senha: "" });
       })
-      .catch((error) => {
-        if (error.code === "AUTH_REQUIRED") {
-          requireLogin("/perfil");
-        }
+      .catch(error => {
+        if (!active) return;
+        if (error.code === "AUTH_REQUIRED") requireLogin();
+        else setMessage("Não foi possível carregar o perfil.");
       });
+    return () => { active = false; };
   }, []);
 
-  const submitProfile = async (event) => {
+  async function submitProfile(event) {
     event.preventDefault();
     setSaving(true);
     setMessage("");
     try {
       const response = await putJson("/api/account/profile", form);
       setProfile(response);
-      setForm((current) => ({ ...current, senha: "" }));
+      setForm({ nome: response.nome, senha: "" });
       notify("Perfil atualizado");
       onAuthRefresh();
     } catch (error) {
-      if (error.code === "AUTH_REQUIRED") {
-        requireLogin("/perfil");
-        return;
-      }
-      setMessage(error.message || "Não foi possível atualizar o perfil agora.");
+      if (error.code === "AUTH_REQUIRED") requireLogin();
+      else setMessage(error.message || "Não foi possível atualizar o perfil.");
     } finally {
       setSaving(false);
     }
-  };
-
-  if (!profile) {
-    return html`<main className="lc-page"><p>Carregando perfil...</p></main>`;
   }
 
-  return html`
-    <main className="lc-page">
-      <section className="lc-account-shell">
-        <div className="lc-section-header">
-          <div>
-            <h2>Meu perfil</h2>
-            ${auth.avatarPasse ? html`<img src=${`/api/pass/rewards/${auth.avatarPasse}/download?inline=true`} alt="Avatar resgatado" style=${{ width: "96px", height: "96px", objectFit: "cover", borderRadius: "50%" }} />` : null}
-            ${auth.badgePasse ? html`<img src=${`/api/pass/rewards/${auth.badgePasse}/download?inline=true`} alt="Conquista resgatada" style=${{ width: "96px", height: "60px", objectFit: "cover" }} />` : null}
-            <p>
-              Atualize seu nome e senha e consulte os selos que você conquistou.
-            </p>
-          </div>
-          <${AppLink} href="/pedidos">Ver pedidos<//>
-        </div>
-        <div className="lc-profile-grid">
-          <form className="lc-checkout-card" onSubmit=${submitProfile}>
-            <h3>Dados da conta</h3>
+  return html`<main className="lc-page lc-profile-page">
+    <header className="lc-profile-header">
+      <${AppLink} href="/conta">‹ Minha conta<//>
+      <div className="lc-profile-identity">
+        ${auth.avatarPasse ? html`<img className="lc-profile-avatar"
+          src=${`/api/pass/rewards/${auth.avatarPasse}/download?inline=true`} alt="Avatar resgatado" />`
+          : html`<span className="lc-profile-avatar" aria-hidden="true"><${Icon} name="user" /></span>`}
+        <div><h1>Meu perfil</h1>${profile ? html`<p>${profile.nome} · ${profile.email}</p>` : null}</div>
+        ${auth.badgePasse ? html`<img className="lc-profile-badge"
+          src=${`/api/pass/rewards/${auth.badgePasse}/download?inline=true`} alt="Conquista equipada" />` : null}
+      </div>
+    </header>
+    <nav className="lc-profile-tabs" aria-label="Seções do perfil">
+      <${AppLink} href="/perfil" current=${active === "conta"}>Dados da conta<//>
+      <${AppLink} href="/perfil?aba=progresso" current=${active === "progresso"}>Progresso e XP<//>
+    </nav>
+    ${message && (!profile || active === "conta") ? html`<p className="lc-form-notice error" role="alert">${message}</p>` : null}
+    ${!profile ? !message ? html`<p role="status">Carregando perfil…</p>` : null
+      : active === "progresso" ? html`<${ProfileProgress} />`
+      : html`<div className="lc-profile-account">
+        <form className="lc-profile-form" onSubmit=${submitProfile}>
+          <fieldset><legend>Informações pessoais</legend>
             <div className="lc-form-grid two">
-              <label
-                >Nome completo<input
-                  value=${form.nome}
-                  onChange=${(e) => setForm({ ...form, nome: e.target.value })}
-              /></label>
-              <label>E-mail<input value=${profile.email} disabled /></label>
+              <label>Nome completo<input required minLength="2" maxLength="100" autoComplete="name"
+                value=${form.nome} onChange=${event => setForm({...form, nome: event.target.value})} /></label>
+              <label>E-mail<input type="email" value=${profile.email} readOnly /></label>
             </div>
-            <div className="lc-form-grid two">
-              <label
-                >Nova senha<input
-                  type="password"
-                  value=${form.senha}
-                  onChange=${(e) => setForm({ ...form, senha: e.target.value })}
-                  placeholder="Deixe em branco para manter"
-              /></label>
-              <label
-                >Tipo de conta<input value=${profile.role} disabled
-              /></label>
-            </div>
-            ${message ? html`<p className="lc-checkout-note">${message}</p>` : null}
-            <button
-              className="lc-btn lc-btn-primary"
-              type="submit"
-              disabled=${saving}
-            >
-              ${saving ? "Salvando..." : "Salvar alterações"}
-            </button>
-          </form>
-          <aside className="lc-cart-summary">
-            <span>Resumo da conta</span>
-            <div className="lc-summary-line">
-              <span>Nome</span><strong>${auth.nome || profile.nome}</strong>
-            </div>
-            <div className="lc-summary-line">
-              <span>E-mail</span><strong>${profile.email}</strong>
-            </div>
-            <div className="lc-summary-line">
-              <span>Total de pedidos</span
-              ><strong>${profile.totalPedidos}</strong>
-            </div>
-            <${AppLink} href="/checkout" className="lc-btn lc-btn-ghost"
-              >Ir para checkout<//
-            >
-          </aside>
-        </div>
-        <${EventBadges} getJson=${getJson} />
-      </section>
-    </main>
-  `;
+          </fieldset>
+          <fieldset><legend>Segurança</legend>
+            <label>Nova senha<input type="password" autoComplete="new-password" minLength="12"
+              value=${form.senha} onChange=${event => setForm({...form, senha: event.target.value})}
+              placeholder="Deixe em branco para manter" /></label>
+          </fieldset>
+          <button type="submit" className="lc-btn lc-btn-primary" disabled=${saving}>
+            ${saving ? "Salvando…" : "Salvar alterações"}
+          </button>
+        </form>
+        <nav className="lc-profile-shortcuts" aria-label="Atalhos da conta">
+          <h2>Gerenciar conta</h2>
+          <${AppLink} href="/conta/endereco">Endereço de entrega →<//>
+          <${AppLink} href="/pedidos">Meus pedidos →<//>
+          <${AppLink} href="/conta/beneficios">Cupons e recompensas →<//>
+        </nav>
+      </div>`}
+  </main>`;
 }
 
 function OrdersPage() {
@@ -1700,6 +1741,7 @@ function PassPage({ auth, notify }) {
   useEffect(() => {
     if (!pass || guided.current) return;
     guided.current = true;
+    if (!shouldShowPassGuide(auth.id)) return;
     if (pass.niveis.some(reward => reward.disponivelParaResgate && !reward.resgatado)) {
       notify("Você tem prêmios para resgatar", "Veja os níveis liberados na trilha.");
     } else if (pass.xpParaProximoNivel > 0) {
@@ -1708,7 +1750,7 @@ function PassPage({ auth, notify }) {
     } else {
       notify("Você alcançou o último nível", "Confira as recompensas da temporada.");
     }
-  }, [pass, notify]);
+  }, [pass, notify, auth.id]);
   const moveTrack = (direction) => {
     const rail = track.current;
     rail?.scrollBy({
@@ -1800,7 +1842,7 @@ function PassPage({ auth, notify }) {
         </div>
       </div>
       <div className=${`lc-rail ${pass.premiumAtivo ? "" : "lc-rail-locked"}`}>
-        <div className="lc-rail-labels" aria-hidden="true"><strong>Premium</strong><span>Nível</span><strong>Gratuito</strong></div>
+        <div className="lc-rail-labels" aria-hidden="true"><strong className="premium">Premium</strong><span>Nível</span><strong className="free">Gratuito</strong></div>
         <div className="lc-rail-track" ref=${track} tabIndex="0" role="region" aria-label="Níveis e recompensas do passe">
           ${pass.niveis.map(reward => html`
             <div className=${`lc-rail-level ${reward.desbloqueado ? "unlocked" : ""}`}
@@ -2085,7 +2127,7 @@ function App() {
       />`;
     }
     if (path === "/perfil") {
-      return html`<${ProfilePage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
+      return html`<${ProfilePage} auth=${auth} route=${route} onAuthRefresh=${refreshAuth} notify=${notify} />`;
     }
     if (path === "/pedidos") {
       return html`<${OrdersPage} />`;

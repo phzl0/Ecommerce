@@ -4,7 +4,6 @@ import com.paulo.ecommerce.model.*;
 import com.paulo.ecommerce.service.*;
 import jakarta.validation.Valid;
 import java.io.IOException;
-import java.nio.file.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -47,13 +46,20 @@ public class AdminController {
     model.addAttribute("pedidosRecentes", adminService.pedidosRecentes());
     model.addAttribute("produtosSemEstoque", adminService.produtosSemEstoque());
     model.addAttribute("pedidosPendentes", adminService.pedidosPendentes());
+    model.addAttribute("pedidosParaEnvio", adminService.pedidosParaEnvio());
+    model.addAttribute("ambienteDeTeste", payments.simulacaoDisponivel());
     return "admin/dashboard";
   }
 
   // ── Produtos ───────────────────────────────────────────
   @GetMapping("/produtos")
-  public String produtos(Model model) {
-    model.addAttribute("produtos", produtoService.listarAtivos(0, 100).getContent());
+  public String produtos(Model model, @RequestParam(defaultValue = "") String busca,
+      @RequestParam(defaultValue = "false") boolean semEstoque, @RequestParam(defaultValue = "0") int pagina) {
+    var resultados = adminService.produtos(busca.strip(), semEstoque, pagina);
+    model.addAttribute("produtos", resultados.getContent());
+    model.addAttribute("pagina", resultados);
+    model.addAttribute("busca", busca.strip());
+    model.addAttribute("semEstoque", semEstoque);
     return "admin/produtos/lista";
   }
 
@@ -137,9 +143,16 @@ public class AdminController {
 
   // ── Pedidos ────────────────────────────────────────────
   @GetMapping("/pedidos")
-  public String pedidos(Model model) {
-    model.addAttribute("pedidos", pedidoService.listarTodos());
-    model.addAttribute("status", Pedido.Status.values());
+  public String pedidos(Model model, @RequestParam(required = false) Pedido.Status status,
+      @RequestParam(defaultValue = "") String busca, @RequestParam(defaultValue = "false") boolean envio,
+      @RequestParam(defaultValue = "0") int pagina) {
+    var resultados = adminService.pedidos(status, busca.strip(), envio, pagina);
+    model.addAttribute("pedidos", resultados.getContent());
+    model.addAttribute("pagina", resultados);
+    model.addAttribute("busca", busca.strip());
+    model.addAttribute("filtroStatus", status);
+    model.addAttribute("envio", envio);
+    model.addAttribute("statusOpcoes", Pedido.Status.values());
     return "admin/pedidos/lista";
   }
 

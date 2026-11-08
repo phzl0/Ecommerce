@@ -1,30 +1,32 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <body>
-<aside th:fragment="sidebar" class="admin-sidebar">
-  <div class="sidebar-brand">
-    <strong>LEVEL COMMERCE</strong>
-    <span>Painel administrativo</span>
-  </div>
-  <nav class="sidebar-nav">
-    <a th:href="@{/admin}" th:classappend="${activePage == 'dashboard'} ? 'ativo' : ''">
-      Dashboard
-    </a>
-    <a th:href="@{/admin/produtos}" th:classappend="${activePage == 'produtos'} ? 'ativo' : ''">
-      Produtos
-    </a>
-    <a th:href="@{/admin/categorias}" th:classappend="${activePage == 'categorias'} ? 'ativo' : ''">
-      Categorias
-    </a>
-    <a th:href="@{/admin/pedidos}" th:classappend="${activePage == 'pedidos'} ? 'ativo' : ''">
-      Pedidos
-    </a>
-    <a th:href="@{/admin/eventos}" th:classappend="${activePage == 'eventos'} ? 'ativo' : ''">Eventos</a>
-    <hr class="sidebar-divider">
-    <a th:href="@{/}">Ver storefront</a>
-    <form th:action="@{/auth/logout}" method="post" class="sidebar-logout">
-      <button type="submit">Encerrar sessão</button>
-    </form>
+<aside th:fragment="sidebar(activePage)" class="admin-sidebar">
+  <a class="sidebar-brand" th:href="@{/admin}">
+    <span class="sidebar-logo" aria-hidden="true">L.</span>
+    <span><strong>LEVEL COMMERCE</strong><small>Administração</small></span>
+  </a>
+  <nav class="sidebar-nav" aria-label="Administração da loja">
+    <div class="sidebar-group">
+      <span>Operação</span>
+      <a th:href="@{/admin}" th:attr="aria-current=${activePage == 'dashboard' ? 'page' : null}">Visão geral</a>
+      <a th:href="@{/admin/pedidos}" th:attr="aria-current=${activePage == 'pedidos' ? 'page' : null}">Pedidos</a>
+    </div>
+    <div class="sidebar-group">
+      <span>Catálogo</span>
+      <a th:href="@{/admin/produtos}" th:attr="aria-current=${activePage == 'produtos' ? 'page' : null}">Produtos</a>
+      <a th:href="@{/admin/categorias}" th:attr="aria-current=${activePage == 'categorias' ? 'page' : null}">Categorias</a>
+    </div>
+    <div class="sidebar-group">
+      <span>Engajamento</span>
+      <a th:href="@{/admin/eventos}" th:attr="aria-current=${activePage == 'eventos' ? 'page' : null}">Eventos</a>
+    </div>
+    <div class="sidebar-group sidebar-footer">
+      <a th:href="@{/}">Voltar à loja</a>
+      <form th:action="@{/auth/logout}" method="post" class="sidebar-logout">
+        <button type="submit">Encerrar sessão</button>
+      </form>
+    </div>
   </nav>
 </aside>
 </body>

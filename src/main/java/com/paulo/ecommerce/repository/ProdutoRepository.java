@@ -44,6 +44,17 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
   @Query("SELECT COUNT(p) FROM Produto p WHERE p.estoque = 0 AND p.ativo = true")
   long countSemEstoque();
 
+  long countByAtivoTrue();
+
+  @EntityGraph(attributePaths = {"categoria"})
+  @Query("""
+      select p from Produto p where p.ativo = true
+      and (:semEstoque = false or p.estoque = 0)
+      and (:busca = '' or locate(lower(:busca), lower(p.nome)) > 0
+        or locate(lower(:busca), lower(coalesce(p.sku, ''))) > 0)
+      """)
+  Page<Produto> buscarCatalogoAdmin(String busca, boolean semEstoque, Pageable pagina);
+
   @Query(
       """
         SELECT p FROM Produto p

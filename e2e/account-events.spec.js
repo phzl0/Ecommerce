@@ -44,7 +44,11 @@ test("registers, earns event XP from a local purchase and claims a badge", async
   const admin = await browser.newPage();
   try {
     await login(admin, "admin@level.local", "AdminLocal123!", "/admin");
-    await admin.goto("/admin/eventos");
+    await expect(admin.getByRole("heading", { name: "Atenção agora" })).toBeVisible();
+    await expect(admin.getByRole("link", { name: "Novo produto" })).toBeVisible();
+    await admin.getByRole("link", { name: /Produtos sem estoque/ }).click();
+    await expect(admin.getByRole("checkbox", { name: "Apenas sem estoque" })).toBeChecked();
+    await admin.getByRole("link", { name: "Eventos", exact: true }).click();
     await admin.getByRole("button", { name: "Publicar evento" }).click();
     await expect(admin.getByRole("status")).toHaveText("Evento publicado.");
 
@@ -71,7 +75,13 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await page.getByRole("link", { name: /Sacola/ }).click();
     await expect(page.getByText(product.nome, { exact: true })).toBeVisible();
     expect((await page.request.get("/admin/eventos")).status()).toBe(403);
-    await admin.goto("/admin/pedidos/" + orderId);
+    await admin.goto("/admin");
+    await admin.getByRole("link", { name: /Aguardando pagamento/ }).click();
+    await expect(admin.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("PENDENTE");
+    await admin.getByLabel("Buscar pedidos").fill(orderId);
+    await admin.getByRole("button", { name: "Filtrar", exact: true }).click();
+    await expect(admin.getByRole("row").filter({ hasText: "Cliente Evento" })).toHaveCount(1);
+    await admin.getByRole("link", { name: "Detalhes →" }).click();
     await admin.getByRole("button", { name: "Simular pagamento aprovado" }).click();
     await expect(admin.getByText("Pagamento simulado. Nenhuma cobrança foi realizada.")).toBeVisible();
 
@@ -84,6 +94,11 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(page.getByLabel("Notificações", { exact: true })).toBeVisible();
 
     await page.goto("/perfil");
+    await expect(page.getByRole("heading", { name: "Meu perfil" })).toBeVisible();
+    await expect(page.getByLabel("Tipo de conta")).toHaveCount(0);
+    await page.getByRole("link", { name: "Progresso e XP" }).click();
+    await expect(page.getByRole("heading", { name: "Últimos ganhos de XP" })).toBeVisible();
+    await expect(page.getByText("XP na temporada")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Selos de eventos" })).toBeVisible();
     await expect(page.locator(".lc-event-badges").getByText("Veterano da Semana LEVEL")).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();

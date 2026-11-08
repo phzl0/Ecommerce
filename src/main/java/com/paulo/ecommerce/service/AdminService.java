@@ -1,11 +1,15 @@
 package com.paulo.ecommerce.service;
 
 import com.paulo.ecommerce.model.Pedido;
+import com.paulo.ecommerce.model.Produto;
+import com.paulo.ecommerce.model.Usuario;
 import com.paulo.ecommerce.repository.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import org.springframework.cache.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,21 +33,19 @@ public class AdminService {
   }
 
   public long totalProdutos() {
-    return produtoRepository.count();
+    return produtoRepository.countByAtivoTrue();
   }
 
   public long totalClientes() {
-    return usuarioRepository.count();
+    return usuarioRepository.countByRole(Usuario.Role.CLIENTE);
   }
-
-  // Substitua os métodos de métricas
 
   public BigDecimal receitaTotal() {
     return pedidoRepository.receitaDesde(LocalDateTime.of(2000, 1, 1, 0, 0));
   }
 
   public List<Pedido> pedidosRecentes() {
-    return pedidoRepository.findPedidosRecentes(LocalDateTime.now().minusDays(30));
+    return pedidoRepository.findPedidosRecentes(LocalDateTime.now().minusDays(30), PageRequest.of(0, 8));
   }
 
   public long produtosSemEstoque() {
@@ -52,5 +54,18 @@ public class AdminService {
 
   public long pedidosPendentes() {
     return pedidoRepository.countByStatus(Pedido.Status.PENDENTE);
+  }
+  public long pedidosParaEnvio() {
+    return pedidoRepository.countByStatusAndTemporadaPasseIdIsNull(Pedido.Status.CONFIRMADO);
+  }
+
+  public Page<Pedido> pedidos(Pedido.Status status, String busca, boolean envio, int pagina) {
+    return pedidoRepository.buscarPedidosAdmin(status, busca, envio,
+        PageRequest.of(Math.max(0, pagina), 20, Sort.by(Sort.Direction.DESC, "dataPedido", "id")));
+  }
+
+  public Page<Produto> produtos(String busca, boolean semEstoque, int pagina) {
+    return produtoRepository.buscarCatalogoAdmin(busca, semEstoque,
+        PageRequest.of(Math.max(0, pagina), 20, Sort.by("nome", "id")));
   }
 }

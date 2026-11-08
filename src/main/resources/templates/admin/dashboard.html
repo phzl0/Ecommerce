@@ -1,36 +1,37 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
 </head>
 <body class="admin-body">
 <div class="admin-layout">
-    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='dashboard'"></div>
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='dashboard')}"></div>
 
     <main class="admin-main">
-        <div class="admin-header">
+        <header class="admin-header">
             <div>
-                <h1>Visão operacional</h1>
-                <p class="admin-subtitle">Indicadores centrais para acompanhar catálogo, pedidos e receita.</p>
+                <span class="admin-eyebrow">ADMINISTRAÇÃO</span>
+                <h1>Visão geral</h1>
+                <p class="admin-subtitle">Acompanhe vendas, estoque e o que precisa de atenção.</p>
             </div>
-        </div>
+            <div class="admin-actions">
+                <a th:href="@{/admin/eventos}" class="admin-button secondary">Gerenciar eventos</a>
+                <a th:href="@{/admin/produtos/novo}" class="admin-button">Novo produto</a>
+            </div>
+        </header>
 
-        <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
-
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <p class="metric-label">Sem estoque</p>
-                <p class="metric-value" th:text="${produtosSemEstoque}">0</p>
+        <section class="metrics-grid" aria-label="Indicadores da loja">
+            <div class="metric-card destaque">
+                <p class="metric-label">Valor aprovado</p>
+                <p class="metric-value" th:text="'R$ ' + ${#numbers.formatDecimal(receitaTotal, 1, 'POINT', 2, 'COMMA')}">R$ 0,00</p>
+                <small th:text="${ambienteDeTeste ? 'Acumulado, incluindo simulações locais' : 'Acumulado de pagamentos aprovados'}"></small>
             </div>
             <div class="metric-card">
-                <p class="metric-label">Pedidos pendentes</p>
-                <p class="metric-value" th:text="${pedidosPendentes}">0</p>
-            </div>
-            <div class="metric-card">
-                <p class="metric-label">Total de pedidos</p>
+                <p class="metric-label">Pedidos registrados</p>
                 <p class="metric-value" th:text="${totalPedidos}">0</p>
             </div>
             <div class="metric-card">
@@ -38,20 +39,32 @@
                 <p class="metric-value" th:text="${totalProdutos}">0</p>
             </div>
             <div class="metric-card">
-                <p class="metric-label">Clientes</p>
+                <p class="metric-label">Clientes cadastrados</p>
                 <p class="metric-value" th:text="${totalClientes}">0</p>
             </div>
-            <div class="metric-card destaque">
-                <p class="metric-label">Receita total</p>
-                <p class="metric-value"
-                   th:text="'R$ ' + ${#numbers.formatDecimal(receitaTotal, 1, 'POINT', 2, 'COMMA')}">
-                    R$ 0,00
-                </p>
-            </div>
-        </div>
+        </section>
 
-        <div class="admin-section">
-            <h2>Pedidos recentes</h2>
+        <section class="admin-section" aria-labelledby="admin-priorities">
+            <h2 id="admin-priorities">Atenção agora</h2>
+            <div class="admin-priorities">
+                <a th:href="@{/admin/pedidos(status='PENDENTE')}">
+                    <span>Aguardando pagamento</span><strong th:text="${pedidosPendentes}">0</strong>
+                </a>
+                <a th:href="@{/admin/pedidos(status='CONFIRMADO',envio=true)}">
+                    <span>Pedidos para envio</span><strong th:text="${pedidosParaEnvio}">0</strong>
+                </a>
+                <a th:href="@{/admin/produtos(semEstoque=true)}">
+                    <span>Produtos sem estoque</span><strong th:text="${produtosSemEstoque}">0</strong>
+                </a>
+            </div>
+        </section>
+
+        <section class="admin-section">
+            <div class="admin-section-heading">
+                <div><h2>Pedidos recentes</h2><p class="admin-subtitle">Até oito pedidos dos últimos 30 dias.</p></div>
+                <a th:href="@{/admin/pedidos}" class="btn-link">Ver todos os pedidos →</a>
+            </div>
+            <div class="admin-table-wrap" tabindex="0" role="region" aria-label="Pedidos recentes">
             <table class="admin-table">
                 <thead>
                 <tr>
@@ -64,6 +77,7 @@
                 </tr>
                 </thead>
                 <tbody>
+                <tr th:if="${pedidosRecentes.isEmpty()}"><td colspan="6" class="admin-empty">Nenhum pedido registrado neste período.</td></tr>
                 <tr th:each="pedido : ${pedidosRecentes}">
                     <td th:text="${pedido.numero != null ? pedido.numero : '#' + pedido.id}"></td>
                     <td th:text="${pedido.usuario.nome}"></td>
@@ -83,7 +97,8 @@
                 </tr>
                 </tbody>
             </table>
-        </div>
+            </div>
+        </section>
     </main>
 </div>
 </body>

@@ -1,25 +1,33 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Produtos - Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
 </head>
 <body class="admin-body">
 <div class="admin-layout">
-    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='produtos'"></div>
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='produtos')}"></div>
 
     <main class="admin-main">
         <div class="admin-header">
             <h1>Produtos</h1>
-            <a th:href="@{/admin/produtos/novo}" class="btn btn-primary" style="width:auto;padding:9px 20px;">
+            <a th:href="@{/admin/produtos/novo}" class="admin-button">
                 + Novo produto
             </a>
         </div>
 
         <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
 
+        <form th:action="@{/admin/produtos}" method="get" class="admin-filter">
+            <label>Buscar produtos<input name="busca" th:value="${busca}" placeholder="Nome ou SKU"></label>
+            <label class="admin-filter-check"><input type="checkbox" name="semEstoque" value="true" th:checked="${semEstoque}"> Apenas sem estoque</label>
+            <button type="submit" class="admin-button">Filtrar</button>
+            <a th:href="@{/admin/produtos}" class="btn-link">Limpar</a>
+        </form>
+        <div class="admin-table-wrap" tabindex="0" role="region" aria-label="Tabela de dados">
         <table class="admin-table">
             <thead>
             <tr>
@@ -34,10 +42,11 @@
             </tr>
             </thead>
             <tbody>
+            <tr th:if="${produtos.isEmpty()}"><td colspan="8" class="admin-empty">Nenhum produto encontrado.</td></tr>
             <tr th:each="produto : ${produtos}">
                 <td>
                     <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
-                         style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
+                         alt="" class="admin-product-image">
                 </td>
                 <td>
                     <strong th:text="${produto.nome}"></strong>
@@ -66,6 +75,12 @@
             </tr>
             </tbody>
         </table>
+        </div>
+        <nav class="admin-pagination" aria-label="Páginas dos produtos" th:if="${pagina.totalPages > 1 || pagina.hasPrevious()}">
+            <a th:if="${pagina.hasPrevious()}" th:href="@{/admin/produtos(busca=${busca},semEstoque=${semEstoque},pagina=${pagina.number - 1})}">‹ Anterior</a>
+            <span th:text="'Página ' + ${pagina.number + 1}"></span>
+            <a th:if="${pagina.hasNext()}" th:href="@{/admin/produtos(busca=${busca},semEstoque=${semEstoque},pagina=${pagina.number + 1})}">Próxima ›</a>
+        </nav>
     </main>
 </div>
 </body>
