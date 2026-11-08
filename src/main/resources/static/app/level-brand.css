@@ -488,13 +488,15 @@
 }
 .lc-rail::before {
   top: 0;
-  background: linear-gradient(100deg, #000, rgb(13 48 23 / 83%)),
-    url("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=75") center / cover no-repeat;
+  /* Photo source: https://images.unsplash.com/photo-1516321318423-f06f85e504b3 */
+  background: linear-gradient(100deg, rgb(0 0 0 / 87%), rgb(13 48 23 / 64%)),
+    url("/app/level-premium.webp") center / cover no-repeat #0c1610;
 }
 .lc-rail::after {
   bottom: 0;
-  background: linear-gradient(100deg, #0c2013, rgb(15 66 36 / 80%)),
-    url("https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=75") center / cover no-repeat;
+  /* Photo source: https://images.unsplash.com/photo-1498050108023-c5249f4df085 */
+  background: linear-gradient(100deg, rgb(12 32 19 / 85%), rgb(15 66 36 / 66%)),
+    url("/app/level-free.webp") center / cover no-repeat #0e2115;
 }
 .lc-rail-locked::before { filter: grayscale(.75) brightness(.65); }
 .lc-rail-track { padding-block: 0; }
@@ -553,5 +555,6 @@
   .lc-catalog-shell .lc-product-grid, .lc-product-page .lc-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .lc-rail-labels { padding-inline: 6px; }
   .lc-premium-access { flex-wrap: wrap; }
+  .lc-premium-access .lc-btn { flex-basis: 100%; }
   .lc-missions-grid { grid-template-columns: minmax(0, 1fr); }
 }
