@@ -9,6 +9,7 @@ async function login(page, email, password, destination = "/conta") {
 }
 
 test("registers, earns event XP from a local purchase and claims a badge", async ({ page, browser }) => {
+  test.setTimeout(120_000);
   const email = "evento@example.test";
   const password = "a-memorable-test-password";
   await page.setViewportSize({ width: 390, height: 844 });
@@ -48,7 +49,13 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(admin.getByRole("link", { name: "Novo produto" })).toBeVisible();
     await admin.getByRole("link", { name: /Produtos sem estoque/ }).click();
     await expect(admin.getByRole("checkbox", { name: "Apenas sem estoque" })).toBeChecked();
+    await admin.getByRole("link", { name: "Integrações", exact: true }).click();
+    await expect(admin.getByText("Aguardando provedor")).toBeVisible();
+    expect((await page.request.get("/admin/integracoes")).status()).toBe(403);
     await admin.getByRole("link", { name: "Eventos", exact: true }).click();
+    await admin.getByRole("button", { name: "Prévia", exact: true }).click();
+    await expect(admin.getByRole("heading", { name: "Prévia do evento" })).toBeVisible();
+    expect(await (await page.request.get("/api/events")).json()).toEqual([]);
     await admin.getByRole("button", { name: "Publicar evento" }).click();
     await expect(admin.getByRole("status")).toHaveText("Evento publicado.");
 
@@ -63,7 +70,7 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await page.goto(productPath);
     await expect(deliveryLink).toBeVisible();
     expect(await (await page.request.get(reviewEndpoint)).json()).toEqual([]);
-    await page.getByRole("button", { name: "Adicionar à sacola", exact: true }).click();
+    await page.locator(".lc-detail-actions").getByRole("button", { name: "Adicionar à sacola", exact: true }).click();
     await expect(page.getByText("Adicionado à sacola", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Comprar agora", exact: true }).first().click();
     await expect(page.getByLabel("CEP", { exact: true })).toHaveValue("01001000");
@@ -87,6 +94,13 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await admin.getByRole("link", { name: "Detalhes →" }).click();
     await admin.getByRole("button", { name: "Simular pagamento aprovado" }).click();
     await expect(admin.getByText("Pagamento simulado. Nenhuma cobrança foi realizada.")).toBeVisible();
+    const history = admin.getByRole("region", { name: "Histórico do pedido" });
+    await expect(history.getByText("Pagamento confirmado", { exact: true })).toBeVisible();
+    await admin.getByRole("button", { name: "Aplicar ação" }).click();
+    await expect(history.getByText("Pedido enviado", { exact: true })).toBeVisible();
+    await admin.goto("/admin/pedidos?pagamento=APROVADO&busca=" + orderId);
+    await expect(admin.getByRole("combobox", { name: "Pagamento", exact: true })).toHaveValue("APROVADO");
+    await expect(admin.getByRole("row").filter({ hasText: "Cliente Evento" })).toContainText("Enviado");
 
     await page.goto("/passe/missoes");
     await expect(page.getByRole("link", { name: /Avalie e ganhe 90 XP/ }))
@@ -171,6 +185,19 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await page.goto("/passe");
     await expect(page.getByText("Premium ativo", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Liberar Premium" })).toHaveCount(0);
+
+    await admin.goto("/admin/produtos/" + product.id + "/editar");
+    const originalImage = await admin.getByRole("img", { name: "Imagem atual" }).getAttribute("src");
+    await admin.getByLabel("Descrição curta", { exact: true }).fill("Descrição atualizada no painel.");
+    await admin.getByRole("button", { name: "Salvar produto" }).click();
+    await expect(admin.getByText("Produto salvo com sucesso!")).toBeVisible();
+    expect((await (await page.request.get("/api/store/products/" + product.id)).json()).imagemUrl).toBe(originalImage);
+    await admin.goto("/admin/produtos?busca=" + encodeURIComponent(product.nome));
+    await admin.getByRole("button", { name: "Desativar", exact: true }).click();
+    await admin.goto("/admin/produtos?visibilidade=inativos&busca=" + encodeURIComponent(product.nome));
+    await expect(admin.getByRole("row").filter({ hasText: product.nome })).toContainText("Inativo");
+    await admin.getByRole("button", { name: "Ativar", exact: true }).click();
+    await expect(admin.getByText("Produto ativado.", { exact: true })).toBeVisible();
   } finally {
     await admin.close();
   }

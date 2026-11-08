@@ -1,6 +1,7 @@
 package com.paulo.ecommerce.service;
 
 import com.paulo.ecommerce.model.Pedido;
+import com.paulo.ecommerce.model.Pagamento;
 import com.paulo.ecommerce.model.Produto;
 import com.paulo.ecommerce.model.Usuario;
 import com.paulo.ecommerce.repository.*;
@@ -15,17 +16,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class AdminService {
 
+  public static final int LIMITE_ESTOQUE_BAIXO = 5;
+
   private final PedidoRepository pedidoRepository;
   private final ProdutoRepository produtoRepository;
   private final UsuarioRepository usuarioRepository;
+  private final EventoSemanalRepository eventoRepository;
 
   public AdminService(
       PedidoRepository pedidoRepository,
       ProdutoRepository produtoRepository,
-      UsuarioRepository usuarioRepository) {
+      UsuarioRepository usuarioRepository, EventoSemanalRepository eventoRepository) {
     this.pedidoRepository = pedidoRepository;
     this.produtoRepository = produtoRepository;
     this.usuarioRepository = usuarioRepository;
+    this.eventoRepository = eventoRepository;
   }
 
   public long totalPedidos() {
@@ -52,6 +57,15 @@ public class AdminService {
     return produtoRepository.countSemEstoque();
   }
 
+  public long produtosComEstoqueBaixo() {
+    return produtoRepository.countByAtivoTrueAndEstoqueBetween(1, LIMITE_ESTOQUE_BAIXO);
+  }
+
+  public long eventosAtivos() {
+    LocalDateTime agora = LocalDateTime.now();
+    return eventoRepository.countByInicioLessThanEqualAndFimGreaterThan(agora, agora);
+  }
+
   public long pedidosPendentes() {
     return pedidoRepository.countByStatus(Pedido.Status.PENDENTE);
   }
@@ -59,13 +73,14 @@ public class AdminService {
     return pedidoRepository.countByStatusAndTemporadaPasseIdIsNull(Pedido.Status.CONFIRMADO);
   }
 
-  public Page<Pedido> pedidos(Pedido.Status status, String busca, boolean envio, int pagina) {
-    return pedidoRepository.buscarPedidosAdmin(status, busca, envio,
+  public Page<Pedido> pedidos(Pedido.Status status, Pagamento.StatusPagamento pagamento,
+      String busca, boolean envio, int pagina) {
+    return pedidoRepository.buscarPedidosAdmin(status, pagamento, busca, envio,
         PageRequest.of(Math.max(0, pagina), 20, Sort.by(Sort.Direction.DESC, "dataPedido", "id")));
   }
 
-  public Page<Produto> produtos(String busca, boolean semEstoque, int pagina) {
-    return produtoRepository.buscarCatalogoAdmin(busca, semEstoque,
+  public Page<Produto> produtos(String busca, Boolean ativo, boolean semEstoque, boolean estoqueBaixo, int pagina) {
+    return produtoRepository.buscarCatalogoAdmin(busca, ativo, semEstoque, estoqueBaixo, LIMITE_ESTOQUE_BAIXO,
         PageRequest.of(Math.max(0, pagina), 20, Sort.by("nome", "id")));
   }
 }

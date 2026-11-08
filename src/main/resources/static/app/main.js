@@ -501,7 +501,17 @@ function CategoryStrip({ categories }) {
   `;
 }
 
-function ProductCard({ product, onAddToCart }) {
+function ProductPurchaseActions({ product, onAddToCart, onBuyNow }) {
+  const soldOut = product.estoque <= 0;
+  return html`<div className="lc-product-purchase">
+    <button type="button" className="lc-btn lc-btn-primary" disabled=${soldOut}
+      onClick=${() => onBuyNow(product)}>Comprar agora</button>
+    <button type="button" className="lc-btn lc-btn-ghost" disabled=${soldOut}
+      onClick=${() => onAddToCart(product)}>${soldOut ? "Esgotado" : "Adicionar à sacola"}</button>
+  </div>`;
+}
+
+function ProductCard({ product, onAddToCart, onBuyNow }) {
   const href = `/produto/${product.id}`;
   return html`<article className="lc-product-card lc-shelf-card">
     <${AppLink} href=${href} className="lc-product-visual">
@@ -513,13 +523,12 @@ function ProductCard({ product, onAddToCart }) {
     <div className="lc-product-copy">
       <h3><${AppLink} href=${href}>${product.nome}<//></h3>
       <strong>${currency(product.preco)}</strong>
-      <button type="button" className="lc-btn lc-btn-ghost" disabled=${product.estoque <= 0}
-        onClick=${() => onAddToCart(product)}>${product.estoque > 0 ? "Adicionar" : "Esgotado"}</button>
+      <${ProductPurchaseActions} product=${product} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
     </div>
   </article>`;
 }
 
-function HomeProductShelf({ title, products, onAddToCart }) {
+function HomeProductShelf({ title, products, onAddToCart, onBuyNow }) {
   if (!products.length) return null;
   return html`<section className="lc-section lc-home-shelf">
     <${SectionHeader} title=${title} actionLabel="Ver catálogo" />
@@ -535,22 +544,21 @@ function HomeProductShelf({ title, products, onAddToCart }) {
           <div className="lc-home-product-info">
             <h3><${AppLink} href=${`/produto/${product.id}`}>${product.nome}<//></h3>
             <strong>${currency(product.preco)}</strong>
-            <button type="button" className="lc-btn lc-btn-ghost" disabled=${product.estoque <= 0}
-              onClick=${() => onAddToCart(product)}>${product.estoque > 0 ? "Adicionar" : "Esgotado"}</button>
+            <${ProductPurchaseActions} product=${product} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
           </div>
         </article>`)}
     </div>
   </section>`;
 }
 
-function HomePage({ data, onAddToCart, auth }) {
+function HomePage({ data, onAddToCart, onBuyNow, auth }) {
   return html`
     <main className="lc-home">
       <${BannerCarousel} banners=${data.banners} />
       <${PromoTicker} />
       <div className="lc-page lc-home-content">
         <${PassPreview} auth=${auth} />
-        <${HomeProductShelf} title="Destaques da loja" products=${data.destaques} onAddToCart=${onAddToCart} />
+        <${HomeProductShelf} title="Destaques da loja" products=${data.destaques} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
         <section className="lc-home-campaigns" aria-label="Campanhas da LEVEL">
           <${AppLink} href="/eventos" className="lc-home-campaign rewards">
             <span>LEVEL REWARDS</span><strong>Eventos da semana</strong><small>Veja as campanhas e conquiste selos →</small>
@@ -563,7 +571,7 @@ function HomePage({ data, onAddToCart, auth }) {
           <${SectionHeader} title="Compre por categoria" actionLabel="Todas as categorias" />
           <${CategoryStrip} categories=${data.categorias} />
         </section>
-        <${HomeProductShelf} title="Novidades" products=${data.novidades} onAddToCart=${onAddToCart} />
+        <${HomeProductShelf} title="Novidades" products=${data.novidades} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
       </div>
     </main>
   `;
@@ -725,7 +733,7 @@ function CatalogFilters({ categories, filters, setFilters }) {
   `;
 }
 
-function CatalogPage({ route, onAddToCart }) {
+function CatalogPage({ route, onAddToCart, onBuyNow }) {
   const [data, setData] = useState({ categorias: [], produtos: [], total: 0 });
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState(parseCatalogFilters(route));
@@ -784,6 +792,7 @@ function CatalogPage({ route, onAddToCart }) {
                   key=${product.id}
                   product=${product}
                   onAddToCart=${onAddToCart}
+                  onBuyNow=${onBuyNow}
                 />
               `,
             )}
@@ -1025,6 +1034,7 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
                 key=${related.id}
                 product=${related}
                 onAddToCart=${onAddToCart}
+                  onBuyNow=${onBuyNow}
               />
             `,
           )}
@@ -1293,12 +1303,17 @@ function CheckoutPage({ items, auth, clearCart, address }) {
             </p>
           </div>
         </div>
-        <aside className="lc-cart-summary">
-          <span>Resumo da compra</span>
+        <aside className="lc-cart-summary" aria-label="Resumo da compra">
+          <h2>Resumo da compra</h2>
+          ${items.length ? null : html`<p>Nenhum produto nesta compra.</p>`}
           ${items.map(
             (item) => html`
-              <div key=${item.id} className="lc-summary-line">
-                <span>${item.nome} x ${item.quantity}</span>
+              <div key=${item.id} className="lc-checkout-item">
+                <img src=${item.imagemUrl || "/images/sem-foto.png"} alt=""
+                  onError=${event => {
+                    if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
+                  }} />
+                <div><span>${item.nome}</span><small>Quantidade ${item.quantity}</small></div>
                 <strong>${currency(item.preco * item.quantity)}</strong>
               </div>
             `,
@@ -1311,7 +1326,7 @@ function CheckoutPage({ items, auth, clearCart, address }) {
             <span>Frete</span
             ><strong>${freight === 0 ? "Gratis" : currency(freight)}</strong>
           </div>
-          <strong className="lc-summary-total">${currency(total)}</strong>
+          <div className="lc-summary-line lc-summary-total"><span>Total</span><strong>${currency(total)}</strong></div>
           ${message ? html`<p className="lc-checkout-note" role="alert">${message}</p>` : null}
           ${
             auth.authenticated
@@ -1799,39 +1814,49 @@ function moveCarousel(track, direction) {
   });
 }
 
-function RewardHighlights({ lastLevel }) {
-  const track = useRef(null);
-  const highlights = [
-    ["/app/level-premium.webp", `Alcance o nível ${lastLevel} e ganhe`],
-    ["/app/level-free.webp", "Explore os prêmios do Passe Premium"],
-    ["/app/level-hero.svg", "Complete missões e ganhe recompensas"],
-  ];
-  return html`<section className="lc-reward-highlights" aria-labelledby="reward-highlights">
-    <div className="lc-rail-toolbar">
-      <div className="lc-reward-highlights-heading"><h2 id="reward-highlights">Prêmios em destaque</h2>
-        <small>Exemplos da vitrine</small></div>
-      <div>
-        <button type="button" className="lc-btn lc-btn-ghost" aria-label="Destaques anteriores"
-          onClick=${() => moveCarousel(track.current, -1)}>←</button>
-        <button type="button" className="lc-btn lc-btn-ghost" aria-label="Próximos destaques"
-          onClick=${() => moveCarousel(track.current, 1)}>→</button>
-      </div>
-    </div>
-    <div className="lc-reward-highlights-track" ref=${track} tabIndex="0" role="region" aria-label="Destaques ilustrativos">
-      ${highlights.map(([image, label]) => html`<article className="lc-reward-highlight" key=${label}>
-        <img src=${image} alt="" />
-        <strong>${label}</strong>
-      </article>`)}
+const rewardExamples = [
+  "Notebook", "Monitor", "Fone sem fio", "Caixa de som", "Tênis", "Relógio",
+  "Garrafa térmica", "Kit para setup", "Mochila", "Acessório para jogos",
+];
+
+function RewardHighlights({ products, target }) {
+  const highlights = rewardExamples.map((label, index) => ({
+    label: products[index]?.nome || label,
+    image: products[index]?.imagemUrl || (index % 2 ? "/app/level-free.webp" : "/app/level-premium.webp"),
+  }));
+  return html`<section className="lc-reward-highlights" aria-label="Vitrine ilustrativa de prêmios">
+    <div className="lc-reward-highlights-track">
+      ${[false, true].map(copy => html`<div className="lc-reward-highlight-set" key=${String(copy)}
+        aria-hidden=${copy ? "true" : undefined}>
+        ${highlights.map(({ image, label }, index) => html`<a href=${target} className="lc-reward-highlight"
+          key=${index} tabIndex=${copy ? -1 : undefined} aria-label=${`${label} · Ver passe`}>
+          <img src=${image} alt="" onError=${event => {
+            if (!event.currentTarget.src.endsWith("/app/level-free.webp")) event.currentTarget.src = "/app/level-free.webp";
+          }} />
+          <strong>${label}</strong>
+        </a>`)}
+      </div>`)}
     </div>
   </section>`;
 }
 
-function PassPage({ auth, notify, notifyGain }) {
+function PassPage({ auth, notify, notifyGain, demoProducts }) {
   const [dashboard, setDashboard] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
   const track = useRef(null);
   const guided = useRef(false);
+  const [showIntro, setShowIntro] = useState(false);
+
+  useEffect(() => {
+    if (!auth.ready) return;
+    const key = `level-commerce-pass-intro-${auth.id ?? "visitor"}`;
+    try {
+      if (localStorage.getItem(key)) return;
+      localStorage.setItem(key, "seen");
+    } catch {}
+    setShowIntro(true);
+  }, [auth.ready, auth.id]);
 
   useEffect(() => {
     if (!auth.authenticated) return;
@@ -1926,21 +1951,27 @@ function PassPage({ auth, notify, notifyGain }) {
       </div>
     </header>
     <div className="lc-page lc-rewards-content">
-    <${RewardHighlights} lastLevel=${pass?.totalNiveis || 30} />
+    ${showIntro ? html`<aside className="lc-pass-intro" aria-label="Como subir de nível">
+      <p>Suba de nível com compras, missões e eventos para liberar recompensas.</p>
+      <${AppLink} href="/passe/missoes">Ver missões<//>
+      <button type="button" className="lc-btn lc-btn-ghost" onClick=${() => setShowIntro(false)}>Entendi</button>
+    </aside>` : null}
     ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
     ${auth.authenticated && !pass && !error ? html`<p role="status">Carregando temporada…</p>` : null}
-    ${pass ? html`<section className="lc-level-trail" aria-labelledby="level-trail-title">
-      <div className="lc-level-trail-heading">
-        <div><h2 id="level-trail-title">Trilha de recompensas</h2>
-          <p>Os prêmios de cada trilha liberam conforme você alcança os níveis.</p></div>
-      </div>
-      <div className=${`lc-premium-access ${pass.premiumAtivo ? "active" : "locked"}`}>
+    ${pass ? html`<div className=${`lc-premium-access ${pass.premiumAtivo ? "active" : "locked"}`}>
         <span className="lc-premium-badge"><${Icon} name=${pass.premiumAtivo ? "shield" : "lock"} /></span>
         <div><strong>${pass.premiumAtivo ? "Premium ativo" : "Trilha Premium bloqueada"}</strong>
           <small>${pass.premiumAtivo ? `Acesso até ${new Date(pass.premiumValidoAte).toLocaleDateString("pt-BR")}`
             : `${currency(pass.precoPremium)} por mês${auth.ambienteLocal ? " · ativação de teste" : ""}`}</small></div>
         ${!pass.premiumAtivo && auth.ambienteLocal ? html`<button type="button" className="lc-btn lc-neon-btn"
           disabled=${busy !== null} onClick=${buyPremium}>Liberar Premium</button>` : null}
+      </div>` : null}
+    </div>
+    <${RewardHighlights} products=${demoProducts} target=${pass ? "#trilha-do-passe" : buildLoginUrl("/passe")} />
+    ${pass ? html`<section id="trilha-do-passe" className="lc-page lc-level-trail" aria-labelledby="level-trail-title">
+      <div className="lc-level-trail-heading">
+        <div><h2 id="level-trail-title">Trilha de recompensas</h2>
+          <p>Os prêmios de cada trilha liberam conforme você alcança os níveis.</p></div>
       </div>
       <div className="lc-rail-toolbar">
         <span>Deslize a trilha para explorar os níveis.</span>
@@ -1968,7 +1999,6 @@ function PassPage({ auth, notify, notifyGain }) {
         </div>`)}
       </details>` : null}
     </section>` : null}
-    </div>
   </main>`;
 }
 
@@ -2025,7 +2055,7 @@ function BenefitsPage({ auth, onAuthRefresh, notify }) {
   </main>`;
 }
 
-function MissionProductShelf({ dashboard, demoProducts }) {
+function MissionProductShelf({ dashboard, demoProducts, onAddToCart, onBuyNow }) {
   const reviewMissions = pendingReviewMissions(dashboard);
   const reviews = dashboard?.produtosParaAvaliar || [];
   const demos = demoProducts.filter(product => !reviews.some(review => review.id === product.id))
@@ -2048,12 +2078,13 @@ function MissionProductShelf({ dashboard, demoProducts }) {
           <span className="lc-mission-product-tag">${label}</span>
           <strong>${product.nome}</strong>
         <//>
+        <${ProductPurchaseActions} product=${product} onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
       </article>`)}
     </div>
   </section>`;
 }
 
-function PassMissionsPage({ auth, demoProducts }) {
+function PassMissionsPage({ auth, demoProducts, onAddToCart, onBuyNow }) {
   const [dashboard, setDashboard] = useState(null);
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(0);
@@ -2136,7 +2167,8 @@ function PassMissionsPage({ auth, demoProducts }) {
           </article>`)}
         </div>`}
     </section>
-    <${MissionProductShelf} dashboard=${dashboard} demoProducts=${demoProducts} />
+    <${MissionProductShelf} dashboard=${dashboard} demoProducts=${demoProducts}
+      onAddToCart=${onAddToCart} onBuyNow=${onBuyNow} />
     </div>
   </main>`;
 }
@@ -2284,6 +2316,7 @@ function App() {
   };
 
   const buyNow = (product) => {
+    if (product.estoque <= 0) return;
     const item = cartItem(product, 1);
     sessionStorage.setItem(BUY_NOW_KEY, JSON.stringify(item));
     setImmediateItem(item);
@@ -2302,8 +2335,13 @@ function App() {
     }
     if (path === "/conta/beneficios")
       return html`<${BenefitsPage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
-    if (path === "/passe") return html`<${PassPage} auth=${auth} notify=${notify} notifyGain=${notifyGain} />`;
-    if (path === "/passe/missoes") return html`<${PassMissionsPage} auth=${auth} demoProducts=${homeData?.destaques || []} />`;
+    if (path === "/passe") {
+      const products = [...(homeData?.destaques || []), ...(homeData?.novidades || [])];
+      const demoProducts = [...new Map(products.map(product => [product.id, product])).values()];
+      return html`<${PassPage} auth=${auth} notify=${notify} notifyGain=${notifyGain} demoProducts=${demoProducts} />`;
+    }
+    if (path === "/passe/missoes") return html`<${PassMissionsPage} auth=${auth} demoProducts=${homeData?.destaques || []}
+      onAddToCart=${addToCartWithTracking} onBuyNow=${buyNow} />`;
     if (path === "/eventos")
       return html`<${EventsPage} auth=${auth} getJson=${getJson} postJson=${postJson}
         notify=${(title, text) => notifyGain(title, text, "prize")} />`;
@@ -2345,6 +2383,7 @@ function App() {
         <${CatalogPage}
           route=${route}
           onAddToCart=${addToCartWithTracking}
+          onBuyNow=${buyNow}
         />
       `;
     }
@@ -2371,6 +2410,7 @@ function App() {
       <${HomePage}
         data=${homeData}
         onAddToCart=${addToCartWithTracking}
+        onBuyNow=${buyNow}
         auth=${auth}
       />
     `;

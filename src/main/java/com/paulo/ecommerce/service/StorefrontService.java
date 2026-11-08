@@ -79,6 +79,7 @@ public class StorefrontService {
 
     public StoreProductDetailResponse carregarProduto(Long id) {
         Produto produto = produtoService.buscarPorId(id);
+        if (!produto.isAtivo()) throw new com.paulo.ecommerce.exception.RecursoNaoEncontradoException("Produto", id);
         List<StoreProductCardResponse> relacionados = produto.getCategoria() == null
                 ? List.of()
                 : produtoService.listarPorCategoria(produto.getCategoria().getId()).stream()

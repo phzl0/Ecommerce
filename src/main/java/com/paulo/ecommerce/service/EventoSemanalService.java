@@ -46,6 +46,11 @@ public class EventoSemanalService {
   @Transactional
   public void publicar(String titulo, String descricao, LocalDateTime inicio, LocalDateTime fim,
       int multiplicador, int limite, int meta, BigDecimal minimo, String selo) {
+    eventos.save(preparar(titulo, descricao, inicio, fim, multiplicador, limite, meta, minimo, selo));
+  }
+
+  public EventoSemanal preparar(String titulo, String descricao, LocalDateTime inicio, LocalDateTime fim,
+      int multiplicador, int limite, int meta, BigDecimal minimo, String selo) {
     titulo = titulo.trim();
     descricao = descricao.trim();
     selo = selo.trim();
@@ -71,7 +76,7 @@ public class EventoSemanalService {
     evento.metaXp = meta;
     evento.minimoCompra = minimo;
     evento.selo = selo;
-    eventos.save(evento);
+    return evento;
   }
 
   @Transactional

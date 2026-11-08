@@ -42,7 +42,18 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(page.getByText("Trilha Premium bloqueada")).toBeVisible();
   await expect(page.locator(".lc-rail")).toHaveCSS("background-color", "rgb(0, 0, 0)");
   await expect(page.getByRole("button", { name: /^Bloqueado · nível 1 ·/ })).toBeDisabled();
-  await expect(page.getByRole("region", { name: "Destaques ilustrativos" }).getByRole("article")).toHaveCount(3);
+  const intro = page.getByRole("complementary", { name: "Como subir de nível" });
+  await expect(intro).toContainText("Suba de nível com compras, missões e eventos");
+  const showcase = page.getByRole("region", { name: "Vitrine ilustrativa de prêmios" });
+  await expect(showcase.getByRole("link")).toHaveCount(10);
+  await expect(showcase.getByRole("button")).toHaveCount(0);
+  await expect(showcase.locator(".lc-reward-highlights-track")).toHaveCSS("animation-name", "lc-reward-loop");
+  expect(await showcase.evaluate(element => element.previousElementSibling.querySelector(".lc-premium-access button")?.textContent))
+    .toContain("Liberar Premium");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await showcase.getByRole("link").first().click();
+  await expect(page).toHaveURL(/#trilha-do-passe$/);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect(page.getByRole("navigation", { name: "Navegação da loja" })
     .getByRole("link", { name: "Missões", exact: true })).toBeVisible();
   await expect(page.getByText(/Faltam \d+ XP para o próximo nível/)).toBeVisible();
@@ -52,6 +63,7 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await page.reload();
   await expect(page.getByRole("button", { name: "Liberar Premium" })).toBeVisible();
   await expect(page.locator(".lc-toast-region .lc-toast")).toHaveCount(0);
+  await expect(intro).toHaveCount(0);
   const account = await (await page.request.get("/api/auth/me")).json();
   await page.evaluate(id => {
     localStorage.setItem(`level-commerce-pass-guide-${id}`, String(Date.now() - 301_000));
@@ -114,11 +126,14 @@ test("catalog, private pass, checkout without live charges and profile", async (
   const product =
     catalog.produtos.find((p) => p.nome === "Garrafa Thermal Elite") ||
     catalog.produtos[0];
-  await page.goto("/produto/" + product.id);
-  await page
-    .locator(".lc-detail-actions")
-    .getByRole("button", { name: "Comprar agora", exact: true })
-    .click();
+  await page.goto("/catalogo");
+  const card = page.locator(".lc-product-card").filter({ hasText: product.nome });
+  await card.getByRole("button", { name: "Comprar agora", exact: true }).click();
+  await expect(page).toHaveURL(/\/checkout\?modo=imediato$/);
+  const summary = page.getByRole("complementary", { name: "Resumo da compra" });
+  await expect(summary).toContainText(product.nome);
+  await expect(summary).toContainText("Quantidade 1");
+  await expect(summary.locator("img")).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Endereco de entrega" }),
   ).toBeVisible();

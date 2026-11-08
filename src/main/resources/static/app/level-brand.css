@@ -633,28 +633,34 @@
 .lc-rewards-banner small { color: #d0e8d4; }
 .lc-rewards-banner progress { accent-color: #79ff57; }
 .lc-rewards-content { padding-top: 24px; }
-.lc-reward-highlights { max-width: 422px; margin-bottom: 24px; }
-.lc-reward-highlights .lc-rail-toolbar { align-items: center; }
-.lc-rail-toolbar .lc-reward-highlights-heading { display: grid; gap: 2px; }
-.lc-reward-highlights-heading h2, .lc-mission-products h2 { color: var(--lc-text); margin: 0; font-size: 1.125rem; }
-.lc-reward-highlights-track {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: var(--lc-reward-width);
-  overflow-x: auto;
-  gap: 8px;
-  scrollbar-width: thin;
-  scroll-snap-type: x mandatory;
+.lc-pass-intro {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px;
+  margin-bottom: 16px; padding: 8px 16px; border: 1px solid var(--lc-line);
+  border-radius: 8px; background: var(--lc-surface-alt);
 }
+.lc-pass-intro p { flex: 1 1 240px; margin: 0; }
+.lc-pass-intro a { color: var(--lc-green-dark); font-weight: 700; text-decoration: underline; }
+.lc-pass-intro button { min-height: 32px; padding-inline: 8px; }
+#trilha-do-passe { scroll-margin-top: 144px; }
+.lc-reward-highlights { overflow: hidden; background: #090f0b; padding-block: 8px; }
+.lc-reward-highlights-track {
+  display: flex;
+  width: max-content;
+  animation: lc-reward-loop 46s linear infinite;
+}
+.lc-reward-highlight-set { display: flex; gap: 8px; padding-right: 8px; }
+.lc-reward-highlights:focus-within .lc-reward-highlights-track { animation-play-state: paused; }
+@keyframes lc-reward-loop { to { transform: translateX(-50%); } }
+.lc-mission-products h2 { color: var(--lc-text); margin: 0; font-size: 1.125rem; }
 .lc-reward-highlight {
   position: relative;
   isolation: isolate;
   display: grid;
   align-content: end;
   overflow: hidden;
+  width: max(144px, 11vw);
   min-height: var(--lc-reward-height);
   border-radius: 8px;
-  scroll-snap-align: start;
   padding: 8px;
   background: #0b1c10;
   color: #fff;
@@ -738,4 +744,28 @@
   .lc-level-pass { --lc-reward-width: 128px; }
   .lc-missions-grid > :nth-last-child(2) { border-bottom: 1px solid var(--lc-line); }
   .lc-review-form { scroll-margin-top: 225px; }
+}
+
+
+.lc-product-purchase { display: grid; gap: 4px; align-self: end; width: 100%; }
+.lc-product-purchase .lc-btn {
+  width: 100%; min-height: 34px; padding: 4px; line-height: 1.15;
+  font-size: .75rem; text-align: center; white-space: normal;
+}
+.lc-mission-product .lc-product-purchase { padding: 0 8px 8px; }
+.lc-checkout-page .lc-cart-summary h2 { margin: 0; font-size: 1rem; }
+.lc-checkout-item {
+  display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center;
+  gap: 8px; padding-block: 8px; border-bottom: 1px solid var(--lc-line); font-size: .85rem;
+}
+.lc-checkout-item img { width: 40px; height: 40px; object-fit: contain; border-radius: 4px; }
+.lc-checkout-item div { display: grid; gap: 4px; overflow-wrap: anywhere; }
+.lc-checkout-item small { color: var(--lc-muted); }
+@media (max-width: 600px) {
+  #trilha-do-passe { scroll-margin-top: 230px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lc-reward-highlights { overflow-x: auto; scrollbar-width: none; }
+  .lc-reward-highlights-track { animation: none; }
+  .lc-reward-highlight-set[aria-hidden="true"] { display: none; }
 }

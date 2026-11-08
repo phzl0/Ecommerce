@@ -46,6 +46,8 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
   long countByAtivoTrue();
 
+  long countByAtivoTrueAndEstoqueBetween(int minimo, int maximo);
+
   @Query("""
       select produto from Produto produto
       where produto.ativo = true and (:produtoId is null or produto.id = :produtoId)
@@ -62,12 +64,16 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
 
   @EntityGraph(attributePaths = {"categoria"})
   @Query("""
-      select p from Produto p where p.ativo = true
+      select p from Produto p
+      where (p.sku is null or lower(p.sku) not like 'passe-mensal-%')
+      and (:ativo is null or p.ativo = :ativo)
       and (:semEstoque = false or p.estoque = 0)
+      and (:estoqueBaixo = false or p.estoque between 1 and :limiteEstoque)
       and (:busca = '' or locate(lower(:busca), lower(p.nome)) > 0
         or locate(lower(:busca), lower(coalesce(p.sku, ''))) > 0)
       """)
-  Page<Produto> buscarCatalogoAdmin(String busca, boolean semEstoque, Pageable pagina);
+  Page<Produto> buscarCatalogoAdmin(String busca, Boolean ativo, boolean semEstoque,
+      boolean estoqueBaixo, int limiteEstoque, Pageable pagina);
 
   @Query(
       """

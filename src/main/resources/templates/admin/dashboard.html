@@ -56,6 +56,12 @@
                 <a th:href="@{/admin/produtos(semEstoque=true)}">
                     <span>Produtos sem estoque</span><strong th:text="${produtosSemEstoque}">0</strong>
                 </a>
+                <a th:href="@{/admin/produtos(estoqueBaixo=true)}">
+                    <span>Estoque baixo</span><strong th:text="${estoqueBaixo}">0</strong>
+                </a>
+                <a th:href="@{/admin/eventos(ativos=true)}">
+                    <span>Eventos ativos</span><strong th:text="${eventosAtivos}">0</strong>
+                </a>
             </div>
         </section>
 

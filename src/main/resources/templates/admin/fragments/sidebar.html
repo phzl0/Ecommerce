@@ -14,12 +14,16 @@
     </div>
     <div class="sidebar-group">
       <span>Catálogo</span>
-      <a th:href="@{/admin/produtos}" th:attr="aria-current=${activePage == 'produtos' ? 'page' : null}">Produtos</a>
+      <a th:href="@{/admin/produtos}" th:attr="aria-current=${activePage == 'produtos' ? 'page' : null}">Produtos e estoque</a>
       <a th:href="@{/admin/categorias}" th:attr="aria-current=${activePage == 'categorias' ? 'page' : null}">Categorias</a>
     </div>
     <div class="sidebar-group">
       <span>Engajamento</span>
       <a th:href="@{/admin/eventos}" th:attr="aria-current=${activePage == 'eventos' ? 'page' : null}">Eventos</a>
+    </div>
+    <div class="sidebar-group">
+      <span>Configuração</span>
+      <a th:href="@{/admin/integracoes}" th:attr="aria-current=${activePage == 'integracoes' ? 'page' : null}">Integrações</a>
     </div>
     <div class="sidebar-group sidebar-footer">
       <a th:href="@{/}">Voltar à loja</a>

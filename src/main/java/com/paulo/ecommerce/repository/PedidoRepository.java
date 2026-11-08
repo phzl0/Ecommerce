@@ -1,6 +1,7 @@
 package com.paulo.ecommerce.repository;
 
 import com.paulo.ecommerce.model.Pedido;
+import com.paulo.ecommerce.model.Pagamento;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -63,6 +64,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
       """
         SELECT p FROM Pedido p
         LEFT JOIN FETCH p.usuario
+        LEFT JOIN FETCH p.pagamento
         LEFT JOIN FETCH p.itens i
         LEFT JOIN FETCH i.produto
         WHERE p.id = :id
@@ -74,17 +76,19 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
 
   long countByStatusAndTemporadaPasseIdIsNull(Pedido.Status status);
 
-  @EntityGraph(attributePaths = {"usuario"})
+  @EntityGraph(attributePaths = {"usuario", "pagamento"})
   @Query("""
-      select p from Pedido p
+      select p from Pedido p left join p.pagamento pg
       where (:status is null or p.status = :status)
+        and (:pagamento is null or pg.status = :pagamento)
         and (:envio = false or p.temporadaPasseId is null)
         and (:busca = '' or locate(lower(:busca), lower(coalesce(p.numero, ''))) > 0
           or locate(lower(:busca), lower(p.usuario.nome)) > 0
           or locate(lower(:busca), lower(p.usuario.email)) > 0
           or str(p.id) = :busca)
       """)
-  Page<Pedido> buscarPedidosAdmin(Pedido.Status status, String busca, boolean envio, Pageable pagina);
+  Page<Pedido> buscarPedidosAdmin(Pedido.Status status, Pagamento.StatusPagamento pagamento,
+      String busca, boolean envio, Pageable pagina);
 
   @Query(
       """

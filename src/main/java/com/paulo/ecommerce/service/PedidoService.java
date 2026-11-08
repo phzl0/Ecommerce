@@ -7,9 +7,12 @@ import com.paulo.ecommerce.exception.EstoqueInsuficienteException;
 import com.paulo.ecommerce.exception.RecursoNaoEncontradoException;
 import com.paulo.ecommerce.model.ItemPedido;
 import com.paulo.ecommerce.model.Pedido;
+import com.paulo.ecommerce.model.PedidoMovimentacao;
+import com.paulo.ecommerce.model.Pagamento;
 import com.paulo.ecommerce.model.Produto;
 import com.paulo.ecommerce.model.Usuario;
 import com.paulo.ecommerce.repository.PedidoRepository;
+import com.paulo.ecommerce.repository.PedidoMovimentacaoRepository;
 import com.paulo.ecommerce.repository.ProdutoRepository;
 import com.paulo.ecommerce.repository.UsuarioRepository;
 import jakarta.servlet.http.HttpSession;
@@ -28,6 +31,7 @@ public class PedidoService {
   @org.springframework.beans.factory.annotation.Autowired private PasseService passes;
   @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
   private final PedidoRepository pedidoRepository;
+  private final PedidoMovimentacaoRepository movimentacoes;
   private final ProdutoRepository produtoRepository;
   private final UsuarioRepository usuarioRepository;
   private final CarrinhoService carrinhoService;
@@ -35,11 +39,13 @@ public class PedidoService {
 
   public PedidoService(
       PedidoRepository pedidoRepository,
+      PedidoMovimentacaoRepository movimentacoes,
       ProdutoRepository produtoRepository,
       UsuarioRepository usuarioRepository,
       CarrinhoService carrinhoService,
       EmailService emailService) {
     this.pedidoRepository = pedidoRepository;
+    this.movimentacoes = movimentacoes;
     this.produtoRepository = produtoRepository;
     this.usuarioRepository = usuarioRepository;
     this.carrinhoService = carrinhoService;
@@ -203,6 +209,38 @@ public class PedidoService {
     return pedido;
   }
 
+  public List<PedidoMovimentacao> historico(Long id) {
+    return movimentacoes.findByPedidoIdOrderByIdDesc(id);
+  }
+
+  public List<Pedido.Status> acoesOperacionais(Pedido pedido) {
+    List<Pedido.Status> acoes = new ArrayList<>();
+    boolean fisico = pedido.getTemporadaPasseId() == null;
+    boolean pagamentoAprovado = pedido.getPagamento() != null
+        && pedido.getPagamento().getStatus() == Pagamento.StatusPagamento.APROVADO;
+    if (fisico && pagamentoAprovado && pedido.getStatus() == Pedido.Status.CONFIRMADO) {
+      acoes.add(Pedido.Status.ENVIADO);
+    }
+    if (fisico && pagamentoAprovado && pedido.getStatus() == Pedido.Status.ENVIADO) {
+      acoes.add(Pedido.Status.ENTREGUE);
+    }
+    if (!pagamentoAprovado && pedido.getStatus() == Pedido.Status.PENDENTE) {
+      acoes.add(Pedido.Status.CANCELADO);
+    }
+    return acoes;
+  }
+
+  @org.springframework.cache.annotation.CacheEvict(
+      value = {"produto", "produtos", "metricas"}, allEntries = true)
+  @Transactional
+  public void atualizarStatusOperacional(Long id, Pedido.Status status) {
+    Pedido pedido = bloquearPedido(id);
+    if (!acoesOperacionais(pedido).contains(status)) {
+      throw new IllegalStateException("Esta ação não está disponível para o estado atual do pedido.");
+    }
+    aplicarStatus(pedido, status);
+  }
+
   @org.springframework.cache.annotation.CacheEvict(
       value = {"produto", "produtos", "metricas"},
       allEntries = true)
@@ -212,6 +250,10 @@ public class PedidoService {
         pedidoRepository
             .findLockedById(id)
             .orElseThrow(() -> new RecursoNaoEncontradoException("Pedido", id));
+    aplicarStatus(pedido, status);
+  }
+
+  private void aplicarStatus(Pedido pedido, Pedido.Status status) {
     if (pedido.getStatus() == status) return;
     if (pedido.getStatus() == Pedido.Status.CANCELADO
         || status == Pedido.Status.PENDENTE
@@ -244,6 +286,7 @@ public class PedidoService {
       case CANCELADO -> "Pedido cancelado";
       case PENDENTE -> throw new IllegalStateException("Transição de pedido inválida.");
     };
+    registrarMovimentacao(pedido, titulo);
     notificarStatus(pedido, titulo);
     emailService.enviarAtualizacaoStatus(pedido);
   }
@@ -271,6 +314,7 @@ public class PedidoService {
 
     pedido.setStatus(Pedido.Status.CANCELADO);
     pedidoRepository.save(pedido);
+    registrarMovimentacao(pedido, "Pedido cancelado pelo cliente");
     notificarStatus(pedido, "Pedido cancelado");
   }
 
@@ -288,7 +332,12 @@ public class PedidoService {
     devolverEstoque(pedido);
     pedido.setStatus(Pedido.Status.CANCELADO);
     pedidoRepository.save(pedido);
+    registrarMovimentacao(pedido, "Reserva do pedido expirada");
     notificarStatus(pedido, "Reserva do pedido expirada");
+  }
+
+  private void registrarMovimentacao(Pedido pedido, String descricao) {
+    movimentacoes.save(new PedidoMovimentacao(pedido.getId(), pedido.getStatus(), descricao));
   }
 
   private void notificarStatus(Pedido pedido, String titulo) {

@@ -94,6 +94,50 @@ public class ProdutoService {
   }
 
   @Transactional
+  @CacheEvict(value = {"produto", "produtos"}, allEntries = true)
+  public Produto salvarCadastro(Produto cadastro, Integer estoqueOriginal) {
+    validarSkuComercial(cadastro);
+    if (cadastro.getId() == null) return salvar(cadastro);
+
+    Produto produto = produtoComercialBloqueado(cadastro.getId());
+    if (estoqueOriginal == null || !estoqueOriginal.equals(cadastro.getEstoque())) {
+      if (!produto.getEstoque().equals(estoqueOriginal)) {
+        throw new IllegalStateException("O estoque mudou durante a edição. Reabra o produto para conferir o saldo atual.");
+      }
+      produto.setEstoque(cadastro.getEstoque());
+    }
+    produto.setNome(cadastro.getNome());
+    produto.setSku(cadastro.getSku());
+    produto.setMarca(cadastro.getMarca());
+    produto.setCategoria(cadastro.getCategoria());
+    produto.setPreco(cadastro.getPreco());
+    produto.setDescricaoCurta(cadastro.getDescricaoCurta());
+    produto.setDescricao(cadastro.getDescricao());
+    produto.setDestaque(cadastro.isDestaque());
+    if (cadastro.getImagemUrl() != null) produto.setImagemUrl(cadastro.getImagemUrl());
+    return salvar(produto);
+  }
+
+  @Transactional
+  @CacheEvict(value = {"produto", "produtos"}, allEntries = true)
+  public void definirVisibilidade(Long id, boolean ativo) {
+    produtoComercialBloqueado(id).setAtivo(ativo);
+  }
+
+  private Produto produtoComercialBloqueado(Long id) {
+    Produto produto = produtoRepository.findLockedById(id)
+        .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", id));
+    validarSkuComercial(produto);
+    return produto;
+  }
+
+  private void validarSkuComercial(Produto produto) {
+    if (produto.getSku() != null && produto.getSku().strip().toUpperCase(Locale.ROOT).startsWith("PASSE-MENSAL-")) {
+      throw new IllegalArgumentException("A família de SKUs PASSE-MENSAL é reservada à assinatura.");
+    }
+  }
+
+  @Transactional
   @CacheEvict(
       value = {"produto", "produtos"},
       allEntries = true)

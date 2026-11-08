@@ -328,3 +328,23 @@
     .admin-priorities, .form-row { grid-template-columns: minmax(0, 1fr); }
     .admin-main .pedido-admin-layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+.admin-main > .form-card + .form-card { margin-top: 16px; }
+.admin-data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(144px, 100%), 1fr));
+  gap: 12px;
+  margin: 12px 0;
+}
+.admin-data-grid div { min-width: 0; }
+.admin-data-grid dt { color: #4c6353; font-size: .8rem; }
+.admin-data-grid dd { margin: 4px 0 0; overflow-wrap: anywhere; font-weight: 650; }
+.admin-order-history { margin-top: 16px; }
+.admin-order-history ol { padding-left: 20px; margin: 8px 0 0; }
+.admin-order-history li { padding-block: 4px; }
+.admin-order-history time { display: block; color: #4c6353; font-size: .8rem; }
+.admin-product-form fieldset {
+  min-width: 0; border: 0; padding: 0; margin: 0 0 16px;
+  border-bottom: 1px solid #d9e5dc;
+}
+.admin-product-form legend { margin-bottom: 8px; padding: 0; font-weight: 750; }
