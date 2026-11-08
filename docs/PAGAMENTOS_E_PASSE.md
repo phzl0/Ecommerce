@@ -27,6 +27,8 @@ Para testes externos do Checkout Pro, configure credenciais da aplicação de te
 | `APP_PAYMENTS_WEBHOOK_SECRET` | Segredo da configuração de Webhooks |
 | `APP_URL` | Origem HTTPS pública da aplicação para notificações e retornos |
 
+O Compose local mantém o modo de cobrança real desativado. Para sandbox, informe a origem HTTPS em `APP_URL` no `.env`.
+
 Cadastre `/pagamento/webhook` como URL de notificações. O provedor não acessa `localhost`: os testes externos exigem uma origem HTTPS alcançável. Não use dados de cartão reais nos testes. Nenhuma credencial foi adicionada ao repositório e nenhum pagamento real foi executado nesta entrega.
 
 A assinatura usa `x-signature`, `x-request-id` e `data.id`, com janela de cinco minutos para o timestamp. Notificações inválidas retornam 401. Falhas no processamento retornam 503 para permitir nova tentativa, em vez de confirmar um processamento que não terminou.

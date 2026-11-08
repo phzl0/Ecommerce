@@ -2,7 +2,7 @@
 
 E-commerce gamificado com catálogo, sacola, pedidos, passe por temporada, missões, XP e recompensas digitais.
 
-**BETA para testes locais. Pagamentos desativados por padrão: o teste não cobra dinheiro.** A versão de teste está na branch `feat/checkout-gamification`; os comandos abaixo selecionam essa branch automaticamente.
+**BETA para testes locais. Pagamentos desativados por padrão: o teste não cobra dinheiro.** A versão de desenvolvimento local está na branch `develop`; os comandos abaixo selecionam essa branch.
 
 ## Testar no computador
 
@@ -18,7 +18,7 @@ Abra o terminal na sua pasta pessoal. Usamos a pasta **Ecommerce-beta** para nã
 
 ```bash
 cd ~
-git clone --branch feat/checkout-gamification https://github.com/phzl0/Ecommerce.git Ecommerce-beta
+git clone --branch develop https://github.com/phzl0/Ecommerce.git Ecommerce-beta
 cd ~/Ecommerce-beta
 ```
 
@@ -58,7 +58,7 @@ Se sua cópia está em `~/Projetos/Ecommerce`, execute os passos abaixo. **Você
 cd ~/Projetos/Ecommerce
 git status --short
 git fetch origin
-git switch feat/checkout-gamification
+git switch develop
 git pull --ff-only
 ```
 
@@ -90,7 +90,7 @@ Instale **Git, Python 3 e Docker Desktop**, com containers Linux/WSL 2. Abra o D
 
 ```powershell
 Set-Location $HOME
-git clone --branch feat/checkout-gamification https://github.com/phzl0/Ecommerce.git Ecommerce-beta
+git clone --branch develop https://github.com/phzl0/Ecommerce.git Ecommerce-beta
 Set-Location "$HOME/Ecommerce-beta"
 ```
 
@@ -111,7 +111,7 @@ docker compose logs -f app
 
 Quando aparecer `Started EcommerceApplication`, abra **http://localhost:8080**. **Ctrl+C** sai dos logs sem desligar a loja.
 
-**Já tem uma cópia no Windows?** Entre na pasta existente com `Set-Location "CAMINHO/DO/Ecommerce"`, rode `git fetch origin`, `git switch feat/checkout-gamification` e `git pull --ff-only`, um comando por vez. Depois execute as etapas 2 e 3. Não faça outro clone dentro da pasta existente.
+**Já tem uma cópia no Windows?** Entre na pasta existente com `Set-Location "CAMINHO/DO/Ecommerce"`, rode `git fetch origin`, `git switch develop` e `git pull --ff-only`, um comando por vez. Depois execute as etapas 2 e 3. Não faça outro clone dentro da pasta existente.
 
 ## O que testar
 
@@ -121,7 +121,7 @@ Quando aparecer `Started EcommerceApplication`, abra **http://localhost:8080**. 
 - **Gamificação:** abra o passe, faça check-in e explore as missões. Compras só geram XP após pagamento verificado; o modo demonstrativo não simula aprovação.
 - **Conta:** teste perfil, pedidos e coleção de benefícios digitais.
 
-O catálogo de demonstração vem habilitado na configuração inicial. A tela carrega bibliotecas externas, então mantenha acesso à internet.
+O catálogo de demonstração vem habilitado na configuração inicial. A tela carrega bibliotecas externas, então mantenha acesso à internet. Os dados de entrega preenchidos no checkout ficam em memória enquanto a tela está aberta. Se fechar ou recarregar após uma falha de rede no envio, consulte seus pedidos antes de refazer a compra.
 
 ## Atualizar ou parar
 
@@ -159,7 +159,7 @@ docker compose up -d
 | Pasta `Ecommerce-beta` já existe | Entre nela e use os comandos de atualização; não clone por cima. |
 | `permission denied ... docker.sock` | No Linux, use `sudo docker compose ...`. |
 | Não consegue conectar ao Docker | Inicie o serviço Docker no Linux ou abra o Docker Desktop no Windows. |
-| Porta 8080 já está em uso | Pare o outro aplicativo que utiliza essa porta antes de iniciar a loja. |
+| Porta 8080 já está em uso | Adicione `APP_PORT=8081` ao `.env`, rode `docker compose up --build -d` e abra http://localhost:8081. |
 | `localhost:8080` ainda não abre | Veja `docker compose ps` e `docker compose logs --tail=100 app`; aguarde a inicialização ou confira o erro. |
 | A senha não aparece no terminal | Digite normalmente e pressione Enter; a entrada fica oculta por segurança. |
 
@@ -187,7 +187,7 @@ O backend é um monólito modular em **Java 17 e Spring Boot**, com **PostgreSQL
 
 Com a configuração inicial, o checkout informa **modo de demonstração** e cria um pedido pendente; nenhuma cobrança é feita. O pedido pode ser cancelado para liberar o estoque. Não há rota pública que permita simular uma compra aprovada para ganhar XP.
 
-Para configurar testes do Mercado Pago, consulte [Pagamentos e Passe](https://github.com/phzl0/Ecommerce/blob/feat/checkout-gamification/docs/PAGAMENTOS_E_PASSE.md). Credenciais ficam apenas no backend. O Webhook exige uma origem HTTPS pública; o provedor não acessa `localhost` diretamente.
+Para configurar testes do Mercado Pago, consulte [Pagamentos e Passe](https://github.com/phzl0/Ecommerce/blob/develop/docs/PAGAMENTOS_E_PASSE.md). Credenciais ficam apenas no backend. O Webhook exige uma origem HTTPS pública; o provedor não acessa `localhost` diretamente.
 
 Não basta colocar um token e considerar a loja validada: antes de ativar vendas, confira o fluxo real de aprovação/rejeição, assinatura, recebedor, frete, descontos, cancelamentos, notificações, disponibilidade do estoque e política de devoluções.
 
@@ -201,7 +201,7 @@ Não basta colocar um token e considerar a loja validada: antes de ativar vendas
 - Cupons são individuais, vinculados à conta, de uso único e com condições registradas no resgate. O padrão é R$ 10 de desconto em produtos a partir de R$ 100.
 - A coleção permite resgatar e utilizar os benefícios digitais. Não há sorteio nem entrega física automática de prêmios nesta beta.
 
-As variáveis de níveis, preço, XP, cupons, fuso e gasto mínimo estão descritas no [guia de regras e operação](https://github.com/phzl0/Ecommerce/blob/feat/checkout-gamification/docs/PAGAMENTOS_E_PASSE.md).
+As variáveis de níveis, preço, XP, cupons, fuso e gasto mínimo estão descritas no [guia de regras e operação](https://github.com/phzl0/Ecommerce/blob/develop/docs/PAGAMENTOS_E_PASSE.md).
 
 ## Limites e próximos cuidados
 
@@ -225,6 +225,6 @@ Os testes padrão usam H2 descartável. O workflow também roda com PostgreSQL 1
 
 Para integração PostgreSQL, use `TEST_DB_URL`, `TEST_DB_USER`, `TEST_DB_PASSWORD` e `TEST_DB_DRIVER` apontando exclusivamente para um banco descartável terminado em `_test`. Os testes criam/removem estruturas nesse banco. Nunca use dados pessoais ou o banco publicado.
 
-Esta entrega está na branch `feat/checkout-gamification`. Nenhuma publicação ou alteração do banco hospedado foi executada. Consulte [o guia operacional](https://github.com/phzl0/Ecommerce/blob/feat/checkout-gamification/docs/PAGAMENTOS_E_PASSE.md) antes de atualizar um ambiente existente.
+Esta entrega está na branch `develop`. Nenhuma publicação ou alteração do banco hospedado foi executada. Consulte [o guia operacional](https://github.com/phzl0/Ecommerce/blob/develop/docs/PAGAMENTOS_E_PASSE.md) antes de atualizar um ambiente existente.
 
 Desenvolvimento e manutenção: [phzl0](https://github.com/phzl0).

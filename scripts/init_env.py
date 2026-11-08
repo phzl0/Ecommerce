@@ -1,6 +1,7 @@
 """First local configuration. Does not overwrite an existing environment."""
 
 import getpass
+import os
 from pathlib import Path
 import secrets
 
@@ -27,7 +28,13 @@ def quote(value):
     return "'" + value.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 
-with path.open("x") as out:
+try:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+except FileExistsError:
+    print(".env já existe. Nenhuma configuração foi alterada.")
+    raise SystemExit(0)
+
+with os.fdopen(fd, "w", encoding="utf-8") as out:
     out.write(
         "POSTGRES_PASSWORD="
         + secrets.token_urlsafe(32)
@@ -37,7 +44,6 @@ with path.open("x") as out:
         + quote(password)
         + "\nDEMO_DATA_ENABLED=true\nAPP_PAYMENTS_ENABLED=false\nAPP_PAYMENTS_LIVE_MODE=false\n"
     )
-path.chmod(0o600)
 print(
     "Configuração local criada. As senhas não serão exibidas. Agora execute docker compose up --build -d."
 )
