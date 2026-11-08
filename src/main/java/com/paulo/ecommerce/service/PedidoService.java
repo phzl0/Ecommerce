@@ -16,7 +16,10 @@ import com.paulo.ecommerce.repository.PedidoMovimentacaoRepository;
 import com.paulo.ecommerce.repository.ProdutoRepository;
 import com.paulo.ecommerce.repository.UsuarioRepository;
 import jakarta.servlet.http.HttpSession;
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Comparator;
 import java.util.UUID;
 import java.util.List;
@@ -95,6 +98,43 @@ public class PedidoService {
     return pedidoRepository.save(pedido);
   }
 
+  public record Cotacao(BigDecimal subtotal, BigDecimal frete, BigDecimal desconto, BigDecimal total,
+      Map<Long, BigDecimal> precos, String cupomErro) {}
+
+  @Transactional(readOnly = true)
+  public Cotacao cotar(String email, String cupom, List<CheckoutItemRequest> itens) {
+    Map<Long, Integer> quantidades = new HashMap<>();
+    for (var item : itens) quantidades.merge(item.produtoId(), item.quantidade(), Integer::sum);
+    Map<Long, BigDecimal> precos = new HashMap<>();
+    BigDecimal subtotal = BigDecimal.ZERO;
+    for (var produto : produtoRepository.findAllById(quantidades.keySet())) {
+      int quantidade = quantidades.get(produto.getId());
+      validarDisponibilidade(produto, quantidade);
+      precos.put(produto.getId(), produto.getPreco());
+      subtotal = subtotal.add(produto.getPreco().multiply(BigDecimal.valueOf(quantidade)));
+    }
+    if (precos.size() != quantidades.size()) {
+      throw new IllegalArgumentException("Um produto da sacola não está mais disponível.");
+    }
+    validarSubtotal(subtotal);
+    BigDecimal frete = calcularFrete(subtotal);
+    BigDecimal desconto = BigDecimal.ZERO;
+    String cupomErro = null;
+    if (cupom != null && !cupom.isBlank()) {
+      if (email == null) {
+        cupomErro = "Entre na sua conta para aplicar um cupom.";
+      } else {
+        var usuario = usuarioRepository.findByEmail(email).orElseThrow();
+        try {
+          desconto = passes.consultarDescontoCupom(usuario, cupom, subtotal);
+        } catch (IllegalArgumentException | IllegalStateException erro) {
+          cupomErro = erro.getMessage();
+        }
+      }
+    }
+    return new Cotacao(subtotal, frete, desconto, subtotal.add(frete).subtract(desconto), precos, cupomErro);
+  }
+
   private Pedido criarPedido(
       Usuario usuario, CheckoutForm checkoutForm, List<CheckoutItemRequest> itensCarrinho) {
 
@@ -123,11 +163,7 @@ public class PedidoService {
               .findLockedById(ci.produtoId())
               .orElseThrow(() -> new RecursoNaoEncontradoException("Produto", ci.produtoId()));
 
-      if (!produto.isAtivo()
-          || ci.quantidade() <= 0
-          || produto.getEstoque() < ci.quantidade()) {
-        throw new EstoqueInsuficienteException(produto.getNome());
-      }
+      validarDisponibilidade(produto, ci.quantidade());
 
       produto.setEstoque(produto.getEstoque() - ci.quantidade());
       produtoRepository.save(produto);
@@ -145,8 +181,7 @@ public class PedidoService {
             .map(
                 i -> i.getPrecoUnitario().multiply(java.math.BigDecimal.valueOf(i.getQuantidade())))
             .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-    if (subtotal.compareTo(new java.math.BigDecimal("9999999.99")) > 0)
-      throw new IllegalArgumentException("O valor deste pedido excede o limite suportado.");
+    validarSubtotal(subtotal);
     pedido.setSubtotal(subtotal);
     pedido.setFrete(calcularFrete(subtotal));
     pedido.setTotal(subtotal.add(pedido.getFrete()));
@@ -354,6 +389,18 @@ public class PedidoService {
       Produto produto = produtoRepository.findLockedById(item.getProduto().getId()).orElseThrow();
       produto.setEstoque(produto.getEstoque() + item.getQuantidade());
       produtoRepository.save(produto);
+    }
+  }
+
+  private void validarDisponibilidade(Produto produto, int quantidade) {
+    if (!produto.isAtivo() || quantidade <= 0 || produto.getEstoque() < quantidade) {
+      throw new EstoqueInsuficienteException(produto.getNome());
+    }
+  }
+
+  private void validarSubtotal(BigDecimal subtotal) {
+    if (subtotal.compareTo(new BigDecimal("9999999.99")) > 0) {
+      throw new IllegalArgumentException("O valor deste pedido excede o limite suportado.");
     }
   }
 

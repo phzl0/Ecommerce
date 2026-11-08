@@ -149,6 +149,24 @@ class CommerceIntegrationTest {
     assertTrue(
         passes.colecao(u.getEmail()).stream()
             .anyMatch(r -> r.get("codigo").equals(claim.codigo())));
+    var produto = product();
+    var payload = """
+        {"itens":[{"produtoId":%d,"quantidade":1}],"cupom":"%s"}
+        """.formatted(produto.getId(), claim.codigo());
+    mvc.perform(post("/api/checkout/quote").with(csrf())
+            .contentType("application/json").content(payload))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.desconto").value(0))
+        .andExpect(jsonPath("$.cupomErro").value("Entre na sua conta para aplicar um cupom."));
+    mvc.perform(post("/api/checkout/quote").with(user(u.getEmail()).roles("CLIENTE")).with(csrf())
+            .contentType("application/json").content(payload))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.subtotal").value(100))
+        .andExpect(jsonPath("$.frete").value(24.9))
+        .andExpect(jsonPath("$.desconto").value(10))
+        .andExpect(jsonPath("$.total").value(114.9));
+    assertEquals(5, products.findById(produto.getId()).orElseThrow().getEstoque());
+
     var order = new Pedido();
     order.setUsuario(u);
     order.setNumero("COUPON-TEST");

@@ -120,6 +120,7 @@ public class SecurityConfig {
                     .requestMatchers("/api/cep/**", "/api/store/**", "/api/auth/me", "/api/auth/register",
                         "/api/auth/password/forgot", "/api/auth/password/reset", "/api/events")
                     .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/checkout/quote").permitAll()
                     .requestMatchers("/api/checkout/**")
                     .hasAnyRole("CLIENTE", "ADMIN")
                     .requestMatchers("/api/account/**")

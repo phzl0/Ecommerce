@@ -9,7 +9,7 @@ async function login(page, email, password, destination = "/conta") {
 }
 
 test("registers, earns event XP from a local purchase and claims a badge", async ({ page, browser }) => {
-  test.setTimeout(120_000);
+  test.setTimeout(150_000);
   const email = "evento@example.test";
   const password = "a-memorable-test-password";
   await page.setViewportSize({ width: 390, height: 844 });
@@ -83,7 +83,18 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(page).toHaveURL(/\/pedidos\/\d+/);
     const orderId = new URL(page.url()).pathname.split("/").pop();
     await page.getByRole("link", { name: /Sacola/ }).click();
-    await expect(page.getByText(product.nome, { exact: true })).toBeVisible();
+    const cartItems = page.getByRole("region", { name: "Produtos da sacola" });
+    await expect(cartItems.getByText(product.nome, { exact: true })).toBeVisible();
+    await expect(cartItems).toHaveCSS("grid-template-columns", /^\d+px \d+px$/);
+    await expect(page.getByRole("region", { name: "Endereço de entrega" })).toContainText("Rua Teste");
+    await cartItems.getByRole("button", { name: "Remover", exact: true }).click();
+    await expect(cartItems).toHaveCount(0);
+    await page.getByRole("button", { name: "Desfazer", exact: true }).click();
+    await expect(cartItems.getByText(product.nome, { exact: true })).toBeVisible();
+    await page.getByLabel("Cupom de desconto").fill("INVALIDO");
+    await page.getByRole("button", { name: "Aplicar cupom" }).click();
+    await expect(page.getByRole("alert")).toHaveText("Cupom não encontrado nesta conta.");
+    await page.getByRole("button", { name: "Limpar cupom" }).click();
     expect((await page.request.get("/admin/eventos")).status()).toBe(403);
     await admin.goto("/admin");
     await admin.getByRole("link", { name: /Aguardando pagamento/ }).click();
@@ -94,6 +105,13 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await admin.getByRole("link", { name: "Detalhes →" }).click();
     await admin.getByRole("button", { name: "Simular pagamento aprovado" }).click();
     await expect(admin.getByText("Pagamento simulado. Nenhuma cobrança foi realizada.")).toBeVisible();
+    await page.goto("/pedidos/" + orderId);
+    const purchaseGains = page.locator(".lc-gain-region");
+    await expect(purchaseGains.getByText(/Compra aprovada do pedido/)).toBeVisible();
+    await expect(purchaseGains.getByRole("link", { name: "Ver passe" })).toBeVisible();
+    await expect(purchaseGains.locator(".lc-gain-toast")).toHaveCSS("animation-name", "lc-gain-enter");
+    await purchaseGains.getByRole("button", { name: "Fechar aviso" }).click();
+    await expect(purchaseGains.getByText(/Recompensa disponível/)).toBeVisible();
     const history = admin.getByRole("region", { name: "Histórico do pedido" });
     await expect(history.getByText("Pagamento confirmado", { exact: true })).toBeVisible();
     await admin.getByRole("button", { name: "Aplicar ação" }).click();
@@ -144,6 +162,22 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await claim.click();
     await expect(page.getByRole("button", { name: /^Recebido · nível 1 ·/ })).toBeDisabled();
     await expect(gains.getByText("Recompensa recebida", { exact: true })).toBeVisible();
+    const rewards = await (await page.request.get("/api/pass/rewards")).json();
+    const coupon = rewards.find(item => item.tipo === "Cupom");
+    await page.goto("/sacola");
+    const quantity = Math.ceil(Number(coupon.minimo) / Number(product.preco));
+    for (let count = 1; count < quantity; count++) {
+      await page.getByRole("button", { name: /^Aumentar quantidade/ }).click();
+    }
+    await page.getByLabel("Cupom de desconto").fill(coupon.codigo);
+    await page.getByRole("button", { name: "Aplicar cupom" }).click();
+    await expect(page.getByText(/Cupom aplicado: LC-/)).toBeVisible();
+    const summary = page.getByRole("complementary", { name: "Resumo da compra" });
+    await expect(summary).toContainText("Desconto");
+    await summary.getByRole("button", { name: "Continuar para pagamento" }).click();
+    await expect(page).toHaveURL(/\/checkout$/);
+    await expect(page.getByLabel("Cupom da sua coleção")).toHaveValue(coupon.codigo);
+    await expect(summary).toContainText("Desconto");
 
     await page.goto("/eventos");
     await event.getByRole("button", { name: "Resgatar selo" }).click();

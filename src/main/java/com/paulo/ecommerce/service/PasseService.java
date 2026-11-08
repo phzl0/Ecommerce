@@ -565,6 +565,17 @@ public class PasseService {
   @Transactional
   public BigDecimal usarCupom(
       Usuario usuario, String codigo, com.paulo.ecommerce.model.Pedido pedido) {
+    var resgate = validarCupom(usuario, codigo, pedido.getSubtotal());
+    resgate.setPedidoUtilizado(pedido);
+    recompensaResgateRepository.save(resgate);
+    return resgate.getValorCupom();
+  }
+
+  public BigDecimal consultarDescontoCupom(Usuario usuario, String codigo, BigDecimal subtotal) {
+    return validarCupom(usuario, codigo, subtotal).getValorCupom();
+  }
+
+  private PasseRecompensaResgate validarCupom(Usuario usuario, String codigo, BigDecimal subtotal) {
     var resgate =
         recompensaResgateRepository
             .findByUsuarioIdAndCodigoEntrega(
@@ -579,11 +590,11 @@ public class PasseService {
       throw new IllegalArgumentException("Cupom já utilizado ou reservado em outro pedido.");
     if (resgate.getValorCupom() == null || resgate.getMinimoCupom() == null)
       throw new IllegalStateException("Resgate o cupom novamente para emitir as condições.");
-    if (pedido.getSubtotal().compareTo(resgate.getMinimoCupom()) < 0)
-      throw new IllegalArgumentException("Pedido abaixo do valor mínimo do cupom.");
-    resgate.setPedidoUtilizado(pedido);
-    recompensaResgateRepository.save(resgate);
-    return resgate.getValorCupom();
+    if (subtotal.compareTo(resgate.getMinimoCupom()) < 0) {
+      var moeda = java.text.NumberFormat.getCurrencyInstance(LOCALE_PT_BR);
+      throw new IllegalArgumentException("Este cupom exige " + moeda.format(resgate.getMinimoCupom()) + " em produtos.");
+    }
+    return resgate;
   }
 
   @Transactional
@@ -807,7 +818,9 @@ public class PasseService {
         Math.min(
             temporada.getTotalNiveis() * temporada.getXpPorNivel(),
             progressoUsuario.getXpTotal() + xp);
-    int xpCreditado = xpTotal - progressoUsuario.getXpTotal();
+    int xpAnterior = progressoUsuario.getXpTotal();
+    int nivelAnterior = progressoUsuario.getNivelAtual();
+    int xpCreditado = xpTotal - xpAnterior;
     progressoUsuario.setXpTotal(xpTotal);
     progressoUsuario.setNivelAtual(
         Math.max(1, Math.min(temporada.getTotalNiveis(), xpTotal / temporada.getXpPorNivel())));
@@ -826,8 +839,26 @@ public class PasseService {
     historico.setDescricao(descricao);
     xpHistoricoRepository.save(historico);
     if (xpCreditado > 0) {
-      notificacoes.registrar(usuario.getId(), "XP recebido", "+" + xpCreditado + " XP · " + descricao, "/passe");
+      String mensagem = "+" + xpCreditado + " XP · " + descricao;
+      if (progressoUsuario.getNivelAtual() > nivelAnterior) {
+        mensagem += " · Nível " + progressoUsuario.getNivelAtual() + " alcançado";
+      }
+      int xpPorNivel = temporada.getXpPorNivel();
+      if (xpTotal / xpPorNivel > xpAnterior / xpPorNivel
+          && premioLiberado(usuario, temporada, xpAnterior / xpPorNivel, xpTotal / xpPorNivel)) {
+        mensagem += " · Recompensa disponível";
+      }
+      notificacoes.registrar(usuario.getId(), "XP recebido", mensagem, "/passe");
     }
+  }
+
+  private boolean premioLiberado(Usuario usuario, PasseTemporada temporada, int nivelAntes, int nivelDepois) {
+    var resgatados = recompensaResgateRepository.findByUsuarioIdAndTemporadaId(usuario.getId(), temporada.getId())
+        .stream().map(resgate -> resgate.getRecompensa().getId()).collect(Collectors.toSet());
+    boolean premium = validadePremium(usuario, temporada, LocalDateTime.now()) != null;
+    return recompensaRepository.findByTemporadaIdOrderByNivelAsc(temporada.getId()).stream()
+        .anyMatch(recompensa -> recompensa.getNivel() > nivelAntes && recompensa.getNivel() <= nivelDepois
+            && !resgatados.contains(recompensa.getId()) && (premium || !exigePremium(recompensa)));
   }
 
   private PasseTemporada criarTemporada(YearMonth yearMonth) {

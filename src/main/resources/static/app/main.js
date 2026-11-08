@@ -178,6 +178,11 @@ function useLocalCart() {
     setItems((current) => current.filter((item) => item.id !== productId));
   };
 
+  const restoreItem = (item, index) => {
+    setItems(current => current.some(entry => entry.id === item.id)
+      ? current : [...current.slice(0, index), item, ...current.slice(index)]);
+  };
+
   const clearCart = () => {
     localStorage.removeItem(CART_KEY);
     setItems([]);
@@ -190,6 +195,7 @@ function useLocalCart() {
     addItem,
     updateQuantity,
     removeItem,
+    restoreItem,
     clearCart,
   };
 }
@@ -602,7 +608,7 @@ const addressFields = [
   ["bairro", "Bairro", 80], ["cidade", "Cidade", 80, "address-level2"], ["estado", "UF", 2, "address-level1"],
 ];
 
-function AddressPage({ address, onSaved, notify }) {
+function AddressPage({ address, onSaved, notify, backHref = "/conta" }) {
   const [form, setForm] = useState(() => ({ ...address }));
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
@@ -628,7 +634,7 @@ function AddressPage({ address, onSaved, notify }) {
 
   return html`<main className="lc-page lc-account-page">
     <header className="lc-store-heading">
-      <${AppLink} href="/conta">‹ Minha conta<//>
+      <${AppLink} href=${backHref}>${backHref === "/sacola" ? "‹ Minha sacola" : "‹ Minha conta"}<//>
       <h1>Endereço de entrega</h1>
       <p>Salve um endereço padrão para usar nas suas compras.</p>
     </header>
@@ -1001,88 +1007,127 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
   `;
 }
 
-function CartPage({ items, updateQuantity, removeItem }) {
-  const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + item.preco * item.quantity, 0),
-    [items],
-  );
-  const freight =
-    subtotal >= 299 ? 0 : subtotal >= 149 ? 14.9 : items.length ? 24.9 : 0;
-  const total = subtotal + freight;
+function useCheckoutQuote(items, coupon) {
+  const body = JSON.stringify({
+    itens: items.map(item => ({ produtoId: item.id, quantidade: item.quantity })),
+    cupom: coupon.trim(),
+  });
+  const [state, setState] = useState(null);
+  const hasItems = items.length > 0;
 
-  return html`
-    <main className="lc-page lc-cart-page">
-      <section className="lc-cart-shell">
-        <div className="lc-cart-list">
-          <div className="lc-section-header">
-            <div>
-              <h1>Minha sacola</h1>
-              <p>Revise os itens antes de seguir para endereco e pagamento.</p>
-            </div>
-          </div>
-          ${items.length === 0 ? html`<p className="lc-empty-state">Sua sacola ainda esta vazia.</p>` : null}
-          ${items.map(
-            (item) => html`
-              <article key=${item.id} className="lc-cart-item">
-                <img
-                  src=${item.imagemUrl || "/images/sem-foto.png"}
-                  alt=${item.nome}
-                />
-                <div>
-                  <${AppLink} href=${`/produto/${item.id}`}><strong>${item.nome}</strong><//>
-                  <span>${currency(item.preco)} por unidade</span>
-                  <div className="lc-qty-row">
-                    <button
-                      type="button"
-                      onClick=${() => updateQuantity(item.id, item.quantity - 1)}
-                    >
-                      -
-                    </button>
-                    <span>${item.quantity}</span>
-                    <button
-                      type="button"
-                      onClick=${() => updateQuantity(item.id, item.quantity + 1)}
-                    >
-                      +
-                    </button>
-                    <button
-                      type="button"
-                      className="lc-link-button"
-                      onClick=${() => removeItem(item.id)}
-                    >
-                      Remover
-                    </button>
-                  </div>
-                </div>
-                <strong>${currency(item.preco * item.quantity)}</strong>
-              </article>
-            `,
-          )}
-        </div>
-        <aside className="lc-cart-summary">
-          <span>Resumo da compra</span>
-          <div className="lc-summary-line">
-            <span>Subtotal</span><strong>${currency(subtotal)}</strong>
-          </div>
-          <div className="lc-summary-line">
-            <span>Frete</span
-            ><strong>${freight === 0 ? "Gratis" : currency(freight)}</strong>
-          </div>
-          <hr />
-          <strong className="lc-summary-total">${currency(total)}</strong>
-          <p className="lc-checkout-note">
-            ${freight === 0 ? "Voce atingiu frete gratis." : "Frete gratis a partir de R$ 299,00."}
-          </p>
-          <${AppLink} href=${items.length ? "/checkout" : "/catalogo"} className="lc-btn lc-btn-primary">
-            ${items.length ? "Continuar compra" : "Ver catálogo"}
-          <//>
-        </aside>
-      </section>
-    </main>
-  `;
+  useEffect(() => {
+    if (!hasItems) return;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      postJson("/api/checkout/quote", JSON.parse(body))
+        .then(quote => { if (active) setState({ body, quote }); })
+        .catch(error => { if (active) setState({ body, error: error.message || "Não foi possível calcular o total." }); });
+    }, 200);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [body, hasItems]);
+
+  return state?.body === body ? state : { loading: hasItems };
 }
 
-function CheckoutPage({ items, auth, clearCart, address }) {
+function PurchaseTotals({ quote, loading, error }) {
+  if (!quote) return html`<p className="lc-checkout-note" role=${error ? "alert" : "status"}>
+    ${error || (loading ? "Calculando os valores da compra…" : "Nenhum produto nesta compra.")}
+  </p>`;
+  return html`
+    <div className="lc-summary-line"><span>Subtotal</span><strong>${currency(quote.subtotal)}</strong></div>
+    <div className="lc-summary-line"><span>Frete</span><strong>${Number(quote.frete) === 0 ? "Grátis" : currency(quote.frete)}</strong></div>
+    ${Number(quote.desconto) > 0 ? html`<div className="lc-summary-line lc-summary-discount">
+      <span>Desconto</span><strong>− ${currency(quote.desconto)}</strong>
+    </div>` : null}
+    <div className="lc-summary-line lc-summary-total"><span>Total</span><strong>${currency(quote.total)}</strong></div>`;
+}
+
+function CartPage({ items, updateQuantity, removeItem, auth, address, coupon, setCoupon }) {
+  const [draft, setDraft] = useState(coupon);
+  const { quote, loading, error } = useCheckoutQuote(items, coupon);
+  const addressHref = "/conta/endereco?voltar=sacola";
+
+  return html`<main className="lc-page lc-cart-page">
+    <header className="lc-section-header"><div>
+      <h1>Minha sacola</h1>
+      <p>Revise os itens, a entrega e o total antes de seguir para o pagamento.</p>
+    </div></header>
+    ${!items.length ? html`<div className="lc-empty-state">
+      <p>Sua sacola ainda está vazia.</p>
+      <${AppLink} href="/catalogo" className="lc-btn lc-btn-primary">Ver catálogo<//>
+    </div>` : html`
+      <section className="lc-cart-list" aria-label="Produtos da sacola">
+        ${items.map(item => {
+          const price = quote?.precos[item.id] ?? item.preco;
+          return html`<article key=${item.id} className="lc-cart-item">
+            <img src=${item.imagemUrl || "/images/sem-foto.png"} alt="" loading="lazy" onError=${event => {
+              if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
+            }} />
+            <div className="lc-cart-item-info">
+              <${AppLink} href=${`/produto/${item.id}`}><strong>${item.nome}</strong><//>
+              <span>${currency(price)} por unidade</span>
+            </div>
+            <div className="lc-cart-item-actions">
+              <div className="lc-qty-row">
+                <button type="button" aria-label=${`Diminuir quantidade de ${item.nome}`} disabled=${item.quantity <= 1}
+                  onClick=${() => updateQuantity(item.id, item.quantity - 1)}>−</button>
+                <span aria-label="Quantidade">${item.quantity}</span>
+                <button type="button" aria-label=${`Aumentar quantidade de ${item.nome}`} disabled=${item.quantity >= 999}
+                  onClick=${() => updateQuantity(item.id, item.quantity + 1)}>+</button>
+              </div>
+              <button type="button" className="lc-link-button" onClick=${() => removeItem(item.id)}>Remover</button>
+              <strong className="lc-cart-item-total">${currency(price * item.quantity)}</strong>
+            </div>
+          </article>`;
+        })}
+      </section>
+      <div className="lc-cart-review">
+        <div className="lc-cart-options">
+          <section className="lc-checkout-card" aria-labelledby="cart-address">
+            <h2 id="cart-address">Endereço de entrega</h2>
+            ${address ? html`<address>
+              <strong>${address.endereco}, ${address.numero}${address.complemento ? ` · ${address.complemento}` : ""}</strong>
+              <span>${address.bairro} · ${address.cidade} / ${address.estado} · ${formatCep(address.cep)}</span>
+            </address>` : html`<p className="lc-checkout-note">Escolha onde quer receber a compra.</p>`}
+            <${AppLink} href=${auth.authenticated ? addressHref : buildLoginUrl(addressHref)}
+              className="lc-btn lc-btn-ghost">${address ? "Alterar endereço" : "Adicionar endereço"}<//>
+          </section>
+          <section className="lc-checkout-card" aria-labelledby="cart-coupon">
+            <h2 id="cart-coupon">Cupom</h2>
+            ${auth.authenticated ? html`<form className="lc-cart-coupon-form" onSubmit=${event => {
+              event.preventDefault();
+              const code = draft.trim().toUpperCase();
+              setDraft(code);
+              setCoupon(code);
+            }}>
+              <label>Cupom de desconto<input value=${draft} maxLength="60" placeholder="LC-..."
+                onChange=${event => setDraft(event.target.value)} /></label>
+              <button type="submit" className="lc-btn lc-btn-ghost" disabled=${!draft.trim()}>Aplicar cupom</button>
+            </form>` : html`<${AppLink} href=${buildLoginUrl("/sacola")}>Entrar para aplicar cupom<//>`}
+            ${coupon ? html`<div className="lc-cart-coupon-status">
+              ${quote?.cupomErro ? html`<span role="alert">${quote.cupomErro}</span>` : quote
+                ? html`<span role="status">Cupom aplicado: ${coupon}</span>` : null}
+              <button type="button" className="lc-link-button" onClick=${() => { setCoupon(""); setDraft(""); }}>Limpar cupom</button>
+            </div>` : null}
+          </section>
+        </div>
+        <aside className="lc-cart-summary" aria-label="Resumo da compra">
+          <h2>Resumo da compra</h2>
+          <${PurchaseTotals} quote=${quote} loading=${loading} error=${error} />
+          <button type="button" className="lc-btn lc-btn-primary" disabled=${!quote}
+            onClick=${() => {
+              if (quote.cupomErro) setCoupon("");
+              navigate("/checkout");
+            }}>Continuar para pagamento</button>
+        </aside>
+      </div>`}
+  </main>`;
+}
+
+function CheckoutPage({ items, auth, clearCart, address, initialCoupon }) {
   const [paymentConfig, setPaymentConfig] = useState(null);
   useEffect(() => {
     if (auth.authenticated)
@@ -1090,16 +1135,10 @@ function CheckoutPage({ items, auth, clearCart, address }) {
         .then(setPaymentConfig)
         .catch(() => {});
   }, [auth.authenticated]);
-  const [form, setForm] = useState(() => ({ ...initialCheckoutForm(), ...address }));
+  const [form, setForm] = useState(() => ({ ...initialCheckoutForm(), ...address, cupom: initialCoupon }));
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
-  const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + item.preco * item.quantity, 0),
-    [items],
-  );
-  const freight =
-    subtotal >= 299 ? 0 : subtotal >= 149 ? 14.9 : items.length ? 24.9 : 0;
-  const total = subtotal + freight;
+  const { quote, loading, error: quoteError } = useCheckoutQuote(items, form.cupom);
 
   const checkoutAttempt = useRef(null);
   const requestInProgress = useRef(false);
@@ -1228,8 +1267,8 @@ function CheckoutPage({ items, auth, clearCart, address }) {
                 placeholder="LC-..."
             /></label>
             <p className="lc-checkout-note">
-              O desconto é validado no servidor e aparece no total final do
-              pedido.
+              ${quote?.cupomErro || (Number(quote?.desconto) > 0
+                ? "Cupom aplicado." : "O desconto aparece no resumo depois da validação.")}
             </p>
             <h3>Forma de pagamento</h3>
             ${paymentConfig && !paymentConfig.enabled ? html`<p role="status" className="lc-checkout-note">Modo demonstração: nenhuma cobrança será feita. O pedido será salvo como pendente para testar a jornada.</p>` : null}
@@ -1263,7 +1302,6 @@ function CheckoutPage({ items, auth, clearCart, address }) {
         </div>
         <aside className="lc-cart-summary" aria-label="Resumo da compra">
           <h2>Resumo da compra</h2>
-          ${items.length ? null : html`<p>Nenhum produto nesta compra.</p>`}
           ${items.map(
             (item) => html`
               <div key=${item.id} className="lc-checkout-item">
@@ -1272,19 +1310,11 @@ function CheckoutPage({ items, auth, clearCart, address }) {
                     if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
                   }} />
                 <div><span>${item.nome}</span><small>Quantidade ${item.quantity}</small></div>
-                <strong>${currency(item.preco * item.quantity)}</strong>
+                <strong>${currency((quote?.precos[item.id] ?? item.preco) * item.quantity)}</strong>
               </div>
             `,
           )}
-          <hr />
-          <div className="lc-summary-line">
-            <span>Subtotal</span><strong>${currency(subtotal)}</strong>
-          </div>
-          <div className="lc-summary-line">
-            <span>Frete</span
-            ><strong>${freight === 0 ? "Grátis" : currency(freight)}</strong>
-          </div>
-          <div className="lc-summary-line lc-summary-total"><span>Total</span><strong>${currency(total)}</strong></div>
+          ${quoteError && message ? null : html`<${PurchaseTotals} quote=${quote} loading=${loading} error=${quoteError} />`}
           ${message ? html`<p className="lc-checkout-note" role="alert">${message}</p>` : null}
           ${
             auth.authenticated
@@ -2164,14 +2194,19 @@ function Footer() {
 
 function GainToast({ item, dismiss }) {
   useEffect(() => {
-    const timer = window.setTimeout(() => dismiss(item.id), 6500);
+    const timer = window.setTimeout(() => dismiss(item.id), 5000);
     return () => window.clearTimeout(timer);
   }, [item.id, dismiss]);
+  const [value, ...details] = item.kind === "xp" ? item.text.split(" · ") : ["", item.text];
   return html`<div className="lc-toast lc-gain-toast">
     <span className="lc-gain-mark" aria-hidden="true">
       ${item.kind === "xp" ? "XP" : html`<${Icon} name="check" />`}
     </span>
-    <div><strong>${item.title}</strong><span>${item.text}</span></div>
+    <div><strong>${item.title}</strong>
+      ${value ? html`<strong className="lc-gain-value">${value}</strong>` : null}
+      <span>${details.join(" · ")}</span>
+      ${item.kind === "xp" ? html`<${AppLink} href="/passe" className="lc-toast-link">Ver passe<//>` : null}
+    </div>
     <button type="button" aria-label="Fechar aviso" onClick=${() => dismiss(item.id)}>×</button>
   </div>`;
 }
@@ -2187,6 +2222,7 @@ function App() {
     setDark(!dark);
   };
   const cart = useLocalCart();
+  const [cartCoupon, setCartCoupon] = useState("");
   const [immediateItem, setImmediateItem] = useState(() => readStorage(BUY_NOW_KEY, null, sessionStorage));
   const immediateCheckout = parseRoute(route).params.get("modo") === "imediato";
   const clearImmediateCheckout = () => {
@@ -2221,16 +2257,16 @@ function App() {
       getJson("/api/account/notifications").then(setNotificationBox).catch(() => {});
   };
 
-  const notify = (title, text = "", error = false, kind, href) => {
-    setNotice({ title, text, error, kind, href });
+  const notify = (title, text = "", error = false, kind, href, undo) => {
+    setNotice({ title, text, error, kind, href, undo });
     window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setNotice(null), href ? 8000 : 4500);
+    toastTimer.current = window.setTimeout(() => setNotice(null), href || undo ? 8000 : 4500);
     if (kind !== "mission") refreshNotifications();
   };
 
   const notifyGain = (title, text, kind) => {
     const item = { id: `gain-${++gainSerial.current}`, title, text, kind };
-    setGains(items => [...items, item].slice(-3));
+    setGains(items => [...items, item]);
     refreshNotifications();
   };
 
@@ -2244,9 +2280,9 @@ function App() {
     try { localStorage.setItem(key, String(latest)); } catch {}
     const updates = notificationBox.itens
       .filter(item => item.id > previous && !item.lida && item.titulo === "XP recebido")
-      .slice(0, 3).reverse()
+      .reverse()
       .map(item => ({ id: `xp-${item.id}`, title: item.titulo, text: item.mensagem, kind: "xp" }));
-    if (updates.length) setGains(items => [...items, ...updates].slice(-3));
+    if (updates.length) setGains(items => [...items, ...updates]);
   }, [auth.id, auth.authenticated, notificationBox]);
 
   useEffect(() => {
@@ -2259,7 +2295,7 @@ function App() {
   useEffect(() => {
     if (!auth.authenticated) return;
     refreshNotifications();
-    const interval = window.setInterval(refreshNotifications, 45_000);
+    const interval = window.setInterval(refreshNotifications, path.startsWith("/pedidos/") ? 10_000 : 45_000);
     window.addEventListener("level-pass-action", refreshNotifications);
     return () => {
       window.clearInterval(interval);
@@ -2301,7 +2337,8 @@ function App() {
         <${AppLink} href=${buildLoginUrl(path)} className="lc-btn lc-btn-primary">Entrar para salvar endereço<//>
       </main>`;
       if (!auth.ready) return null;
-      return html`<${AddressPage} address=${address} onSaved=${setAddress} notify=${notify} />`;
+      return html`<${AddressPage} address=${address} onSaved=${setAddress} notify=${notify}
+        backHref=${parseRoute(route).params.get("voltar") === "sacola" ? "/sacola" : "/conta"} />`;
     }
     if (path === "/conta/beneficios")
       return html`<${BenefitsPage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
@@ -2321,9 +2358,16 @@ function App() {
         <${CartPage}
           items=${cart.items}
           updateQuantity=${cart.updateQuantity}
-          removeItem=${(id) => {
+          auth=${auth}
+          address=${auth.authenticated ? address : null}
+          coupon=${cartCoupon}
+          setCoupon=${setCartCoupon}
+          removeItem=${id => {
+            const index = cart.items.findIndex(item => item.id === id);
+            if (index < 0) return;
+            const item = cart.items[index];
             cart.removeItem(id);
-            notify("Produto removido da sacola");
+            notify("Produto removido da sacola", item.nome, false, "cart", null, () => cart.restoreItem(item, index));
           }}
         />
       `;
@@ -2333,7 +2377,8 @@ function App() {
         items=${immediateCheckout ? immediateItem ? [immediateItem] : [] : cart.items}
         auth=${auth}
         address=${auth.authenticated ? address : null}
-        clearCart=${immediateCheckout ? clearImmediateCheckout : cart.clearCart}
+        initialCoupon=${immediateCheckout ? "" : cartCoupon}
+        clearCart=${immediateCheckout ? clearImmediateCheckout : () => { cart.clearCart(); setCartCoupon(""); }}
       />`;
     }
     if (path === "/perfil") {
@@ -2385,7 +2430,7 @@ function App() {
         auth=${auth}
       />
     `;
-  }, [path, route, homeData, auth, cart, immediateItem, address]);
+  }, [path, route, homeData, auth, cart, cartCoupon, immediateItem, address]);
 
   const searchAndNavigate = (searchTerm) => {
     const params = new URLSearchParams();
@@ -2416,7 +2461,7 @@ function App() {
       ${currentScreen}
       <${Footer} />
       <div className="lc-gain-region" role="status" aria-label="Ganhos de XP e prêmios">
-        ${gains.map(item => html`<${GainToast} key=${item.id} item=${item} dismiss=${dismissGain} />`)}
+        ${gains.length ? html`<${GainToast} key=${gains[0].id} item=${gains[0]} dismiss=${dismissGain} />` : null}
       </div>
       <div className="lc-toast-region" role="status">
         ${notice ? html`<div className=${`lc-toast ${notice.error ? "error" : ""}`}>
@@ -2427,7 +2472,11 @@ function App() {
               event.preventDefault();
               setNotice(null);
               navigate(notice.href);
-            }}>Ir para avaliação →</a>` : null}</div>
+            }}>Ir para avaliação →</a>` : null}
+            ${notice.undo ? html`<button type="button" className="lc-toast-undo" onClick=${() => {
+              notice.undo();
+              setNotice(null);
+            }}>Desfazer</button>` : null}</div>
           <button type="button" aria-label="Fechar aviso" onClick=${() => setNotice(null)}>×</button>
         </div>` : null}
       </div>

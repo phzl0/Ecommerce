@@ -2,11 +2,16 @@ package com.paulo.ecommerce.controller;
 
 import com.paulo.ecommerce.dto.CheckoutForm;
 import com.paulo.ecommerce.dto.api.CheckoutRequest;
+import com.paulo.ecommerce.dto.api.CheckoutItemRequest;
 import com.paulo.ecommerce.dto.api.CheckoutResponse;
 import com.paulo.ecommerce.model.Pagamento;
 import com.paulo.ecommerce.service.PagamentoService;
 import com.paulo.ecommerce.service.PedidoService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,6 +34,16 @@ public class CheckoutApiController {
   @org.springframework.web.bind.annotation.GetMapping("/config")
   public java.util.Map<String, Boolean> config() {
     return pagamentoService.configuracaoPublica();
+  }
+
+  public record CotacaoRequest(
+      @NotEmpty @Size(max = 100) List<@NotNull @Valid CheckoutItemRequest> itens,
+      @Size(max = 60) String cupom) {}
+
+  @PostMapping("/quote")
+  public PedidoService.Cotacao cotar(
+      @Valid @RequestBody CotacaoRequest request, @AuthenticationPrincipal UserDetails user) {
+    return pedidoService.cotar(user == null ? null : user.getUsername(), request.cupom(), request.itens());
   }
 
   @PostMapping("/orders")

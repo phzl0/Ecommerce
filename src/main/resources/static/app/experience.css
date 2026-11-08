@@ -217,7 +217,8 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   pointer-events: auto;
   background: #0a1d12;
   border-color: #65d95a;
-  animation: lc-gain-enter 220ms ease-out both;
+  animation: lc-gain-enter 480ms ease-out both;
+  box-shadow: 0 0 24px rgb(111 255 92 / 26%), 0 12px 28px rgb(0 0 0 / 34%);
 }
 .lc-gain-toast .lc-gain-mark {
   display: grid;
@@ -229,12 +230,36 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   background: #79ff57;
   color: #08110a;
   font-weight: 800;
+  animation: lc-gain-flare 850ms 180ms ease-out both;
+}
+.lc-gain-toast .lc-gain-value {
+  width: fit-content;
+  color: #b7ff9f;
+  font-size: 1.25rem;
+  animation: lc-gain-flare 850ms 180ms ease-out both;
+}
+.lc-toast .lc-toast-undo {
+  justify-self: start;
+  min-height: 28px;
+  padding: 0;
+  color: #b3ff9a;
+  font-size: .875rem;
+  font-weight: 750;
+  text-decoration: underline;
 }
 .lc-toast-link { color: #b3ff9a; font-size: .85rem; font-weight: 750; text-decoration: underline; }
 @keyframes lc-gain-enter {
-  from { transform: translateY(-10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  0% { transform: translateY(-12px) scale(.96); opacity: 0; }
+  55% { transform: translateY(5px) scale(1.02); opacity: 1; }
+  78% { transform: translateY(-3px); }
+  100% { transform: translateY(0); opacity: 1; }
 }
+@keyframes lc-gain-flare {
+  0%, 100% { filter: none; }
+  45% { filter: brightness(1.24) drop-shadow(0 0 8px rgb(143 255 111 / 65%)); }
+}
+@keyframes lc-gain-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .lc-gain-toast { animation: none; }
+  .lc-gain-toast { animation: lc-gain-fade 160ms ease-out both; }
+  .lc-gain-toast :is(.lc-gain-mark, .lc-gain-value) { animation: none; }
 }
