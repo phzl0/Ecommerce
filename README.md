@@ -24,13 +24,13 @@ cd ~/Ecommerce-beta
 
 Se `Ecommerce-beta` já existir, use o caminho de atualização abaixo com essa pasta; não repita o clone.
 
-**2. Crie sua conta de administrador:**
+**2. Gere a configuração local:**
 
 ```bash
-python3 scripts/init_env.py
+python3 scripts/init_env.py --demo
 ```
 
-Informe seu e-mail e uma senha de **12 a 72 caracteres**. A senha não aparece enquanto você digita; isso é normal. Confirme a mesma senha quando solicitado. O script cria o arquivo `.env`.
+O script cria o `.env` e uma senha aleatória para o banco. Para adicionar um administrador próprio, rode o script sem `--demo` na primeira configuração.
 
 **3. Inicie a loja e o banco:**
 
@@ -75,7 +75,7 @@ Os dois arquivos devem aparecer. Se não aparecerem, a troca de branch não foi 
 **3. Configure e inicie:**
 
 ```bash
-python3 scripts/init_env.py
+python3 scripts/init_env.py --demo
 sudo docker compose up --build -d
 sudo docker compose logs -f app
 ```
@@ -94,13 +94,13 @@ git clone --branch develop https://github.com/phzl0/Ecommerce.git Ecommerce-beta
 Set-Location "$HOME/Ecommerce-beta"
 ```
 
-**2. Crie a conta administrativa:**
+**2. Gere a configuração local:**
 
 ```powershell
-py -3 scripts/init_env.py
+py -3 scripts/init_env.py --demo
 ```
 
-Informe e-mail, senha de 12 a 72 caracteres e confirmação. A senha não aparece enquanto você digita. Se `py` não existir, tente `python scripts/init_env.py`.
+Se `py` não existir, tente `python scripts/init_env.py --demo`. Para adicionar um administrador próprio, retire `--demo` na primeira configuração.
 
 **3. Inicie e acompanhe:**
 
@@ -122,6 +122,33 @@ Quando aparecer `Started EcommerceApplication`, abra **http://localhost:8080**. 
 - **Conta:** teste perfil, pedidos e coleção de benefícios digitais.
 
 O catálogo de demonstração vem habilitado na configuração inicial. A tela carrega bibliotecas externas, então mantenha acesso à internet. Os dados de entrega preenchidos no checkout ficam em memória enquanto a tela está aberta. Se fechar ou recarregar após uma falha de rede no envio, consulte seus pedidos antes de refazer a compra.
+
+## Testar conta, notificações e evento semanal
+
+A navegação inclui **Administração** quando você estiver deslogado no Docker local ou conectado como administrador. Acesse [localhost:8080/admin](http://localhost:8080/admin) com a conta local de demonstração:
+
+| Campo | Valor |
+| --- | --- |
+| E-mail | `admin@level.local` |
+| Senha inicial | `AdminLocal123!` |
+
+A conta de demonstração é criada pelo Compose local. As credenciais administrativas existentes no `.env` continuam válidas. Se você alterar a senha da conta de demonstração, a aplicação preserva a mudança nas próximas inicializações.
+
+1. No admin, abra **Eventos** e publique **Semana XP em Dobro**. Os campos já vêm preenchidos com um exemplo. O horário segue o fuso da loja, por padrão São Paulo.
+2. Em outra sessão do navegador, crie uma conta de cliente e faça um pedido de demonstração.
+3. No admin, abra o pedido e selecione **Simular pagamento aprovado**. A aprovação local atualiza o pedido e credita XP para as compras que atendem às regras do evento.
+4. Na conta do cliente, abra **Eventos**, resgate o selo e confira o **sino de notificações**. Os selos válidos também aparecem no perfil.
+
+O evento considera o valor líquido dos produtos, sem frete ou compra de passe. A cada R$ 10 completos elegíveis por pedido, o cliente recebe 1 XP de evento multiplicado pela campanha, até o limite configurado. O selo pode ser resgatado até sete dias após o encerramento. Um estorno recalcula a elegibilidade.
+
+**Recuperar senha no Docker**. Na tela de login, clique em **Esqueci minha senha** e informe o e-mail da conta. Abra [Mailpit em localhost:8025](http://localhost:8025) e use o link recebido. A caixa captura mensagens de teste. O link expira em 15 minutos e só funciona uma vez. Se a porta 8025 estiver ocupada, ajuste `MAILPIT_PORT` no `.env`.
+
+### Pendências para produção
+
+- Configurar login com Google, incluindo credenciais OAuth, URLs HTTPS de retorno e regras de vínculo a contas existentes.
+- Configurar um provedor de e-mail transacional, domínio autenticado, limites de envio e verificação de entrega antes de habilitar recuperação de senha comercial.
+- Validar o checkout externo e o webhook público com credenciais de teste. A conta e o simulador de demonstração só são habilitados no perfil local com a configuração explícita do Compose.
+- Empacotar as dependências da interface para servir os scripts da própria aplicação antes de ativar fluxos de autenticação comercial.
 
 ## Atualizar ou parar
 

@@ -68,6 +68,8 @@ jobs:
           done
           exit 1
       - run: npm run test:e2e
+        env:
+          TEST_MAILPIT_URL: http://localhost:8025
       - name: Collect Compose logs and stop containers
         if: always()
         run: |
