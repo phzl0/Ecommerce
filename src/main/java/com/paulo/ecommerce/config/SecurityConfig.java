@@ -125,6 +125,7 @@ public class SecurityConfig {
                     .hasAnyRole("CLIENTE", "ADMIN")
                     .requestMatchers("/api/account/**")
                     .hasAnyRole("CLIENTE", "ADMIN")
+                    .requestMatchers(HttpMethod.GET, "/api/pass/preview").permitAll()
                     .requestMatchers("/api/pass/**")
                     .hasAnyRole("CLIENTE", "ADMIN")
                     .requestMatchers("/pagamento/webhook")

@@ -6,8 +6,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 @Controller
 public class ProdutoController {
 
-    @GetMapping({"/", "/produtos", "/produtos/{id}", "/catalogo", "/produto/{id}", "/sacola", "/conta", "/conta/beneficios", "/conta/endereco", "/checkout", "/login", "/cadastro", "/recuperar-senha", "/redefinir-senha", "/eventos", "/pagamento/retorno", "/passe", "/passe/missoes"})
+    @GetMapping({"/", "/produtos", "/produtos/{id}", "/catalogo", "/produto/{id}", "/sacola", "/conta", "/conta/beneficios", "/conta/endereco", "/checkout", "/login", "/cadastro", "/recuperar-senha", "/redefinir-senha", "/pagamento/retorno", "/passe", "/passe/missoes"})
     public String storefront() {
         return "forward:/index.html";
+    }
+    @GetMapping("/eventos")
+    public String eventos() {
+        return "redirect:/passe#eventos";
     }
 }

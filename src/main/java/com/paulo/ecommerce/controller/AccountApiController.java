@@ -120,7 +120,8 @@ public class AccountApiController {
         pedido.getItens() == null
             ? 0
             : pedido.getItens().stream().mapToInt(item -> item.getQuantidade()).sum(),
-        resolvePaymentStatus(pedido));
+        resolvePaymentStatus(pedido),
+        toItems(pedido));
   }
 
   private AccountOrderDetailResponse toDetail(Pedido pedido) {
@@ -147,17 +148,18 @@ public class AccountApiController {
         pagamento == null || pagamento.getPagoEm() == null
             ? null
             : pagamento.getPagoEm().format(DATE_TIME_FORMATTER),
-        pedido.getItens().stream()
-            .map(
-                item ->
-                    new AccountOrderItemResponse(
-                        item.getProduto().getId(),
-                        item.getProduto().getNome(),
-                        item.getProduto().getImagemUrl(),
-                        item.getQuantidade(),
-                        item.getPrecoUnitario(),
-                        item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade()))))
-            .toList());
+        toItems(pedido));
+  }
+
+  private List<AccountOrderItemResponse> toItems(Pedido pedido) {
+    if (pedido.getItens() == null) return List.of();
+    return pedido.getItens().stream().map(item -> {
+      var produto = item.getProduto();
+      return new AccountOrderItemResponse(produto.getId(), produto.getNome(), produto.getImagemUrl(),
+          item.getQuantidade(), item.getPrecoUnitario(),
+          item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade())),
+          produto.getDescricaoCurta(), produto.isAtivo() && pedido.getTemporadaPasseId() == null);
+    }).toList();
   }
 
   private String resolvePaymentStatus(Pedido pedido) {

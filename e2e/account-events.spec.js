@@ -28,6 +28,14 @@ test("registers, earns event XP from a local purchase and claims a badge", async
   await expect(page).toHaveURL(/\/login\?.*sucesso=true/);
   await login(page, email, password);
 
+  const drawer = page.getByRole("dialog", { name: "Menu da loja" });
+  await expect(page.locator(".lc-nav-bottom")).toBeHidden();
+  await page.getByRole("button", { name: "Abrir menu da loja" }).click();
+  await expect(drawer.getByRole("link", { name: "Passe mensal" })).toBeVisible();
+  await expect(drawer.getByRole("link", { name: "Eventos", exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+
   await page.getByRole("link", { name: /Entregar em Adicionar endereço/ }).click();
   for (const [label, value] of [
     ["CEP", "01001000"], ["Rua ou avenida", "Rua Teste"], ["Número", "10"],
@@ -60,6 +68,8 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(admin.getByRole("status")).toHaveText("Evento publicado.");
 
     await page.goto("/eventos");
+    await expect(page).toHaveURL(/\/passe#eventos$/);
+    await expect(page.getByRole("region", { name: "Eventos da loja" })).toBeVisible();
     const event = page.getByRole("article").filter({ hasText: "Semana XP em Dobro" });
     await expect(event.getByRole("button", { name: "Resgatar selo" })).toBeDisabled();
 
@@ -82,6 +92,16 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await page.getByRole("button", { name: "Criar pedido de demonstração" }).click();
     await expect(page).toHaveURL(/\/pedidos\/\d+/);
     const orderId = new URL(page.url()).pathname.split("/").pop();
+    await page.locator(".lc-account-popover summary").click();
+    const accountMenu = page.getByRole("navigation", { name: "Menu da conta" });
+    await expect(accountMenu.getByRole("link", { name: "Meu perfil" })).toBeVisible();
+    await accountMenu.getByRole("link", { name: "Meus pedidos" }).click();
+    const orderCard = page.locator(".lc-orders-page .lc-order-card").first();
+    await expect(orderCard.getByRole("heading", { name: /^Pedido / })).toBeVisible();
+    await expect(orderCard.locator(".lc-order-product img")).toBeVisible();
+    await expect(orderCard.locator(".lc-order-product p")).toBeVisible();
+    await expect(orderCard.getByRole("link", { name: "Ver produto" })).toHaveAttribute("href", productPath);
+    await expect(orderCard.getByRole("link", { name: "Ver detalhes do pedido" })).toHaveAttribute("href", "/pedidos/" + orderId);
     await page.getByRole("link", { name: /Sacola/ }).click();
     const cartItems = page.getByRole("region", { name: "Produtos da sacola" });
     await expect(cartItems.getByText(product.nome, { exact: true })).toBeVisible();
@@ -156,7 +176,7 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(gains.getByText(/\+90 XP/)).toBeVisible();
     expect(await (await page.request.get(reviewEndpoint)).json()).toEqual([]);
 
-    await page.goto("/passe");
+    await page.goto("/");
     const claim = page.getByRole("button", { name: /^Receber · nível 1 ·/ });
     await expect(claim).toBeEnabled();
     await claim.click();

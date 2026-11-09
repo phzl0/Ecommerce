@@ -156,38 +156,9 @@ public class PasseService {
             .map(resgate -> resgate.getRecompensa().getId())
             .collect(Collectors.toSet());
 
-    List<PasseNivelResponse> niveis =
-        recompensas.stream()
-            .map(
-                recompensa -> {
-                  int xpNecessario = recompensa.getNivel() * xpPorNivel;
-                  int xpBaseNivel = Math.max(0, xpNecessario - xpPorNivel);
-                  int progressoBruto = progressoUsuario.getXpTotal() - xpBaseNivel;
-                  int progressoPercentual =
-                      Math.max(
-                          0,
-                          Math.min(
-                              100, (int) Math.round((progressoBruto / (double) xpPorNivel) * 100)));
-                  boolean desbloqueado = progressoUsuario.getXpTotal() >= xpNecessario;
-                  boolean resgatado = resgatadas.contains(recompensa.getId());
-                  boolean premium = exigePremium(recompensa);
-                  return new PasseNivelResponse(
-                      recompensa.getId(),
-                      premium,
-                      recompensa.getNivel(),
-                      xpNecessario,
-                      recompensa.getTitulo(),
-                      recompensa.getDescricao(),
-                      recompensa.getTipoDigital(),
-                      resgatado ? recompensa.getCodigo() : null,
-                      desbloqueado,
-                      resgatado,
-                      desbloqueado
-                          && !resgatado
-                          && (!premium || premiumAtivoAgora),
-                      progressoPercentual);
-                })
-            .toList();
+    List<PasseNivelResponse> niveis = recompensas.stream()
+        .map(recompensa -> toNivel(recompensa, xpPorNivel, progressoUsuario.getXpTotal(), premiumAtivoAgora, resgatadas))
+        .toList();
 
     boolean avaliacaoPendente = templates.stream()
         .anyMatch(template -> template.getAcaoTipo() == PasseAcaoTipo.REVIEW_SUBMITTED
@@ -243,6 +214,28 @@ public class PasseService {
         missoesMensais,
         historico,
         produtosParaAvaliar);
+  }
+
+  @Transactional
+  public List<PasseNivelResponse> visualizarTrilha() {
+    PasseTemporada temporada = obterPasseAtual();
+    return recompensaRepository.findByTemporadaIdOrderByNivelAsc(temporada.getId()).stream()
+        .map(recompensa -> toNivel(recompensa, temporada.getXpPorNivel(), 0, false, java.util.Set.of()))
+        .toList();
+  }
+
+  private PasseNivelResponse toNivel(PasseRecompensaNivel recompensa, int xpPorNivel, int xpTotal,
+      boolean premiumAtivo, java.util.Set<Long> resgatadas) {
+    int xpNecessario = recompensa.getNivel() * xpPorNivel;
+    int xpBaseNivel = xpNecessario - xpPorNivel;
+    int percentual = Math.max(0, Math.min(100, (int) Math.round((xpTotal - xpBaseNivel) * 100.0 / xpPorNivel)));
+    boolean desbloqueado = xpTotal >= xpNecessario;
+    boolean resgatado = resgatadas.contains(recompensa.getId());
+    boolean premium = exigePremium(recompensa);
+    return new PasseNivelResponse(recompensa.getId(), premium, recompensa.getNivel(), xpNecessario,
+        recompensa.getTitulo(), recompensa.getDescricao(), recompensa.getTipoDigital(),
+        resgatado ? recompensa.getCodigo() : null, desbloqueado, resgatado,
+        desbloqueado && !resgatado && (!premium || premiumAtivo), percentual);
   }
 
   @Transactional(readOnly = true)

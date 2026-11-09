@@ -4,6 +4,7 @@ import com.paulo.ecommerce.dto.api.PasseAcaoRequest;
 import com.paulo.ecommerce.dto.api.PasseClaimResponse;
 import com.paulo.ecommerce.dto.api.PasseDashboardResponse;
 import com.paulo.ecommerce.dto.api.PasseMissaoResponse;
+import com.paulo.ecommerce.dto.api.PasseNivelResponse;
 import java.util.List;
 import com.paulo.ecommerce.model.PasseAcaoTipo;
 import com.paulo.ecommerce.service.PasseService;
@@ -27,6 +28,11 @@ public class PasseApiController {
 
   public PasseApiController(PasseService passeService) {
     this.passeService = passeService;
+  }
+
+  @GetMapping("/preview")
+  public List<PasseNivelResponse> preview() {
+    return passeService.visualizarTrilha();
   }
 
   @GetMapping("/current")

@@ -946,3 +946,89 @@
   .lc-netflix-art { opacity: .28; right: 4%; }
   .lc-footer-inner { padding: 16px; }
 }
+
+.lc-nav-brand-area { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lc-menu-toggle, .lc-mobile-address { display: none; }
+.lc-account-popover .lc-popover-panel { inset-inline: auto 0; width: min(224px, calc(100vw - 32px)); min-width: 0; }
+.lc-account-popover .lc-popover-panel a, .lc-account-popover .lc-popover-panel button {
+  display: block; width: 100%; padding: 8px 12px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--lc-text); font: inherit; text-align: left; cursor: pointer;
+}
+.lc-account-popover .lc-popover-panel a:hover, .lc-account-popover .lc-popover-panel button:hover {
+  background: var(--lc-surface-alt);
+}
+.lc-mobile-drawer {
+  position: fixed; inset: 0 auto 0 0; margin: 0; padding: 0; border: 0;
+  width: min(320px, 88vw); max-width: none; height: 100dvh; max-height: none;
+  background: var(--lc-surface); color: var(--lc-text);
+}
+.lc-mobile-drawer[open] { animation: lc-drawer-enter 180ms ease-out; }
+.lc-mobile-drawer::backdrop { background: rgb(0 0 0 / 65%); }
+html:has(.lc-mobile-drawer[open]) { overflow: hidden; }
+.lc-mobile-drawer-inner { min-height: 100%; padding: 16px; }
+.lc-mobile-drawer header {
+  display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px;
+  border-bottom: 1px solid var(--lc-line); margin-bottom: 8px;
+}
+.lc-mobile-drawer header button {
+  width: 40px; height: 40px; background: var(--lc-surface-alt); color: var(--lc-text);
+  border: 1px solid var(--lc-line); border-radius: 8px; font-size: 1.3rem; cursor: pointer;
+}
+.lc-mobile-drawer nav { display: grid; gap: 4px; }
+.lc-mobile-drawer :is(a, summary) { display: block; padding: 10px 8px; border-radius: 6px; overflow-wrap: anywhere; }
+.lc-mobile-drawer summary { cursor: pointer; }
+.lc-mobile-drawer details a { padding-inline-start: 16px; }
+.lc-mobile-drawer [aria-current="page"] { color: var(--lc-green-dark); background: var(--lc-surface-alt); font-weight: 750; }
+@keyframes lc-drawer-enter { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+
+.lc-orders-page .lc-section-header h1 { margin: 0; font-size: clamp(1.5rem, 4vw, 2rem); }
+.lc-orders-page .lc-order-card { display: grid; gap: 12px; min-width: 0; }
+.lc-orders-page .lc-order-card-top { align-items: start; flex-wrap: wrap; gap: 8px; }
+.lc-order-identity { display: grid; gap: 6px; min-width: 0; }
+.lc-order-identity h2 { margin: 0; font-size: 1rem; overflow-wrap: anywhere; }
+.lc-order-identity span { color: var(--lc-muted); font-size: .85rem; }
+.lc-order-products { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.lc-order-product {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto;
+  align-items: center; gap: 8px; padding: 8px 0; border-top: 1px solid var(--lc-line);
+}
+.lc-order-product img {
+  width: 56px; height: 56px; object-fit: contain; border-radius: 8px; background: var(--lc-surface-alt);
+}
+.lc-order-product div { display: grid; gap: 4px; overflow-wrap: anywhere; }
+.lc-order-product p, .lc-order-product small { margin: 0; color: var(--lc-muted); font-size: .82rem; }
+.lc-order-product .lc-btn, .lc-orders-page .lc-order-card > .lc-btn { min-height: 36px; padding: 6px 10px; font-size: .8rem; }
+.lc-orders-page .lc-order-card > .lc-btn { justify-self: start; }
+.lc-order-more summary { cursor: pointer; color: var(--lc-green-dark); font-weight: 700; }
+
+.lc-level-trail { --lc-reward-width: 144px; --lc-reward-height: 128px; }
+.lc-level-pass > #eventos { width: 100%; padding-block: 0; scroll-margin-top: 120px; }
+.lc-events-hero h2 { font-size: clamp(1.5rem, 4vw, 2.5rem); margin-block: 8px; }
+
+@media (max-width: 800px) {
+  .lc-nav-shell .lc-nav-bottom { display: none; }
+  .lc-mobile-address { display: block; padding: 0 16px 8px; }
+  .lc-mobile-address .lc-nav-address { display: inline-flex; gap: 8px; max-width: 100%; border: 0; }
+  .lc-account-popover { position: static; }
+  .lc-account-popover .lc-popover-panel { inset-inline-end: 16px; }
+  .lc-menu-toggle {
+    display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px;
+    padding: 0; background: transparent; border: 1px solid #36543b; border-radius: 8px; color: #fff; cursor: pointer;
+  }
+  .lc-level-pass > #eventos { scroll-margin-top: 16px; }
+}
+@media (max-width: 600px) {
+  .lc-level-trail { --lc-reward-width: 128px; }
+}
+@media (max-width: 480px) {
+  .lc-account-popover summary > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .lc-order-product { grid-template-columns: 48px minmax(0, 1fr); }
+  .lc-order-product img { width: 48px; height: 48px; }
+  .lc-order-product .lc-btn { grid-column: 2; justify-self: start; }
+}
+@media (max-width: 420px) {
+  .lc-nav-brand-area .lc-brand > strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lc-mobile-drawer[open] { animation: none; }
+}

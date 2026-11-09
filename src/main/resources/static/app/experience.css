@@ -151,7 +151,6 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 
 .lc-events-page { display: grid; gap: 24px; }
 .lc-events-hero { padding: 40px; border-radius: 16px; color: white; background: linear-gradient(125deg, #161e28, #21482d); }
-.lc-events-hero h1 { font-size: clamp(2rem, 5vw, 3.25rem); margin-block: 8px; }
 .lc-events-hero p { max-width: 54ch; color: #e0e9e0; }
 .lc-eyebrow { color: var(--lc-accent); letter-spacing: .12em; font-weight: 750; font-size: .8rem; }
 .lc-events-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); gap: 16px; }
@@ -159,7 +158,7 @@ button:disabled { cursor: not-allowed; opacity: .6; }
   background: var(--lc-surface); border: 1px solid var(--lc-line); border-radius: 12px;
   padding: 24px; display: grid; gap: 12px; align-content: start;
 }
-.lc-event-card h2, .lc-event-card p, .lc-event-card dl, .lc-event-card dd { margin: 0; }
+.lc-event-card h3, .lc-event-card p, .lc-event-card dl, .lc-event-card dd { margin: 0; }
 .lc-event-top, .lc-event-card dl > div { display: flex; justify-content: space-between; gap: 8px; }
 .lc-event-state { background: var(--lc-green-soft); color: var(--lc-green-dark); border-radius: 16px; padding: 4px 8px; font-weight: 700; font-size: .8rem; }
 .lc-event-card dl { display: grid; gap: 8px; font-size: .9rem; }

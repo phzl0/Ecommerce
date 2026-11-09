@@ -102,9 +102,12 @@ test("catalog, private pass, checkout without live charges and profile", async (
   const sections = await home.locator("section").evaluateAll(sections =>
     sections.map(section => section.getAttribute("aria-label") || section.querySelector("h2")?.textContent));
   expect(sections).toEqual([
-    "Campanhas em destaque", "Chamadas promocionais demonstrativas", "Passe LEVEL", "Destaques da loja",
+    "Campanhas em destaque", "Chamadas promocionais demonstrativas", "Passe LEVEL", "Trilha de recompensas", "Destaques da loja",
     "Campanhas da LEVEL", "Compre por categoria", "Netflix", "Novidades",
   ]);
+  await expect(home.getByRole("region", { name: "Níveis e recompensas do passe" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Meus pedidos", exact: true })).toHaveCount(0);
+  await expect(navigation.getByRole("link", { name: "Eventos", exact: true })).toHaveCount(0);
   await expect(home.getByRole("region", { name: "Destaque do Passe LEVEL" }))
     .toContainText(/Faltam? \d+ XP para desbloquear este prêmio/);
   await expect(home.locator(".lc-product-card").first().locator(".lc-product-copy p")).toBeVisible();

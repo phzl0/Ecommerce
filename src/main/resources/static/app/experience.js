@@ -184,7 +184,7 @@ export function NotificationMenu({ box, readAll, refresh, openLink }) {
   </details>`;
 }
 
-export function EventsPage({ auth, getJson, postJson, notify }) {
+export function PassEvents({ auth, getJson, postJson, notify }) {
   const [events, setEvents] = useState(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(null);
@@ -203,21 +203,21 @@ export function EventsPage({ auth, getJson, postJson, notify }) {
       setBusy(null);
     }
   }
-  return html`<main className="lc-page lc-events-page">
+  return html`<section id="eventos" className="lc-page lc-events-page" aria-labelledby="pass-events-title">
     <section className="lc-events-hero">
       <span className="lc-eyebrow">LEVEL REWARDS</span>
-      <h1>Eventos da loja</h1>
+      <h2 id="pass-events-title">Eventos da loja</h2>
       <p>Veja as campanhas da semana, acompanhe seu progresso e desbloqueie selos para a sua coleção.</p>
     </section>
     ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
     ${events === null ? html`<p role="status">Carregando eventos…</p>`
-      : events.length === 0 ? html`<div className="lc-event-card"><h2>Nenhum evento publicado</h2>
-        <p>As próximas campanhas da loja aparecem aqui.</p><a href="/passe">Explorar o passe →</a></div>`
+      : events.length === 0 ? html`<div className="lc-event-card"><h3>Nenhum evento publicado</h3>
+        <p>As próximas campanhas da loja aparecem aqui.</p><a href="#trilha-do-passe">Explorar a trilha →</a></div>`
       : html`<div className="lc-events-grid">${events.map((event) => html`
         <article className="lc-event-card" key=${event.id}>
           <div className="lc-event-top"><span className="lc-event-state">${event.estado}</span>
             <strong>${event.multiplicador}× XP</strong></div>
-          <h2>${event.titulo}</h2><p>${event.descricao}</p>
+          <h3>${event.titulo}</h3><p>${event.descricao}</p>
           <dl><div><dt>Período</dt><dd>${dates.format(new Date(event.inicio))} – ${dates.format(new Date(event.fim))}</dd></div>
             <div><dt>Compra mínima</dt><dd>${reais.format(event.minimoCompra)} em produtos</dd></div>
             <div><dt>Limite por cliente</dt><dd>${event.limiteXp} XP</dd></div></dl>
@@ -232,10 +232,10 @@ export function EventsPage({ auth, getJson, postJson, notify }) {
                   disabled=${!event.podeResgatar || busy !== null} onClick=${() => claim(event)}>
                 ${busy === event.id ? "Resgatando…" : "Resgatar selo"}
               </button>`}`
-            : html`<a href="/login?returnUrl=%2Feventos">Entre para acompanhar seu XP →</a>`}
+            : html`<a href="/login?returnUrl=%2Fpasse%23eventos">Entre para acompanhar seu XP →</a>`}
           <small>XP da campanha separado do passe. Resgates até sete dias após o fim.</small>
         </article>`)}</div>`}
-  </main>`;
+  </section>`;
 }
 
 export function EventBadges({ getJson }) {
