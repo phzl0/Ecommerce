@@ -542,36 +542,6 @@ function usePassOverview(auth) {
   };
 }
 
-function PassPreview({ pass }) {
-  const available = pass?.niveis.find(reward => reward.disponivelParaResgate && !reward.resgatado);
-  const next = pass?.niveis.find(reward =>
-    !reward.resgatado && reward.xpNecessario > pass.xpTotal && (!reward.premium || pass.premiumAtivo));
-  const reward = available || next;
-  const remaining = next ? next.xpNecessario - pass.xpTotal : null;
-
-  return html`<section className="lc-pass-spotlight" aria-labelledby="home-pass">
-    <div className="lc-spotlight-copy">
-      <span className="lc-eyebrow">LEVEL REWARDS</span>
-      <h2 id="home-pass">Passe LEVEL</h2>
-      <p>${pass ? pass.temporadaNome : "Ganhe XP com compras e missões e desbloqueie recompensas."}</p>
-      ${pass ? html`<p className="lc-spotlight-level">Nível ${pass.nivelAtual} · ${pass.xpTotal} XP</p>` : null}
-      <${AppLink} href="/passe" className="lc-btn lc-neon-btn">Ver passe<//>
-    </div>
-    <div className="lc-spotlight-reward" role="region" aria-label="Destaque do Passe LEVEL">
-      <span className="lc-spotlight-reward-icon" aria-hidden="true">${available ? "✓" : "✦"}</span>
-      <div>
-        <small>${available ? "Disponível para resgate" : next ? "Próxima recompensa" : "Eventos da LEVEL"}</small>
-        <strong>${reward ? reward.titulo : "Participe dos eventos da loja"}</strong>
-        ${available ? html`<p>Você tem uma recompensa para resgatar.</p>`
-          : next ? html`<p>${remaining === 1 ? "Falta" : "Faltam"} ${remaining} XP para desbloquear este prêmio.</p>`
-          : html`<${AppLink} href="/passe#eventos">Ver eventos e desafios →<//>`}
-      </div>
-      ${next && !available ? html`<progress aria-label="Progresso até a próxima recompensa"
-        value=${pass.xpTotal} max=${next.xpNecessario}></progress>` : null}
-    </div>
-  </section>`;
-}
-
 function CategoryStrip({ categories }) {
   return html`<nav className="lc-categories" aria-label="Categorias de produtos">
     ${categories.map(category => html`<${AppLink} key=${category.id}
@@ -620,7 +590,6 @@ function HomePage({ data, auth, notifyGain }) {
       <${BannerCarousel} banners=${data.banners} />
       <${PromoTicker} />
       <div className="lc-page lc-home-content">
-        <${PassPreview} pass=${overview.pass} />
         <${RewardTrail} auth=${auth} overview=${overview} notifyGain=${notifyGain} />
         <${HomeProductShelf} title="Destaques da loja" products=${data.destaques} />
         <section className="lc-home-campaigns" aria-label="Campanhas da LEVEL">
@@ -2048,16 +2017,17 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
         disabled=${busy !== null} onClick=${buyPremium}>Liberar Premium</button>` : null}
   </div>`;
 
-  return html`<section id="trilha-do-passe" className=${`lc-level-trail ${standalone ? "lc-page" : ""}`} aria-labelledby="level-trail-title">
-      <div className="lc-level-trail-heading">
+  return html`<section id="trilha-do-passe" className=${`lc-level-trail ${standalone ? "lc-page" : ""}`} aria-label=${standalone ? undefined : "Trilha de recompensas"}
+    aria-labelledby=${standalone ? "level-trail-title" : undefined}>
+      ${standalone ? html`<div className="lc-level-trail-heading">
         <div><h2 id="level-trail-title">Trilha de recompensas</h2>
           <p>Os prêmios de cada trilha liberam conforme você alcança os níveis.</p></div>
-      </div>
+      </div>` : null}
       ${error || overview.error ? html`<p className="lc-form-notice error" role="alert">${error || overview.error}</p>` : null}
       ${!levels ? !overview.error ? html`<p role="status">Carregando temporada…</p>` : null : html`
-      ${pass?.premiumAtivo ? premiumAccess : null}
+      ${standalone && pass?.premiumAtivo ? premiumAccess : null}
       <div className="lc-rail-toolbar">
-        <span>Deslize a trilha para explorar os níveis.</span>
+        ${standalone ? html`<span>Deslize a trilha para explorar os níveis.</span>` : null}
         <div>
           <button type="button" className="lc-btn lc-btn-ghost" aria-label="Níveis anteriores" onClick=${() => moveCarousel(track.current, -1)}>←</button>
           <button type="button" className="lc-btn lc-btn-ghost" aria-label="Próximos níveis" onClick=${() => moveCarousel(track.current, 1)}>→</button>

@@ -188,34 +188,6 @@
 @keyframes lc-ticker-scroll { to { transform: translateX(-50%); } }
 
 .lc-home-content { padding-top: 16px; }
-.lc-pass-spotlight {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
-  align-items: center;
-  gap: 24px;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #43556a;
-  background: radial-gradient(ellipse at 86% 0%, #24354a, #121821 72%);
-  color: #f4f6fa;
-}
-.lc-pass-spotlight h2 { margin: 4px 0; font-size: clamp(1.5rem, 3vw, 2rem); }
-.lc-pass-spotlight p { margin: 0; color: #c4cddd; }
-.lc-spotlight-copy .lc-btn { margin-top: 12px; }
-.lc-spotlight-copy .lc-spotlight-level { margin-top: 8px; font-size: .85rem; font-weight: 700; }
-.lc-spotlight-reward {
-  display: grid; grid-template-columns: 40px minmax(0, 1fr); align-items: start; gap: 8px;
-  padding: 12px; border: 1px solid #61738d; border-radius: 8px; background: #202b3b;
-}
-.lc-spotlight-reward-icon {
-  display: grid; place-items: center; height: 40px; border-radius: 8px;
-  color: #221400; background: #ffd878; font-size: 1.3rem;
-}
-.lc-spotlight-reward > div { display: grid; gap: 4px; overflow-wrap: anywhere; }
-.lc-spotlight-reward small { color: #ffe1a2; }
-.lc-spotlight-reward p, .lc-spotlight-reward a { font-size: .85rem; }
-.lc-spotlight-reward a { color: #f4f6fa; text-decoration: underline; text-underline-offset: 3px; }
-.lc-spotlight-reward progress { grid-column: 2; width: 100%; height: 8px; accent-color: #ffd878; }
 .lc-level-pass-progress progress { width: 100%; accent-color: var(--lc-green); }
 
 .lc-home-shelf .lc-section-header h2, .lc-home-categories .lc-section-header h2 { font-size: clamp(1.2rem, 3vw, 1.6rem); }
@@ -267,7 +239,7 @@
 .lc-level-trail-heading h2 { margin: 0; }
 .lc-level-trail-heading p { margin: 8px 0; }
 .lc-rail-toolbar { padding-block: 8px; font-size: .875rem; }
-.lc-rail-toolbar > div { display: flex; gap: 8px; }
+.lc-rail-toolbar > div { display: flex; gap: 8px; margin-inline-start: auto; }
 .lc-rail {
   --lc-rail-rows: var(--lc-reward-height) 40px var(--lc-reward-height);
   display: grid;
@@ -324,8 +296,8 @@
   .lc-hero-inner { padding: 32px 16px 56px; }
   .lc-hero-full::after { background: linear-gradient(90deg, rgb(6 10 7 / 97%), rgb(7 21 11 / 70%)); }
   .lc-home-products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .lc-pass-spotlight, .lc-home-campaigns { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .lc-pass-spotlight, .lc-home-campaign { padding: 16px; }
+  .lc-home-campaigns { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .lc-home-campaign { padding: 16px; }
   .lc-level-pass-progress, .lc-level-trail-heading { align-items: flex-start; flex-direction: column; gap: 12px; }
   .lc-rail-labels { padding-right: 8px; font-size: .75rem; }
   .lc-rail-track { grid-auto-columns: 128px; }
