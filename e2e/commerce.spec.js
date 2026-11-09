@@ -117,6 +117,11 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(footer).toContainText("Endereço e cadastro fictícios");
   await expect(footer.getByRole("link", { name: "Acompanhar pedido" })).toHaveAttribute("href", "/pedidos");
   await expect(home.getByRole("button", { name: "Pausar faixa" })).toHaveCount(0);
+  await home.getByRole("button", { name: /^Mostrar destaque 2/ }).click();
+  await home.getByRole("link", { name: "Ver eventos", exact: true }).click();
+  await expect(page).toHaveURL(/\/passe#eventos$/);
+  await expect(page.getByRole("region", { name: "Eventos da loja" })).toBeVisible();
+  await navigation.getByRole("link", { name: "Início", exact: true }).click();
   const themeToggle = page.getByRole("button", { name: "Modo escuro" });
   await expect(themeToggle).toHaveAttribute("aria-pressed", "false");
   await page.screenshot({ path: "test-results/home-light-desktop.png" });

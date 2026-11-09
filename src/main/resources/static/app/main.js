@@ -76,9 +76,12 @@ function useRoute() {
 }
 
 function navigate(path) {
-  window.history.pushState({}, "", path);
+  const target = path === "/eventos" ? "/passe#eventos" : path;
+  window.history.pushState({}, "", target);
   window.dispatchEvent(new PopStateEvent("popstate"));
-  window.scrollTo(0, 0);
+  const section = document.getElementById(target.split("#")[1] || "");
+  if (section) section.scrollIntoView();
+  else window.scrollTo(0, 0);
 }
 
 function parseRoute(route) {
