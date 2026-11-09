@@ -101,9 +101,18 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(home.getByRole("heading", { name: "Destaques da loja" })).toBeVisible();
   const sections = await home.locator("section").evaluateAll(sections =>
     sections.map(section => section.getAttribute("aria-label") || section.querySelector("h2")?.textContent));
-  expect(sections.slice(0, 4)).toEqual([
+  expect(sections).toEqual([
     "Campanhas em destaque", "Chamadas promocionais demonstrativas", "Passe LEVEL", "Destaques da loja",
+    "Campanhas da LEVEL", "Compre por categoria", "Netflix", "Novidades",
   ]);
+  await expect(home.getByRole("region", { name: "Destaque do Passe LEVEL" }))
+    .toContainText(/Faltam? \d+ XP para desbloquear este prêmio/);
+  await expect(home.locator(".lc-product-card").first().locator(".lc-product-copy p")).toBeVisible();
+  await expect(home.locator(".lc-product-card").getByRole("button")).toHaveCount(0);
+  await expect(home.getByRole("region", { name: "Netflix" })).toContainText("CAMPANHA FICTÍCIA");
+  const footer = page.getByRole("contentinfo");
+  await expect(footer).toContainText("Endereço e cadastro fictícios");
+  await expect(footer.getByRole("link", { name: "Acompanhar pedido" })).toHaveAttribute("href", "/pedidos");
   await expect(home.getByRole("button", { name: "Pausar faixa" })).toHaveCount(0);
   const themeToggle = page.getByRole("button", { name: "Modo escuro" });
   await expect(themeToggle).toHaveAttribute("aria-pressed", "false");
@@ -147,7 +156,7 @@ test("catalog, private pass, checkout without live charges and profile", async (
     await route.fulfill({ json: data });
   });
   await page.goto("/catalogo");
-  const longTitle = page.locator(".lc-product-copy").getByRole("link", { name: longName, exact: true });
+  const longTitle = page.getByRole("heading", { name: longName, exact: true });
   await expect(longTitle).toBeVisible();
   expect(await longTitle.evaluate(link => {
     const card = link.closest("article");
@@ -161,7 +170,10 @@ test("catalog, private pass, checkout without live charges and profile", async (
     catalog.produtos[0];
   await page.goto("/catalogo");
   const card = page.locator(".lc-product-card").filter({ hasText: product.nome });
-  await card.getByRole("button", { name: "Comprar agora", exact: true }).click();
+  await expect(card.getByRole("button")).toHaveCount(0);
+  await card.getByRole("link").click();
+  await expect(page).toHaveURL(new RegExp(`/produto/${product.id}$`));
+  await page.locator(".lc-detail-actions").getByRole("button", { name: "Comprar agora", exact: true }).click();
   await expect(page).toHaveURL(/\/checkout\?modo=imediato$/);
   const summary = page.getByRole("complementary", { name: "Resumo da compra" });
   await expect(summary).toContainText(product.nome);
@@ -253,12 +265,11 @@ test("catalog, private pass, checkout without live charges and profile", async (
   ).toBeTruthy();
   const passProducts = page.locator(".lc-pass-products");
   await expect(passProducts.getByRole("heading", { name: "Produtos da loja" })).toBeVisible();
-  const availableCard = passProducts.locator("article").filter({
-    has: page.getByRole("button", { name: "Comprar agora" }).and(page.locator(":enabled")),
-  }).first();
-  const itemName = await availableCard.getByRole("heading").innerText();
-  await availableCard.getByRole("button", { name: "Comprar agora" }).click();
-  await expect(page).toHaveURL(/\/checkout\?modo=imediato$/);
-  await expect(page.getByRole("complementary", { name: "Resumo da compra" })).toContainText(itemName);
+  const shelfCard = passProducts.locator("article").first();
+  await expect(shelfCard.getByRole("button")).toHaveCount(0);
+  const itemName = await shelfCard.getByRole("heading").innerText();
+  await shelfCard.getByRole("link").click();
+  await expect(page.getByRole("heading", { name: itemName, level: 1 })).toBeVisible();
+  await expect(page.locator(".lc-detail-actions").getByRole("button", { name: "Comprar agora" })).toBeVisible();
   expect(errors).toEqual([]);
 });

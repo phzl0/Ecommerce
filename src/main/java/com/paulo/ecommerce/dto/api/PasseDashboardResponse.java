@@ -21,5 +21,5 @@ public record PasseDashboardResponse(
     List<PasseHistoricoXpResponse> historico,
     List<ProdutoAvaliavel> produtosParaAvaliar) {
 
-  public record ProdutoAvaliavel(Long id, String nome, String imagemUrl, java.math.BigDecimal preco, int estoque) {}
+  public record ProdutoAvaliavel(Long id, String nome, String imagemUrl, java.math.BigDecimal preco, int estoque, String descricaoCurta) {}
 }

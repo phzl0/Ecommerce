@@ -195,7 +195,7 @@ public class PasseService {
     List<ProdutoAvaliavel> produtosParaAvaliar = avaliacaoPendente
         ? produtoRepository.buscarParaAvaliar(usuario.getId(), null, PageRequest.of(0, 4)).stream()
             .map(produto -> new ProdutoAvaliavel(produto.getId(), produto.getNome(),
-                produto.getImagemUrl(), produto.getPreco(), produto.getEstoque()))
+                produto.getImagemUrl(), produto.getPreco(), produto.getEstoque(), produto.getDescricaoCurta()))
             .toList()
         : List.of();
     Long produtoParaAvaliar = produtosParaAvaliar.isEmpty() ? null : produtosParaAvaliar.get(0).id();
