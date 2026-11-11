@@ -14,6 +14,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @Controller
 @RequestMapping("/admin/fidelidade")
 public class AdminFidelidadeController {
+  @org.springframework.beans.factory.annotation.Autowired private BauItemRepository bau;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.service.PasseService passe;
   private final FidelidadeService fidelidade;
   private final FidelidadeConfigRepository configuracoes;
   private final VipNivelRepository niveis;
@@ -35,6 +37,8 @@ public class AdminFidelidadeController {
   @GetMapping
   @Transactional
   public String pagina(Model model) {
+    passe.garantirPasseAtual();
+    model.addAttribute("resgates", bau.findTop100ByOrderByIdDesc());
     var mes = YearMonth.now();
     var temporada = temporadas.findByAnoAndMes(mes.getYear(), mes.getMonthValue()).orElseThrow();
     model.addAttribute("config", fidelidade.config());

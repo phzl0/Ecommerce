@@ -40,4 +40,13 @@
 <label>XP<input name="xp" type="number" min="1" max="3000" required value="100"></label>
 <label><input type="checkbox" name="premium" value="true">Exclusiva Premium</label><button class="admin-button">Criar missão</button></form>
 <ul><li th:each="m : ${missoes}" th:text="${m.titulo + ' · ' + m.xpRecompensa + ' XP · ' + (m.premium ? 'Premium' : 'Gratuita')}"></li></ul>
-</section></main></div></body></html>
+</section>
+<section class="form-card"><h2>Últimos resgates no Baú</h2>
+<p>Produtos físicos aguardando solicitação já têm uma unidade reservada no estoque.</p>
+<div class="admin-table-wrap"><table class="admin-table">
+<thead><tr><th>Resgate</th><th>Cliente</th><th>Prêmio</th><th>Origem</th><th>Entrega</th></tr></thead>
+<tbody><tr th:each="r : ${resgates}"><td th:text="${r.id}"></td><td th:text="${r.usuarioId}"></td>
+<td th:text="${r.titulo}"></td><td th:text="${r.origem}"></td>
+<td><a th:if="${r.pedido != null}" th:href="@{/admin/pedidos/{id}(id=${r.pedido.id})}" th:text="${r.pedido.numero + ' · ' + r.pedido.status}"></a>
+<span th:if="${r.pedido == null}" th:text="${r.produto == null ? 'Coleção digital' : 'Aguardando solicitação'}"></span></td></tr></tbody>
+</table></div></section></main></div></body></html>
