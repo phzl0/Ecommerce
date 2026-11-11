@@ -2021,7 +2021,7 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
     <span className="lc-premium-badge"><${Icon} name=${pass?.premiumAtivo ? "shield" : "lock"} /></span>
     <div><strong>${pass?.premiumAtivo ? "Premium ativo" : "Trilha Premium bloqueada"}</strong>
       <small>${pass?.premiumAtivo ? `Acesso até ${new Date(pass.premiumValidoAte).toLocaleDateString("pt-BR")}`
-        : pass ? `${currency(pass.precoPremium)} nesta temporada${auth.ambienteLocal ? " · ativação de teste" : ""}`
+        : pass ? `${currency(pass.precoPremium)} nesta temporada · ${pass.temporadaPeriodo}${auth.ambienteLocal ? " · ativação de teste" : ""}`
           : "Entre para acompanhar a trilha e resgatar prêmios."}</small></div>
     ${!pass ? html`<${AppLink} href=${buildLoginUrl()} className="lc-btn lc-neon-btn">Entrar<//>`
       : !pass.premiumAtivo && auth.ambienteLocal ? html`<button type="button" className="lc-btn lc-neon-btn"
@@ -2254,7 +2254,7 @@ function PassMissionsPage({ auth, demoProducts }) {
   const [events, setEvents] = useState([]);
   const [selected, setSelected] = useState(0);
   const [error, setError] = useState("");
-  const tabs = ["Diárias", "Semanais", "Mensais", "Especiais"];
+  const tabs = ["Diárias", "Semanais", "Mensais", "Especiais", "Premium"];
 
   useEffect(() => {
     if (!auth.ready) return;
@@ -2278,7 +2278,9 @@ function PassMissionsPage({ auth, demoProducts }) {
       .catch(() => {});
   }, []);
 
-  const missions = dashboard ? [dashboard.missoesDiarias, dashboard.missoesSemanais, dashboard.missoesMensais][selected] : [];
+  const missionGroups = dashboard ? [dashboard.missoesDiarias, dashboard.missoesSemanais, dashboard.missoesMensais] : [];
+  const missions = selected === 4 ? missionGroups.flat().filter(m => m.premium)
+    : (missionGroups[selected] || []).filter(m => !m.premium);
   return html`<main className="lc-missions-page">
     <header className="lc-rewards-banner lc-missions-banner">
       <div className="lc-page lc-rewards-banner-content">

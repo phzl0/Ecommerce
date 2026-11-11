@@ -32,6 +32,7 @@ public class BauService {
   }
 
   @Transactional
+  @org.springframework.cache.annotation.CacheEvict(value={"produto", "produtos", "metricas"}, allEntries=true)
   public BauItem conceder(Long usuario, String origem, String titulo, Produto produto) {
     usuarios.findLockedById(usuario).orElseThrow();
     var anterior = itens.findByUsuarioIdAndOrigem(usuario, origem);

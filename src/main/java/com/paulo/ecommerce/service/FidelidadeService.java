@@ -76,7 +76,18 @@ public class FidelidadeService {
 
   @Transactional
   public void estornar(Long pedidoId) {
-    for (var movimento : movimentos.findByPedidoId(pedidoId)) movimento.estornado = true;
+    var afetados = movimentos.findByPedidoId(pedidoId);
+    for (var movimento : afetados) movimento.estornado = true;
+    movimentos.flush();
+    afetados.stream().map(m -> m.usuarioId).distinct().forEach(id -> contas.findById(id).ifPresent(c -> {
+      c.ultimaAtividade = movimentos.findByUsuarioIdAndEstornadoFalseOrderByCriadoEmDesc(id).stream()
+          .filter(m -> !m.criadoEm.isBefore(c.cicloInicio)).map(m -> m.criadoEm).findFirst().orElse(null);
+    }));
+  }
+
+  @Transactional
+  public void reconciliarMissao(Long usuarioId, String referencia, boolean completa) {
+    movimentos.findByUsuarioIdAndReferencia(usuarioId, referencia).ifPresent(m -> m.estornado = !completa);
   }
 
   private long saldo(VipConta conta) {

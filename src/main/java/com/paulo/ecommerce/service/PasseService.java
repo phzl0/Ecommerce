@@ -432,6 +432,7 @@ public class PasseService {
         progresso.setConcluida(completa);
         progresso.setRecompensaEntregue(completa);
         String ref = "MISSION-" + template.getCodigo() + "-" + progresso.getPeriodoInicio();
+        fidelidade.reconciliarMissao(usuario.getId(), "MISSAO-" + temporada.getId() + "-" + ref, completa);
         xpHistoricoRepository
             .findByUsuarioIdAndTemporadaIdAndOrigemTipoAndReferencia(
                 usuario.getId(), temporada.getId(), PasseOrigemXpTipo.MISSION, ref)
@@ -934,6 +935,10 @@ public class PasseService {
         PassePeriodicidade.DIARIA, PasseAcaoTipo.CHECKIN, 1, 250, 50);
     criarMissao(temporada, "premium-explorar", "Descobertas Premium", "Veja dois produtos diferentes.",
         PassePeriodicidade.DIARIA, PasseAcaoTipo.VIEW_PRODUCT, 2, 350, 51);
+    criarMissao(temporada, "premium-planejar", "Sua seleção Premium", "Adicione um produto à sacola, sem obrigação de compra.",
+        PassePeriodicidade.SEMANAL, PasseAcaoTipo.ADD_TO_CART, 1, 500, 52);
+    criarMissao(temporada, "premium-vitrine", "Explore a vitrine", "Veja três produtos diferentes.",
+        PassePeriodicidade.SEMANAL, PasseAcaoTipo.VIEW_PRODUCT, 3, 500, 53);
     for (var missao : missaoTemplateRepository
         .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId())) {
       if (missao.getCodigo().startsWith("premium-")) missao.setPremium(true);
