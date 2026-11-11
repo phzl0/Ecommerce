@@ -44,8 +44,14 @@ jobs:
         with:
           node-version: "22"
       - run: npm install --ignore-scripts
-      - name: Install Chromium
+      - name: Prepare browser
+        timeout-minutes: 5
         run: |
+          if command -v google-chrome >/dev/null 2>&1; then
+            google-chrome --version
+            echo "PLAYWRIGHT_CHANNEL=chrome" >> "$GITHUB_ENV"
+            exit 0
+          fi
           sudo mkdir -p "$RUNNER_TEMP/apt-disabled"
           for source in /etc/apt/sources.list.d/*; do
             if [ -f "$source" ] && grep -q 'packages.microsoft.com' "$source"; then sudo mv "$source" "$RUNNER_TEMP/apt-disabled/"; fi

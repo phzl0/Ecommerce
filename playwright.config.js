@@ -5,6 +5,7 @@ export default defineConfig({
   retries: 0,
   timeout: 90000,
   use: {
+    channel: process.env.PLAYWRIGHT_CHANNEL || undefined,
     baseURL: "http://localhost:8080",
     viewport: { width: 1440, height: 1000 },
     screenshot: "only-on-failure",
