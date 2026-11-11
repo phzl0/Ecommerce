@@ -143,7 +143,7 @@ public class AccountApiController {
         pedido.getEstadoEntrega(),
         pedido.getComplementoEntrega(),
         pedido.getObservacoes(),
-        pagamento == null ? "SEM_PAGAMENTO" : pagamento.getStatus().name(),
+        resolvePaymentStatus(pedido),
         pagamento == null || pagamento.getMetodo() == null ? null : pagamento.getMetodo().name(),
         pagamento == null || pagamento.getPagoEm() == null
             ? null
@@ -163,6 +163,7 @@ public class AccountApiController {
   }
 
   private String resolvePaymentStatus(Pedido pedido) {
+    if (pedido.isRecompensa()) return "ISENTO";
     Pagamento pagamento = findPagamento(pedido);
     return pagamento == null ? "SEM_PAGAMENTO" : pagamento.getStatus().name();
   }

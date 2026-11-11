@@ -295,6 +295,7 @@ function paymentStatusLabel(status) {
     CANCELADO: "Pagamento cancelado",
     REEMBOLSADO: "Pagamento reembolsado",
     SEM_PAGAMENTO: "Pagamento nao iniciado",
+    ISENTO: "Entrega gratuita de recompensa",
   };
   return labels[status] || status;
 }

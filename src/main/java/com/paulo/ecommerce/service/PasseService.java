@@ -738,12 +738,14 @@ public class PasseService {
   private PasseMissaoResponse toMissaoResponse(PasseMissaoTemplate template,
       PasseMissaoProgresso progresso, PeriodoPeriodo periodo, Long produtoParaAvaliar) {
     CtaMissao cta = resolverCta(template.getAcaoTipo(), produtoParaAvaliar);
+    var fimTemporada = template.getTemporada().getFimEm().plusDays(1).atStartOfDay();
+    var fim = periodo.fim().isAfter(fimTemporada) ? fimTemporada : periodo.fim();
     return new PasseMissaoResponse(
         template.getId(), template.getPeriodicidade().name(), template.getAcaoTipo().name(),
         template.getTitulo(), template.getDescricao(),
         progresso == null ? 0 : progresso.getProgressoAtual(), template.getMetaValor(),
         template.getXpRecompensa(), progresso != null && Boolean.TRUE.equals(progresso.getConcluida()),
-        periodo.fim().format(DATE_TIME_FORMATTER), cta.label(), cta.href(), template.isPremium());
+        fim.format(DATE_TIME_FORMATTER), cta.label(), cta.href(), template.isPremium());
   }
 
   private Map<Long, PasseMissaoProgresso> carregarProgressoMissao(
