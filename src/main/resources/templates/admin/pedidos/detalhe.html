@@ -15,7 +15,7 @@
         <div class="admin-header">
             <div><span class="admin-eyebrow">OPERAÇÃO</span>
                 <h1 th:text="'Pedido ' + ${pedido.numero}">Pedido</h1>
-                <p class="admin-subtitle" th:text="${pedido.temporadaPasseId == null ? 'Pedido físico' : 'Passe digital'}"></p>
+                <p class="admin-subtitle" th:text="${pedido.recompensa ? 'Recompensa do Baú · entrega gratuita' : (pedido.temporadaPasseId == null ? 'Pedido de produtos' : 'Passe digital')}"></p>
             </div>
             <a th:href="@{/admin/pedidos}" class="btn-link">← Voltar</a>
         </div>

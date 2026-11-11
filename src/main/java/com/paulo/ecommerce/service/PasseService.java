@@ -46,6 +46,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PasseService {
+  @org.springframework.beans.factory.annotation.Autowired private FidelidadeService fidelidade;
+  @org.springframework.beans.factory.annotation.Autowired private BauService bau;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.RecompensaOpcaoRepository opcoes;
+
   @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
 
   private static final Locale LOCALE_PT_BR = Locale.forLanguageTag("pt-BR");
@@ -58,7 +62,7 @@ public class PasseService {
   @org.springframework.beans.factory.annotation.Autowired
   private com.paulo.ecommerce.repository.PedidoRepository pedidoRepository;
 
-  private static final BigDecimal PRECO_PREMIUM = new BigDecimal("79.00");
+
 
   @org.springframework.beans.factory.annotation.Value("${app.pass.total-levels:30}")
   private int niveisNovasTemporadas;
@@ -111,16 +115,9 @@ public class PasseService {
             .findByAnoAndMes(yearMonth.getYear(), yearMonth.getMonthValue())
             .orElseGet(() -> criarTemporada(yearMonth));
 
-    if (recompensaRepository.findByTemporadaIdOrderByNivelAsc(temporada.getId()).size()
-        < temporada.getTotalNiveis()) {
-      criarRecompensas(temporada);
-    }
-
-    if (missaoTemplateRepository
-        .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId())
-        .size() < 12) {
-      criarMissoes(temporada);
-    }
+    criarRecompensas(temporada);
+    criarMissoes(temporada);
+    criarMissoesPremium(temporada);
   }
 
   @Transactional
@@ -196,7 +193,7 @@ public class PasseService {
 
     return new PasseDashboardResponse(
         premiumAtivoAgora,
-        PRECO_PREMIUM,
+        fidelidade.config().precoPasse,
         premiumValidoAte,
         temporada.getNome(),
         temporada.getInicioEm().format(DateTimeFormatter.ofPattern("dd/MM"))
@@ -235,7 +232,10 @@ public class PasseService {
     return new PasseNivelResponse(recompensa.getId(), premium, recompensa.getNivel(), xpNecessario,
         recompensa.getTitulo(), recompensa.getDescricao(), recompensa.getTipoDigital(),
         resgatado ? recompensa.getCodigo() : null, desbloqueado, resgatado,
-        desbloqueado && !resgatado && (!premium || premiumAtivo), percentual);
+        desbloqueado && !resgatado && (!premium || premiumAtivo), percentual,
+        opcoes.findByRecompensaIdOrderByIdAsc(recompensa.getId()).stream()
+            .map(o -> new PasseNivelResponse.Opcao(o.produto.getId(), o.produto.getNome(), o.produto.getEstoque() > 0))
+            .toList());
   }
 
   @Transactional(readOnly = true)
@@ -307,6 +307,7 @@ public class PasseService {
             .toList();
 
     for (PasseMissaoTemplate template : templates) {
+      if (template.isPremium() && validadePremium(usuario, temporada, LocalDateTime.now()) == null) continue;
       PeriodoPeriodo periodo = resolverPeriodo(template.getPeriodicidade());
       PasseMissaoProgresso progresso =
           missaoProgressoRepository
@@ -384,6 +385,7 @@ public class PasseService {
               .filter(
                   p ->
                       p.getStatus() != com.paulo.ecommerce.model.Pedido.Status.CANCELADO
+                          && p.getTemporadaPasseId() == null && !p.isRecompensa()
                           && p.getPagamento() != null
                           && p.getPagamento().getStatus()
                               == com.paulo.ecommerce.model.Pagamento.StatusPagamento.APROVADO)
@@ -457,6 +459,11 @@ public class PasseService {
 
   @Transactional
   public PasseClaimResponse reclamarRecompensa(String emailUsuario, Long recompensaId) {
+    return reclamarRecompensa(emailUsuario, recompensaId, null);
+  }
+
+  @Transactional
+  public PasseClaimResponse reclamarRecompensa(String emailUsuario, Long recompensaId, Long produtoId) {
     PasseTemporada temporada = obterPasseAtual();
     Usuario usuario = buscarUsuario(emailUsuario);
     PasseRecompensaNivel recompensa =
@@ -505,11 +512,19 @@ public class PasseService {
       resgate.setValorCupom(valorCupom);
       resgate.setMinimoCupom(minimoCupom);
     }
+    var escolhas = opcoes.findByRecompensaIdOrderByIdAsc(recompensaId);
+    Long itemBauId = null;
+    if (!escolhas.isEmpty()) {
+      var escolha = escolhas.stream().filter(o -> o.produto.getId().equals(produtoId))
+          .findFirst().orElseThrow(() -> new IllegalArgumentException("Escolha o produto da recompensa."));
+      itemBauId = bau.conceder(usuario.getId(), "PASSE-" + recompensaId,
+          escolha.produto.getNome(), escolha.produto).id;
+    }
     recompensaResgateRepository.save(resgate);
     if (primeiroResgate)
       notificacoes.registrar(usuario.getId(), "Recompensa do passe resgatada", recompensa.getTitulo(), "/passe");
     return new PasseClaimResponse(
-        resgate.getCodigoEntrega(), recompensa.getTitulo(), recompensa.getDescricao());
+        resgate.getCodigoEntrega(), recompensa.getTitulo(), recompensa.getDescricao(), itemBauId);
   }
 
   @Transactional
@@ -524,7 +539,8 @@ public class PasseService {
               item.put("tipo", r.getRecompensa().getTipoDigital());
               item.put("valor", r.getValorCupom());
               item.put("minimo", r.getMinimoCupom());
-              item.put("validade", r.getTemporada().getFimEm().plusDays(30).toString());
+              item.put("validade", "Cupom".equals(r.getRecompensa().getTipoDigital())
+                  ? r.getTemporada().getFimEm().plusDays(30).toString() : null);
               item.put(
                   "codigo",
                   r.getCodigoEntrega() == null ? "Resgate anterior" : r.getCodigoEntrega());
@@ -548,7 +564,8 @@ public class PasseService {
     LocalDateTime resgatadoEm = resgate.getCriadoEm() == null
         ? resgate.getTemporada().getFimEm().atTime(23, 59)
         : resgate.getCriadoEm();
-    return !LocalDate.now().isAfter(resgate.getTemporada().getFimEm().plusDays(30))
+    return (!"Cupom".equals(resgate.getRecompensa().getTipoDigital())
+            || !LocalDate.now().isAfter(resgate.getTemporada().getFimEm().plusDays(30)))
         && progresso.isPresent()
         && progresso.get().getXpTotal()
             >= resgate.getRecompensa().getNivel() * resgate.getTemporada().getXpPorNivel()
@@ -599,7 +616,7 @@ public class PasseService {
             .orElseThrow(() -> new IllegalArgumentException("Resgate este benefício primeiro."));
     if (!beneficioAtivo(usuario, resgate))
       throw new IllegalArgumentException("Benefício indisponível.");
-    if ("Cupom".equals(resgate.getRecompensa().getTipoDigital()))
+    if ("Cupom".equals(resgate.getRecompensa().getTipoDigital()) || "Fisico".equals(resgate.getRecompensa().getTipoDigital()))
       throw new IllegalArgumentException("Use o código do cupom no checkout.");
     String svg =
         """
@@ -633,21 +650,17 @@ public class PasseService {
   }
 
   private boolean exigePremium(PasseRecompensaNivel recompensa) {
-    return recompensa.getNivel().equals(recompensa.getTemporada().getTotalNiveis())
-        || !gratuita(recompensa.getNivel());
+    return recompensa.isPremium();
   }
 
   private LocalDateTime validadePremium(Usuario usuario, PasseTemporada temporada, LocalDateTime referencia) {
-    return pedidoRepository.pagamentosPasse(usuario.getId(), temporada.getId(), referencia.minusDays(32))
-        .stream().map(pedido -> {
-          var pagoEm = pedido.getPagamento().getPagoEm();
-          if (pagoEm != null && pagoEm.isAfter(referencia)) return null;
-          return pedido.isPasseMensal()
-              ? pagoEm == null ? null : pagoEm.plusMonths(1)
-              : temporada.getFimEm().plusDays(1).atStartOfDay();
-        })
-        .filter(validade -> validade != null && validade.isAfter(referencia))
-        .max(LocalDateTime::compareTo).orElse(null);
+    var fim = temporada.getFimEm().plusDays(1).atStartOfDay();
+    if (!referencia.isBefore(fim)) return null;
+    return pedidoRepository.pagamentosPasse(usuario.getId(), temporada.getId(), temporada.getInicioEm().atStartOfDay())
+        .stream().filter(p -> p.getTemporadaPasseId().equals(temporada.getId()))
+        .anyMatch(p -> p.getPagamento().getPagoEm() != null
+            && !p.getPagamento().getPagoEm().isAfter(referencia)
+            && p.getPagamento().getPagoEm().isBefore(fim)) ? fim : null;
   }
 
   @Transactional
@@ -658,16 +671,17 @@ public class PasseService {
       throw new IllegalStateException("Seu Passe Premium já está ativo.");
     var aberto = pedidoRepository.findFirstByUsuarioIdAndPasseMensalTrueAndStatusAndDataPedidoAfterOrderByIdDesc(
         usuario.getId(), com.paulo.ecommerce.model.Pedido.Status.PENDENTE, LocalDateTime.now().minusHours(24));
-    if (aberto.isPresent()) return aberto.get().getId();
+    if (aberto.isPresent() && temporada.getId().equals(aberto.get().getTemporadaPasseId())) return aberto.get().getId();
     Produto produto =
         produtoRepository
             .findBySku("PASSE-MENSAL-" + temporada.getSlug())
             .orElseGet(
                 () -> {
                   Produto virtual = new Produto();
-                  virtual.setNome("Passe Premium mensal");
+                  virtual.setNome("Passe Premium · " + temporada.getNome());
+                  virtual.setTipo(Produto.Tipo.DIGITAL);
                   virtual.setSku("PASSE-MENSAL-" + temporada.getSlug());
-                  virtual.setPreco(PRECO_PREMIUM);
+                  virtual.setPreco(fidelidade.config().precoPasse);
                   virtual.setAtivo(false);
                   virtual.setEstoque(0);
                   return produtoRepository.save(virtual);
@@ -678,15 +692,15 @@ public class PasseService {
     pedido.setPasseMensal(true);
     pedido.setNumero(
         "PP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24));
-    pedido.setSubtotal(PRECO_PREMIUM);
+    pedido.setSubtotal(fidelidade.config().precoPasse);
     pedido.setFrete(BigDecimal.ZERO);
-    pedido.setTotal(PRECO_PREMIUM);
+    pedido.setTotal(fidelidade.config().precoPasse);
     pedido.setEnderecoEntrega("Entrega digital na conta");
     var item = new com.paulo.ecommerce.model.ItemPedido();
     item.setPedido(pedido);
     item.setProduto(produto);
     item.setQuantidade(1);
-    item.setPrecoUnitario(PRECO_PREMIUM);
+    item.setPrecoUnitario(fidelidade.config().precoPasse);
     pedido.setItens(List.of(item));
     return pedidoRepository.save(pedido).getId();
   }
@@ -711,7 +725,7 @@ public class PasseService {
         template.getTitulo(), template.getDescricao(),
         progresso == null ? 0 : progresso.getProgressoAtual(), template.getMetaValor(),
         template.getXpRecompensa(), progresso != null && Boolean.TRUE.equals(progresso.getConcluida()),
-        periodo.fim().format(DATE_TIME_FORMATTER), cta.label(), cta.href());
+        periodo.fim().format(DATE_TIME_FORMATTER), cta.label(), cta.href(), template.isPremium());
   }
 
   private Map<Long, PasseMissaoProgresso> carregarProgressoMissao(
@@ -778,6 +792,8 @@ public class PasseService {
       PasseMissaoTemplate template,
       PeriodoPeriodo periodo) {
     String referencia = "MISSION-" + template.getCodigo() + "-" + periodo.inicio();
+    fidelidade.creditar(usuario.getId(), "MISSAO-" + temporada.getId() + "-" + referencia,
+        fidelidade.config().pontosMissao, null);
     adicionarXp(
         usuario,
         temporada,
@@ -877,23 +893,33 @@ public class PasseService {
 
   private void criarRecompensas(PasseTemporada temporada) {
     String[] tipos = {"Cupom", "Avatar", "Wallpaper", "Badge", "Tema"};
-    java.util.Set<Integer> niveisExistentes =
-        recompensaRepository.findByTemporadaIdOrderByNivelAsc(temporada.getId()).stream()
-            .map(PasseRecompensaNivel::getNivel)
-            .collect(Collectors.toSet());
+    var existentes = recompensaRepository.findByTemporadaIdOrderByNivelAsc(temporada.getId()).stream()
+        .map(r -> r.getNivel() + "-" + r.isPremium()).collect(Collectors.toSet());
     for (int nivel = 1; nivel <= temporada.getTotalNiveis(); nivel++) {
-      if (niveisExistentes.contains(nivel)) {
-        continue;
+      for (boolean premium : new boolean[] {false, true}) {
+        if (!premium && !gratuita(nivel) && nivel != temporada.getTotalNiveis()) continue;
+        if (existentes.contains(nivel + "-" + premium)) continue;
+        var recompensa = new PasseRecompensaNivel();
+        recompensa.setTemporada(temporada);
+        recompensa.setNivel(nivel);
+        recompensa.setPremium(premium);
+        recompensa.setTitulo((premium ? "Premium" : "Gratuito") + " · nível " + nivel);
+        recompensa.setDescricao(descricaoRecompensa(nivel));
+        recompensa.setTipoDigital(tipos[(nivel - 1) % tipos.length]);
+        recompensa.setCodigo("LEVEL-" + temporada.getId() + "-" + nivel + "-" + premium);
+        recompensaRepository.save(recompensa);
       }
-      PasseRecompensaNivel recompensa = new PasseRecompensaNivel();
-      recompensa.setTemporada(temporada);
-      recompensa.setNivel(nivel);
-      recompensa.setTitulo("Recompensa digital nivel " + nivel);
-      recompensa.setDescricao(descricaoRecompensa(nivel));
-      recompensa.setTipoDigital(tipos[(nivel - 1) % tipos.length]);
-      recompensa.setCodigo(
-          "LEVEL-" + temporada.getAno() + temporada.getMes() + "-" + String.format("%02d", nivel));
-      recompensaRepository.save(recompensa);
+    }
+  }
+
+  private void criarMissoesPremium(PasseTemporada temporada) {
+    criarMissao(temporada, "premium-checkin", "Presença Premium", "Entre na loja para ganhar XP.",
+        PassePeriodicidade.DIARIA, PasseAcaoTipo.CHECKIN, 1, 250, 50);
+    criarMissao(temporada, "premium-explorar", "Descobertas Premium", "Veja dois produtos diferentes.",
+        PassePeriodicidade.DIARIA, PasseAcaoTipo.VIEW_PRODUCT, 2, 350, 51);
+    for (var missao : missaoTemplateRepository
+        .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId())) {
+      if (missao.getCodigo().startsWith("premium-")) missao.setPremium(true);
     }
   }
 

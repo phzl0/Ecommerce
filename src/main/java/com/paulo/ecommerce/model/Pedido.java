@@ -19,6 +19,11 @@ public class Pedido extends BaseEntity {
     checkoutKey = value;
   }
 
+  @Column(nullable = false)
+  private boolean recompensa;
+  public boolean isRecompensa() { return recompensa; }
+  public void setRecompensa(boolean value) { recompensa = value; }
+
   private Long temporadaPasseId;
 
   @Column(nullable = false)

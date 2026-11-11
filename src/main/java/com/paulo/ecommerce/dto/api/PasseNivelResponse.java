@@ -12,4 +12,7 @@ public record PasseNivelResponse(
     boolean desbloqueado,
     boolean resgatado,
     boolean disponivelParaResgate,
-    int progressoPercentual) {}
+    int progressoPercentual,
+    java.util.List<Opcao> opcoes) {
+  public record Opcao(Long produtoId, String nome, boolean disponivel) {}
+}

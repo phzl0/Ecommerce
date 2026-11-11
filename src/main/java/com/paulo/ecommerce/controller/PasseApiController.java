@@ -74,7 +74,7 @@ public class PasseApiController {
   public com.paulo.ecommerce.dto.api.PaymentRedirectResponse premium(
       @AuthenticationPrincipal UserDetails user) {
     if (!pagamentos.simulacaoDisponivel())
-      throw new IllegalStateException("A assinatura está disponível apenas para testes no ambiente local.");
+      throw new IllegalStateException("A compra do passe está disponível apenas para testes no ambiente local.");
     Long id = passeService.criarPedidoPremium(user.getUsername());
     return new com.paulo.ecommerce.dto.api.PaymentRedirectResponse(
         pagamentos.iniciarFluxoPagamento(
@@ -98,7 +98,9 @@ public class PasseApiController {
 
   @PostMapping("/rewards/{rewardId}/claim")
   public PasseClaimResponse claimReward(
-      @PathVariable Long rewardId, @AuthenticationPrincipal UserDetails userDetails) {
-    return passeService.reclamarRecompensa(userDetails.getUsername(), rewardId);
+      @PathVariable Long rewardId, @RequestBody(required = false) java.util.Map<String, Long> escolha,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    return passeService.reclamarRecompensa(userDetails.getUsername(), rewardId,
+        escolha == null ? null : escolha.get("produtoId"));
   }
 }

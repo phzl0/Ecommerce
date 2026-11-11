@@ -21,7 +21,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
       select p from Pedido p join fetch p.pagamento pg
       where p.usuario.id = :usuarioId and p.temporadaPasseId is not null
         and p.status <> 'CANCELADO' and pg.status = 'APROVADO'
-        and (p.temporadaPasseId = :temporadaId or (p.passeMensal = true and pg.pagoEm >= :limite))
+        and p.temporadaPasseId = :temporadaId and pg.pagoEm >= :limite
       """)
   List<Pedido> pagamentosPasse(Long usuarioId, Long temporadaId, LocalDateTime limite);
 

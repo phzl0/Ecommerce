@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EventoSemanalService {
+  @org.springframework.beans.factory.annotation.Autowired private FidelidadeService fidelidade;
   private final EventoSemanalRepository eventos;
   private final EventoResgateRepository resgates;
   private final PedidoRepository pedidos;
@@ -92,6 +93,7 @@ public class EventoSemanalService {
     resgate.usuarioId = usuario.getId();
     resgate.resgatadoEm = LocalDateTime.now();
     resgates.save(resgate);
+    fidelidade.creditar(usuario.getId(), "EVENTO-" + id, fidelidade.config().pontosEvento, null);
     notificacoes.registrar(usuario.getId(), "Selo resgatado", evento.selo, "/eventos");
   }
 

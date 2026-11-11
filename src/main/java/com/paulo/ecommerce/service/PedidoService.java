@@ -117,7 +117,9 @@ public class PedidoService {
       throw new IllegalArgumentException("Um produto da sacola não está mais disponível.");
     }
     validarSubtotal(subtotal);
-    BigDecimal frete = calcularFrete(subtotal);
+    boolean fisico = produtoRepository.findAllById(quantidades.keySet()).stream()
+        .anyMatch(p -> p.getTipo() == Produto.Tipo.FISICO);
+    BigDecimal frete = fisico ? calcularFrete(subtotal) : BigDecimal.ZERO;
     BigDecimal desconto = BigDecimal.ZERO;
     String cupomErro = null;
     if (cupom != null && !cupom.isBlank()) {
@@ -183,7 +185,8 @@ public class PedidoService {
             .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
     validarSubtotal(subtotal);
     pedido.setSubtotal(subtotal);
-    pedido.setFrete(calcularFrete(subtotal));
+    pedido.setFrete(itens.stream().anyMatch(i -> i.getProduto().getTipo() == Produto.Tipo.FISICO)
+        ? calcularFrete(subtotal) : BigDecimal.ZERO);
     pedido.setTotal(subtotal.add(pedido.getFrete()));
     pedido.setItens(itens);
     Pedido salvo = pedidoRepository.save(pedido);
@@ -251,15 +254,16 @@ public class PedidoService {
   public List<Pedido.Status> acoesOperacionais(Pedido pedido) {
     List<Pedido.Status> acoes = new ArrayList<>();
     boolean fisico = pedido.getTemporadaPasseId() == null;
-    boolean pagamentoAprovado = pedido.getPagamento() != null
-        && pedido.getPagamento().getStatus() == Pagamento.StatusPagamento.APROVADO;
+    boolean pagamentoAprovado = pedido.isRecompensa() || (pedido.getPagamento() != null
+        && pedido.getPagamento().getStatus() == Pagamento.StatusPagamento.APROVADO);
     if (fisico && pagamentoAprovado && pedido.getStatus() == Pedido.Status.CONFIRMADO) {
       acoes.add(Pedido.Status.ENVIADO);
     }
     if (fisico && pagamentoAprovado && pedido.getStatus() == Pedido.Status.ENVIADO) {
       acoes.add(Pedido.Status.ENTREGUE);
     }
-    if (!pagamentoAprovado && pedido.getStatus() == Pedido.Status.PENDENTE) {
+    if ((!pagamentoAprovado && pedido.getStatus() == Pedido.Status.PENDENTE)
+        || (pedido.isRecompensa() && pedido.getStatus() == Pedido.Status.CONFIRMADO)) {
       acoes.add(Pedido.Status.CANCELADO);
     }
     return acoes;
@@ -381,7 +385,7 @@ public class PedidoService {
   }
 
   private void devolverEstoque(Pedido pedido) {
-    if (pedido.getTemporadaPasseId() != null) return;
+    if (pedido.getTemporadaPasseId() != null || pedido.isRecompensa()) return;
     for (ItemPedido item :
         pedido.getItens().stream()
             .sorted(Comparator.comparing(i -> i.getProduto().getId()))

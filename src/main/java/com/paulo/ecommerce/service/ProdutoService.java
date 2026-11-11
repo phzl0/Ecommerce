@@ -109,6 +109,7 @@ public class ProdutoService {
     produto.setNome(cadastro.getNome());
     produto.setSku(cadastro.getSku());
     produto.setMarca(cadastro.getMarca());
+    produto.setTipo(cadastro.getTipo());
     produto.setCategoria(cadastro.getCategoria());
     produto.setPreco(cadastro.getPreco());
     produto.setDescricaoCurta(cadastro.getDescricaoCurta());

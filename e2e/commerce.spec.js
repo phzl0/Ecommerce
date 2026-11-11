@@ -41,7 +41,7 @@ test("catalog, private pass, checkout without live charges and profile", async (
   await expect(page.getByRole("region", { name: "Níveis e recompensas do passe" })).toBeVisible();
   await expect(page.getByText("Trilha Premium bloqueada")).toBeVisible();
   await expect(page.locator(".lc-rail")).toHaveCSS("background-color", "rgb(0, 0, 0)");
-  await expect(page.getByRole("button", { name: /^Bloqueado · nível 1 ·/ })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /^Bloqueado · nível 1 ·/ }).first()).toBeDisabled();
   const intro = page.getByRole("complementary", { name: "Como subir de nível" });
   await expect(intro).toContainText("Suba de nível com compras, missões e eventos");
   const showcase = page.getByRole("region", { name: "Vitrine ilustrativa de prêmios" });

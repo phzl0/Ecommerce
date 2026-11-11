@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PagamentoService {
+  @org.springframework.beans.factory.annotation.Autowired private FidelidadeService fidelidade;
 
   private final PagamentoRepository pagamentoRepository;
   private final PedidoService pedidoService;
@@ -206,6 +207,7 @@ public class PagamentoService {
           if (pedido.getStatus() != Pedido.Status.CANCELADO)
             pedidoService.atualizarStatus(pedidoId, Pedido.Status.CANCELADO);
           passeService.estornarCompra(pedido.getUsuario().getEmail(), pedidoId);
+          fidelidade.estornar(pedidoId);
         }
         case "rejected" -> {
           if (pagamento.getStatus() != StatusPagamento.APROVADO
@@ -255,6 +257,7 @@ public class PagamentoService {
     pagamento.setPagoEm(LocalDateTime.now());
     pagamentoRepository.save(pagamento);
     pedidoService.atualizarStatus(pedido.getId(), Pedido.Status.CONFIRMADO);
+    fidelidade.compra(pedido);
     if (pedido.getTemporadaPasseId() == null) {
       var valor = pedido.getSubtotal().subtract(pedido.getDesconto());
       passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(), pedido.getId(), valor);
@@ -270,6 +273,8 @@ public class PagamentoService {
 
   @Transactional
   public String iniciarFluxoPagamento(Long pedidoId, MetodoPagamento metodoPagamento) {
+    if (pedidoService.buscarPorId(pedidoId).isRecompensa())
+      throw new IllegalStateException("Recompensas não exigem pagamento.");
     if (!paymentsEnabled) return "/pedidos/" + pedidoId + "?paymentsDisabled=true";
     try {
       Pagamento pagamento =

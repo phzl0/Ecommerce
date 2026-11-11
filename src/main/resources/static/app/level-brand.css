@@ -1004,3 +1004,16 @@ html:has(.lc-mobile-drawer[open]) { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .lc-mobile-drawer[open] { animation: none; }
 }
+
+.lc-bau-list, .lc-vip-levels { display: grid; gap: 16px; margin-block: 24px; }
+.lc-bau-item, .lc-vip-levels article { display: flex; align-items: center; gap: 16px; padding: 16px; border-bottom: 1px solid var(--lc-border); }
+.lc-bau-item img { width: 80px; height: 80px; object-fit: contain; }
+.lc-bau-item h2, .lc-vip-levels h2 { margin: 0; font-size: 1.125rem; }
+.lc-vip-levels article { justify-content: space-between; }
+.lc-vip-overview { padding: 24px; background: linear-gradient(120deg, #003d25, #000); color: white; border-radius: 8px; }
+.lc-vip-overview strong { font-size: 2rem; color: #7bffb2; }
+.lc-reward-address { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; max-width: 760px; }
+.lc-reward-address label { display: grid; gap: 8px; }
+.lc-reward-address input { width: 100%; padding: 12px; border: 1px solid var(--lc-border); border-radius: 4px; }
+.lc-rail-reward select { width: 100%; min-width: 0; font-size: .75rem; }
+@media (max-width: 640px) { .lc-reward-address { grid-template-columns: 1fr; } }

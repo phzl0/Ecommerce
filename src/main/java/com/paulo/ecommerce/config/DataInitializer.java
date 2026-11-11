@@ -23,7 +23,7 @@ public class DataInitializer {
       CategoriaRepository categoriaRepository,
       ProdutoRepository produtoRepository,
       PasswordEncoder passwordEncoder,
-      PasseService passeService) {
+      PasseService passeService, com.paulo.ecommerce.service.FidelidadeDemoService fidelidadeDemo) {
     return args -> {
       passeService.garantirPasseAtual();
 
@@ -187,6 +187,7 @@ public class DataInitializer {
             50,
             false);
       }
+      fidelidadeDemo.preparar();
     };
   }
 

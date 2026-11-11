@@ -279,7 +279,7 @@ class CommerceIntegrationTest {
     progress.saveAndFlush(state);
     var reward =
         dashboard.niveis().stream()
-            .filter(n -> n.nivel() == dashboard.totalNiveis())
+            .filter(n -> n.nivel() == dashboard.totalNiveis() && n.premium())
             .findFirst()
             .orElseThrow();
     assertThrows(

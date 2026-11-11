@@ -265,8 +265,8 @@ function trackPassAction(acao, valor = 1, referencia = "") {
   }).then(() => window.dispatchEvent(new Event("level-pass-action"))).catch(() => null);
 }
 
-function claimPassReward(rewardId) {
-  return postJson(`/api/pass/rewards/${rewardId}/claim`, {});
+function claimPassReward(rewardId, produtoId) {
+  return postJson(`/api/pass/rewards/${rewardId}/claim`, { produtoId });
 }
 
 function currency(value) {
@@ -399,9 +399,9 @@ function NavBar({ totalItems, onSearch, auth, categories, notificationProps, rou
               if (event.target.closest("a")) closeAccount();
             }}>
               ${auth.authenticated ? html`
-                <${AppLink} href="/perfil">Meu perfil<//>
+                <${AppLink} href="/perfil">Meu perfil<//><${AppLink} href="/conta/vip">Meu VIP<//>
                 <${AppLink} href="/pedidos">Meus pedidos<//>
-                <${AppLink} href="/conta/beneficios">Meus benefícios<//>
+                <${AppLink} href="/conta/beneficios">Meu Baú<//>
                 <${AppLink} href="/conta">Gerenciar conta<//>
                 <form action="/auth/logout" method="post">
                   <input type="hidden" name="_csrf" value=${getCsrfToken()} />
@@ -633,7 +633,7 @@ function AccountPage({ auth }) {
     ["/pedidos", "Meus pedidos", "Acompanhe pagamentos, envios e entregas."],
     ["/conta/endereco", "Endereço de entrega", "Gerencie o endereço usado nas suas compras."],
     ["/perfil", "Dados da conta", "Atualize seu nome e sua senha."],
-    ["/passe", "Passe LEVEL", "Acompanhe sua assinatura, seus níveis e missões."],
+    ["/passe", "Passe LEVEL", "Acompanhe sua temporada, seus níveis e missões."],
     ["/conta/beneficios", "Cupons e recompensas", "Veja e use os benefícios que você resgatou."],
   ] : [
     ["/login", "Entrar", "Acesse seus pedidos e dados da conta."],
@@ -1565,7 +1565,7 @@ function OrdersPage() {
     <section className="lc-account-shell">
       <header className="lc-section-header">
         <div><h1>Meus pedidos</h1><p>Acompanhe o pagamento e a entrega das suas compras.</p></div>
-        <${AppLink} href="/perfil">Meu perfil<//>
+        <${AppLink} href="/perfil">Meu perfil<//><${AppLink} href="/conta/vip">Meu VIP<//>
       </header>
       ${error ? html`<p role="alert">Não foi possível carregar os pedidos.</p>`
         : !orders ? html`<p role="status">Carregando pedidos…</p>`
@@ -1953,6 +1953,8 @@ function PassPage({ auth, route, notify, notifyGain, products }) {
 }
 
 function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
+  const [choices, setChoices] = useState({});
+  const [claimedItem, setClaimedItem] = useState(null);
   const { pass, levels } = overview;
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState("");
@@ -1962,7 +1964,9 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
     setBusy(reward.recompensaId);
     setError("");
     try {
-      const result = await claimPassReward(reward.recompensaId);
+      const result = await claimPassReward(reward.recompensaId, choices[reward.recompensaId]
+        || (reward.opcoes?.length === 1 ? reward.opcoes[0].produtoId : null));
+      setClaimedItem(result.itemBauId);
       notifyGain("Recompensa recebida", result.titulo, "prize");
       overview.updatePass(current => ({ ...current, niveis: current.niveis.map(item =>
         item.recompensaId === reward.recompensaId
@@ -1991,12 +1995,19 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
   }
 
   const rewardCell = (reward, premium) => {
-    if (reward.premium !== premium) return html`<div className=${`lc-rail-reward ${premium ? "premium" : "free"} empty`} aria-hidden="true">—</div>`;
+    if (!reward || reward.premium !== premium) return html`<div className=${`lc-rail-reward ${premium ? "premium" : "free"} empty`} aria-hidden="true">—</div>`;
     const available = reward.disponivelParaResgate && !reward.resgatado;
     const blockedReason = premium && !pass?.premiumAtivo ? "Requer Premium" : `Requer ${reward.xpNecessario} XP`;
     return html`<div className=${`lc-rail-reward ${premium ? "premium" : "free"} ${available ? "available" : ""}`}>
       <span>${reward.tipoDigital}</span>
       <strong title=${reward.descricao}>${reward.titulo}</strong>
+      ${reward.opcoes?.length && !reward.resgatado ? html`<select aria-label=${`Escolher prêmio do nível ${reward.nivel}`}
+        value=${choices[reward.recompensaId] || (reward.opcoes.length === 1 ? reward.opcoes[0].produtoId : "")}
+        onChange=${e => setChoices(current => ({ ...current, [reward.recompensaId]: Number(e.target.value) }))}>
+        ${reward.opcoes.length > 1 ? html`<option value="">Escolha seu prêmio</option>` : null}
+        ${reward.opcoes.map(option => html`<option key=${option.produtoId} value=${option.produtoId}
+          disabled=${!option.disponivel}>${option.nome}${option.disponivel ? "" : " · indisponível"}</option>`)}
+      </select>` : null}
       <button type="button" className=${`lc-reward-state ${available ? "available" : reward.resgatado ? "received" : "locked"}`}
         disabled=${!available || busy !== null} aria-label=${`${available ? "Receber" : reward.resgatado ? "Recebido" : "Bloqueado"} · nível ${reward.nivel} · ${reward.titulo}${!available && !reward.resgatado ? ` · ${blockedReason}` : ""}`}
         onClick=${() => claim(reward)}>
@@ -2010,7 +2021,7 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
     <span className="lc-premium-badge"><${Icon} name=${pass?.premiumAtivo ? "shield" : "lock"} /></span>
     <div><strong>${pass?.premiumAtivo ? "Premium ativo" : "Trilha Premium bloqueada"}</strong>
       <small>${pass?.premiumAtivo ? `Acesso até ${new Date(pass.premiumValidoAte).toLocaleDateString("pt-BR")}`
-        : pass ? `${currency(pass.precoPremium)} por mês${auth.ambienteLocal ? " · ativação de teste" : ""}`
+        : pass ? `${currency(pass.precoPremium)} nesta temporada${auth.ambienteLocal ? " · ativação de teste" : ""}`
           : "Entre para acompanhar a trilha e resgatar prêmios."}</small></div>
     ${!pass ? html`<${AppLink} href=${buildLoginUrl()} className="lc-btn lc-neon-btn">Entrar<//>`
       : !pass.premiumAtivo && auth.ambienteLocal ? html`<button type="button" className="lc-btn lc-neon-btn"
@@ -2023,6 +2034,10 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
         <div><h2 id="level-trail-title">Trilha de recompensas</h2>
           <p>Os prêmios de cada trilha liberam conforme você alcança os níveis.</p></div>
       </div>` : null}
+      ${claimedItem ? html`<div className="lc-form-notice" role="status">Prêmio guardado no Baú.
+        <${AppLink} href=${`/conta/bau/${claimedItem}/entrega`}>Receber agora →<//>
+        <${AppLink} href="/conta/beneficios">Ver Baú<//></div>` : null}
+      ${standalone && pass ? html`<p>Compra única válida na temporada ${pass.temporadaPeriodo}. O progresso encerra com a temporada.</p>` : null}
       ${error || overview.error ? html`<p className="lc-form-notice error" role="alert">${error || overview.error}</p>` : null}
       ${!levels ? !overview.error ? html`<p role="status">Carregando temporada…</p>` : null : html`
       ${standalone && pass?.premiumAtivo ? premiumAccess : null}
@@ -2037,12 +2052,11 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
         ${!pass?.premiumAtivo ? html`<div className="lc-premium-overlay">${premiumAccess}</div>` : null}
         <div className="lc-rail-labels" aria-hidden="true"><strong className="premium">Premium</strong><span>Nível</span><strong className="free">Gratuito</strong></div>
         <div className="lc-rail-track" ref=${track} tabIndex="0" role="region" aria-label="Níveis e recompensas do passe">
-          ${levels.map(reward => html`
-            <div className=${`lc-rail-level ${reward.desbloqueado ? "unlocked" : ""}`}
-              key=${reward.nivel} aria-label=${`Nível ${reward.nivel}, trilha ${reward.premium ? "premium" : "gratuita"}`}>
-              ${rewardCell(reward, true)}
-              <span className="lc-rail-node" aria-current=${reward.nivel === pass?.nivelAtual ? "step" : undefined}>${reward.nivel}</span>
-              ${rewardCell(reward, false)}
+          ${[...new Set(levels.map(r => r.nivel))].map(nivel => html`
+            <div className="lc-rail-level" key=${nivel} aria-label=${`Nível ${nivel}`}>
+              ${rewardCell(levels.find(r => r.nivel === nivel && r.premium), true)}
+              <span className="lc-rail-node" aria-current=${nivel === pass?.nivelAtual ? "step" : undefined}>${nivel}</span>
+              ${rewardCell(levels.find(r => r.nivel === nivel && !r.premium), false)}
             </div>`)}
         </div>
       </div>
@@ -2054,6 +2068,111 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
         </div>`)}
       </details>` : null}
   </section>`;
+}
+
+function BauItems() {
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    getJson("/api/account/bau").then(setItems).catch(() => setError("Não foi possível carregar o Baú."));
+  }, []);
+  return html`<section className="lc-bau-list" aria-label="Itens guardados no Baú">
+    ${error ? html`<p role="alert">${error}</p>` : null}
+    ${items.map(item => html`<article key=${item.id} className="lc-bau-item">
+      ${item.imagem ? html`<img src=${item.imagem} alt="" loading="lazy" />` : html`<span aria-hidden="true">✦</span>`}
+      <div><h2>${item.titulo}</h2><p>${item.fisico ? "Produto e entrega gratuitos" : "Selo da sua coleção VIP"}</p>
+      ${item.podeSolicitar ? html`<${AppLink} className="lc-btn lc-btn-primary" href=${`/conta/bau/${item.id}/entrega`}>Solicitar entrega<//>`
+        : item.pedidoId ? html`<${AppLink} href=${`/pedidos/${item.pedidoId}`}>Acompanhar pedido · ${item.estado}<//>`
+        : html`<span>Na coleção</span>`}
+      </div></article>`)}
+  </section>`;
+}
+
+function RewardDeliveryPage({ id, auth }) {
+  const [item, setItem] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [address, setAddress] = useState({});
+  useEffect(() => {
+    if (!auth.authenticated) return;
+    getJson("/api/account/bau").then(items => {
+      const found = items.find(i => String(i.id) === id);
+      if (!found) throw new Error("Recompensa não encontrada.");
+      setItem(found);
+    }).catch(e => setError(e.message));
+  }, [id, auth.authenticated]);
+  async function submit(event) {
+    event.preventDefault();
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await postJson(`/api/account/bau/${id}/entrega`, address);
+      window.location.assign(`/pedidos/${result.pedidoId}`);
+    } catch (e) {
+      setError(e.message || "Não foi possível solicitar a entrega.");
+      setBusy(false);
+    }
+  }
+  return html`<main className="lc-page"><div className="lc-section-header"><h1>Receber recompensa</h1>
+    <${AppLink} href="/conta/beneficios">Voltar ao Baú<//></div>
+    ${error ? html`<p role="alert" className="lc-form-notice error">${error}</p>` : null}
+    ${!auth.authenticated ? html`<${AppLink} href=${buildLoginUrl()}>Entrar<//>`
+      : item ? html`<section className="lc-checkout-card"><h2>${item.titulo}</h2>
+      <p>Produto R$ 0,00 · Frete R$ 0,00 · Total R$ 0,00</p>
+      ${!item.podeSolicitar ? html`<${AppLink} href=${`/pedidos/${item.pedidoId}`}>Ver pedido de entrega<//>`
+      : html`<form onSubmit=${submit} className="lc-reward-address">
+        ${[["nomeDestinatario", "Destinatário", 120], ["telefoneContato", "Telefone", 20],
+          ["cep", "CEP", 9], ["logradouro", "Endereço", 160], ["numero", "Número", 20],
+          ["complemento", "Complemento", 80], ["bairro", "Bairro", 80],
+          ["cidade", "Cidade", 80], ["uf", "Estado (UF)", 2]].map(([name, label, max]) => html`
+          <label key=${name}>${label}<input name=${name} required=${name !== "complemento"} maxLength=${max}
+            value=${address[name] || ""} onChange=${e => setAddress(a => ({ ...a, [name]: e.target.value }))} /></label>`)}
+        <button className="lc-btn lc-btn-primary" disabled=${busy}>${busy ? "Confirmando…" : "Confirmar entrega gratuita"}</button>
+      </form>`}</section>` : html`<p role="status">Carregando recompensa…</p>`}
+  </main>`;
+}
+
+function VipPage({ auth }) {
+  const [vip, setVip] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(null);
+  const refresh = () => getJson("/api/account/vip").then(setVip);
+  useEffect(() => {
+    if (auth.authenticated) refresh().catch(() => setError("Não foi possível carregar seu VIP."));
+  }, [auth.authenticated]);
+  async function claim(id) {
+    if (busy !== null) return;
+    setBusy(id);
+    setError("");
+    try {
+      await postJson(`/api/account/vip/${id}/claim`, {});
+      await refresh();
+    } catch (e) { setError(e.message || "Não foi possível resgatar."); }
+    finally { setBusy(null); }
+  }
+  return html`<main className="lc-page"><div className="lc-section-header"><h1>Meu VIP</h1>
+    <${AppLink} href="/conta/beneficios">Meu Baú →<//></div>
+    ${error ? html`<p role="alert" className="lc-form-notice error">${error}</p>` : null}
+    ${!auth.authenticated ? html`<${AppLink} href=${buildLoginUrl()}>Entrar para ver meu VIP<//>`
+      : vip ? html`<section className="lc-vip-overview"><h2>${vip.nivel}</h2><strong>${vip.pontos} pontos VIP</strong>
+        <p>Compras, passe, missões e eventos ajudam você a progredir.</p>
+        <p>${vip.expirado ? "Seu progresso expirou por inatividade. Participe novamente para recomeçar."
+          : vip.validade ? `Mantenha sua atividade até ${new Date(vip.validade).toLocaleDateString("pt-BR")}.`
+          : `O progresso expira após ${vip.diasInatividade} dias sem atividade elegível.`}</p>
+        </section>
+        <section className="lc-vip-levels" aria-label="Níveis VIP">
+          ${vip.niveis.map(n => html`<article key=${n.id}><div><h2>${n.nome}</h2>
+            <p>${n.pontos} pontos · ${n.premio}</p></div>
+            <button className="lc-btn lc-btn-primary" disabled=${!n.disponivel || busy !== null}
+              onClick=${() => claim(n.id)}>${n.resgatado ? "Recebido" : n.disponivel ? "Receber" : "Bloqueado"}</button></article>`)}
+        </section>
+        <h2>Histórico de pontos</h2>
+        ${vip.historico.map((h, index) => html`<div key=${index} className="lc-summary-line">
+          <span>${h.origem.startsWith("COMPRA") ? "Compra aprovada" : h.origem.startsWith("MISSAO") ? "Missão concluída"
+            : h.origem.startsWith("EVENTO") ? "Evento" : "Bônus do passe"}</span><strong>+${h.pontos} pontos</strong></div>`)}
+      ` : html`<p role="status">Carregando VIP…</p>`}
+  </main>`;
 }
 
 function BenefitsPage({ auth, onAuthRefresh, notify }) {
@@ -2085,15 +2204,16 @@ function BenefitsPage({ auth, onAuthRefresh, notify }) {
 
   return html`<main className="lc-page">
     <div className="lc-section-header">
-      <h1>Cupons e recompensas</h1><${AppLink} href="/conta">Voltar à conta<//>
+      <h1>Meu Baú</h1><${AppLink} href="/conta">Voltar à conta<//>
     </div>
     ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
     ${auth.ready && !auth.authenticated ? html`<${AppLink} href=${buildLoginUrl("/conta/beneficios")}
       className="lc-btn lc-btn-primary">Entrar para ver meus benefícios<//>` : null}
     ${auth.authenticated && !collection && !error ? html`<p role="status">Carregando benefícios…</p>` : null}
+    ${auth.authenticated ? html`<${BauItems} />` : null}
     ${auth.authenticated && collection ? html`<section className="lc-checkout-card lc-benefit-list">
       ${collection.length === 0 ? html`<p>Você ainda não tem benefícios resgatados.</p><${AppLink} href="/passe">Ver passe →<//>` : null}
-      ${collection.map(reward => html`<div key=${reward.id} className="lc-summary-line">
+      ${collection.filter(reward => reward.tipo !== "Fisico").map(reward => html`<div key=${reward.id} className="lc-summary-line">
         <strong>${reward.titulo} · ${reward.tipo}</strong>
         ${!reward.ativo ? html`<span>Indisponível</span>`
           : reward.tipo === "Cupom" ? html`<span>
@@ -2196,8 +2316,8 @@ function PassMissionsPage({ auth, demoProducts }) {
         : auth.ready && !auth.authenticated ? html`<p>Entre para acompanhar seu progresso.</p>`
         : !dashboard ? !error ? html`<p role="status">Carregando missões…</p>` : null
         : html`<div className="lc-missions-grid">
-          ${(missions || []).slice(0, 4).map(mission => html`<article key=${mission.id} className="lc-mission-row">
-            <div><h2>${mission.titulo}</h2><p>${mission.descricao}</p>
+          ${(missions || []).map(mission => html`<article key=${mission.id} className="lc-mission-row">
+            <div><h2>${mission.titulo}${mission.premium ? " · Premium" : ""}</h2><p>${mission.descricao}</p>
               <progress aria-label=${`Progresso de ${mission.titulo}`} value=${mission.progressoAtual}
                 max=${mission.metaValor}></progress>
               <small>Renova em ${mission.resetaEm}</small>
@@ -2205,7 +2325,8 @@ function PassMissionsPage({ auth, demoProducts }) {
             <div className="lc-mission-meta">
               <strong>+${mission.xpRecompensa} XP</strong>
               <span>${mission.concluida ? "Concluída" : `${mission.progressoAtual}/${mission.metaValor}`}</span>
-              ${!mission.concluida && mission.ctaHref ? html`<${AppLink} href=${mission.ctaHref}
+              ${mission.premium && !dashboard.premiumAtivo ? html`<span>🔒 Requer Premium</span>`
+                : !mission.concluida && mission.ctaHref ? html`<${AppLink} href=${mission.ctaHref}
                 className="lc-btn lc-btn-ghost lc-mission-cta">${mission.ctaLabel}<//>`
                 : !mission.concluida && mission.ctaLabel ? html`<small>${mission.ctaLabel}</small>` : null}
             </div>
@@ -2233,7 +2354,7 @@ function Footer() {
           <h2 id="footer-support">Suporte</h2>
           <${AppLink} href="/pedidos">Acompanhar pedido<//>
           <${AppLink} href="/conta">Minha conta<//>
-          <${AppLink} href="/conta/beneficios">Meus benefícios<//>
+          <${AppLink} href="/conta/beneficios">Meu Baú<//>
         </nav>
         <section aria-labelledby="footer-contact">
           <h2 id="footer-contact">Contato</h2>
@@ -2404,6 +2525,9 @@ function App() {
       return html`<${AddressPage} address=${address} onSaved=${setAddress} notify=${notify}
         backHref=${parseRoute(route).params.get("voltar") === "sacola" ? "/sacola" : "/conta"} />`;
     }
+    if (path === "/conta/vip") return html`<${VipPage} auth=${auth} />`;
+    const rewardDelivery = path.match(/^\/conta\/bau\/(\d+)\/entrega$/);
+    if (rewardDelivery) return html`<${RewardDeliveryPage} id=${rewardDelivery[1]} auth=${auth} />`;
     if (path === "/conta/beneficios")
       return html`<${BenefitsPage} auth=${auth} onAuthRefresh=${refreshAuth} notify=${notify} />`;
     if (path === "/passe") {

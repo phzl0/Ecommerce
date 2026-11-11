@@ -50,6 +50,13 @@ public class Produto extends BaseEntity{
     @JoinColumn(name = "categoria_id")
     private Categoria categoria;
 
+    public enum Tipo { FISICO, DIGITAL }
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Tipo tipo = Tipo.FISICO;
+    public Tipo getTipo() { return tipo; }
+    public void setTipo(Tipo tipo) { this.tipo = tipo; }
+
     // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
