@@ -18,6 +18,7 @@ public record StoreProductDetailResponse(
         long totalAvaliacoes,
         StoreCategoryResponse categoria,
         List<StoreProductCardResponse> relacionados,
-        List<StoreReviewResponse> avaliacoes
+        List<StoreReviewResponse> avaliacoes,
+        String tipo
 ) {
 }

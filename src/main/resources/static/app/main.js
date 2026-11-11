@@ -920,7 +920,7 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
             ${product.sku ? html`<span>SKU ${product.sku}</span>` : null}
             ${product.destaque ? html`<span className="lc-detail-featured">Destaque</span>` : null}
           </div>
-          <h1>${product.nome}</h1>
+          <h1>${product.nome}</h1><p>${product.tipo === "DIGITAL" ? "Produto digital" : "Produto físico"}</p>
           <div className="lc-review-summary">
             ${product.totalAvaliacoes
               ? html`<strong>★ ${Number(product.mediaAvaliacoes || 0).toLocaleString("pt-BR", { minimumFractionDigits: 1 })}</strong>`
@@ -1499,7 +1499,7 @@ function ProfilePage({ auth, route, onAuthRefresh, notify }) {
     </header>
     <nav className="lc-profile-tabs" aria-label="Seções do perfil">
       <${AppLink} href="/perfil" current=${active === "conta"}>Dados da conta<//>
-      <${AppLink} href="/perfil?aba=progresso" current=${active === "progresso"}>Progresso e XP<//>
+      <${AppLink} href="/perfil?aba=progresso" current=${active === "progresso"}>Progresso e XP<//><${AppLink} href="/conta/vip">Meu VIP<//>
     </nav>
     ${message && (!profile || active === "conta") ? html`<p className="lc-form-notice error" role="alert">${message}</p>` : null}
     ${!profile ? !message ? html`<p role="status">Carregando perfil…</p>` : null
@@ -2257,9 +2257,12 @@ function PassMissionsPage({ auth, demoProducts }) {
   const tabs = ["Diárias", "Semanais", "Mensais", "Especiais"];
 
   useEffect(() => {
-    if (!auth.authenticated) return;
+    if (!auth.ready) return;
     let active = true;
-    trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
+    const request = auth.authenticated
+      ? trackPassAction("CHECKIN").then(() => getJson("/api/pass/current"))
+      : getJson("/api/pass/missions/preview");
+    request
       .then(data => { if (active) setDashboard(data); })
       .catch(failure => {
         if (!active) return;
@@ -2267,7 +2270,7 @@ function PassMissionsPage({ auth, demoProducts }) {
         else setError("Não foi possível carregar as missões.");
       });
     return () => { active = false; };
-  }, [auth.authenticated]);
+  }, [auth.authenticated, auth.ready]);
 
   useEffect(() => {
     getJson("/api/events")
@@ -2313,7 +2316,7 @@ function PassMissionsPage({ auth, demoProducts }) {
           </article>`)}
         </div>
         ${events.length === 0 ? html`<p className="lc-muted">Nenhuma missão especial disponível no momento.</p>` : null}`
-        : auth.ready && !auth.authenticated ? html`<p>Entre para acompanhar seu progresso.</p>`
+
         : !dashboard ? !error ? html`<p role="status">Carregando missões…</p>` : null
         : html`<div className="lc-missions-grid">
           ${(missions || []).map(mission => html`<article key=${mission.id} className="lc-mission-row">

@@ -137,10 +137,10 @@ test("catalog, private pass, checkout without live charges and profile", async (
 
   await page.goto("/conta");
   await page.getByRole("link", { name: /Cupons e recompensas/ }).click();
-  await expect(page.getByRole("heading", { name: "Cupons e recompensas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Meu Baú" })).toBeVisible();
   await expect(page.getByText("Você ainda não tem benefícios resgatados.")).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Cupons e recompensas" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Meu Baú" })).toBeVisible();
 
   const catalog = await (await page.request.get("/api/store/catalog")).json();
   expect(catalog.produtos.length).toBeGreaterThan(0);

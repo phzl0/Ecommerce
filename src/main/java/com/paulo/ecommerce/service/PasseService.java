@@ -214,6 +214,17 @@ public class PasseService {
   }
 
   @Transactional
+  public Map<String, Object> visualizarMissoes() {
+    var temporada = obterPasseAtual();
+    var templates = missaoTemplateRepository.findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId());
+    return Map.of("premiumAtivo", false,
+        "missoesDiarias", buildMissaoResponses(templates, Map.of(), PassePeriodicidade.DIARIA, null),
+        "missoesSemanais", buildMissaoResponses(templates, Map.of(), PassePeriodicidade.SEMANAL, null),
+        "missoesMensais", buildMissaoResponses(templates, Map.of(), PassePeriodicidade.MENSAL, null),
+        "produtosParaAvaliar", List.of());
+  }
+
+  @Transactional
   public List<PasseNivelResponse> visualizarTrilha() {
     PasseTemporada temporada = obterPasseAtual();
     return recompensaRepository.findByTemporadaIdOrderByNivelAsc(temporada.getId()).stream()
@@ -661,6 +672,12 @@ public class PasseService {
         .anyMatch(p -> p.getPagamento().getPagoEm() != null
             && !p.getPagamento().getPagoEm().isAfter(referencia)
             && p.getPagamento().getPagoEm().isBefore(fim)) ? fim : null;
+  }
+
+  public void validarTemporadaCompra(Long id) {
+    var temporada = temporadaRepository.findById(id).orElseThrow();
+    if (LocalDate.now().isBefore(temporada.getInicioEm()) || LocalDate.now().isAfter(temporada.getFimEm()))
+      throw new IllegalStateException("A temporada deste pedido encerrou. O pagamento exige conciliação.");
   }
 
   @Transactional

@@ -253,6 +253,7 @@ public class PagamentoService {
   }
 
   private void confirmar(Pedido pedido, Pagamento pagamento) {
+    if (pedido.getTemporadaPasseId() != null) passeService.validarTemporadaCompra(pedido.getTemporadaPasseId());
     pagamento.setStatus(StatusPagamento.APROVADO);
     pagamento.setPagoEm(LocalDateTime.now());
     pagamentoRepository.save(pagamento);

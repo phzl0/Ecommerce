@@ -111,7 +111,8 @@ public class StorefrontService {
                                 avaliacao.getComentario(),
                                 avaliacao.getCriadoEm() == null ? "" : avaliacao.getCriadoEm().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                         ))
-                        .toList()
+                        .toList(),
+                produto.getTipo().name()
         );
     }
 

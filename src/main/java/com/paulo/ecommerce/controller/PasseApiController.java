@@ -35,6 +35,9 @@ public class PasseApiController {
     return passeService.visualizarTrilha();
   }
 
+  @GetMapping("/missions/preview")
+  public Object missionsPreview() { return passeService.visualizarMissoes(); }
+
   @GetMapping("/current")
   public PasseDashboardResponse current(@AuthenticationPrincipal UserDetails userDetails) {
     return passeService.carregarDashboard(userDetails.getUsername());

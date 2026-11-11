@@ -227,7 +227,7 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(page.getByRole("tabpanel").getByText("Semana XP em Dobro")).toBeVisible();
 
     await page.goto("/passe");
-    await expect(page.getByText(/R\$\s?79,00 por mês/)).toBeVisible();
+    await expect(page.getByText(/R\$\s?79,00 nesta temporada/)).toBeVisible();
     await page.getByRole("button", { name: "Liberar Premium" }).click();
     await expect(page).toHaveURL(/\/pedidos\/\d+/);
     const premiumId = new URL(page.url()).pathname.split("/").pop();

@@ -19,6 +19,8 @@ class PaymentRegressionTest {
     var passes = mock(PasseService.class);
     var service = spy(new PagamentoService(repo, orders, mock(EmailService.class), passes,
         mock(EventoSemanalService.class), new org.springframework.mock.env.MockEnvironment()));
+    var vip = mock(FidelidadeService.class);
+    ReflectionTestUtils.setField(service, "fidelidade", vip);
     ReflectionTestUtils.setField(service, "paymentsEnabled", true);
     ReflectionTestUtils.setField(service, "collectorId", "123");
     var order = new Pedido();
@@ -58,5 +60,7 @@ class PaymentRegressionTest {
       assertEquals(Pagamento.StatusPagamento.REEMBOLSADO, payment.getStatus());
     }
     verify(passes).estornarCompra("a@example.test", 10L);
+    verify(vip).compra(order);
+    verify(vip).estornar(10L);
   }
 }

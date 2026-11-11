@@ -9,8 +9,8 @@
 - Checkout Pro do Mercado Pago com frete/desconto, URL de retorno, assinatura HMAC das notificações, consulta autenticada do pagamento e conferência de valor, moeda, conta recebedora e ambiente.
 - Tentativas repetidas reutilizam a preferência enquanto o pedido está válido. Eventos aprovados repetidos não concedem XP novamente nem reconfirmam o pedido.
 - Histórico de XP, missões, produtos distintos, resgate por temporada e coleção privada.
-- Passe Premium mensal com aprovação simulada no ambiente local. O pagamento da assinatura não concede XP de compra.
-- Cupons pessoais de uso único, avatar/badge em SVG, wallpaper e tema aplicável à conta. Não há premiação física automática nesta versão.
+- Passe Premium por temporada com aprovação simulada no ambiente local. O pagamento da assinatura não concede XP de compra.
+- Cupons pessoais de uso único, avatar/badge em SVG, wallpaper e tema aplicável à conta. Prêmios físicos configurados podem ser resgatados no Baú e solicitados como pedidos de entrega gratuita.
 
 ## Demonstração e pagamento real são configurações diferentes
 
@@ -60,13 +60,13 @@ O fuso padrão de negócio é `America/Sao_Paulo`, configurável por `APP_TIMEZO
 | `APP_PASS_COUPON_VALUE` | `10.00` | Desconto de cupom validado no checkout |
 | `APP_PASS_COUPON_MINIMUM` | `100.00` | Subtotal mínimo de produtos para usar cupom |
 
-Temporadas existentes mantêm quantidade de níveis e XP já definidos. O preço fica registrado no pedido premium. Valor e mínimo de compra de cada cupom são registrados no resgate: alterar os parâmetros afeta novas emissões, preservando cupons já emitidos. A beta ainda não oferece um editor administrativo dessas regras.
+Temporadas existentes mantêm quantidade de níveis e XP já definidos. O preço fica registrado no pedido premium. Valor e mínimo de compra de cada cupom são registrados no resgate: alterar os parâmetros afeta novas emissões, preservando cupons já emitidos. O administrativo oferece configuração de preço, missões e opções físicas de recompensa.
 
-A trilha gratuita libera níveis selecionados. As recompensas Premium, incluindo a última da trilha, exigem acesso Premium ativo e o nível correspondente. O Passe Premium custa R$ 79 por mês no ambiente de teste. A aprovação simulada libera um mês de acesso a partir do pagamento, inclusive se o mês atravessar uma troca de temporada. A integração de cobrança recorrente será feita separadamente.
+A trilha gratuita libera níveis selecionados. As recompensas Premium, incluindo a última da trilha, exigem acesso Premium ativo e o nível correspondente. O preço demonstrativo do Passe Premium é R$ 79. A compra vale até o encerramento da temporada vigente.
 
 Cada recompensa é resgatada uma vez por usuário. Códigos pessoais são emitidos no resgate, não expostos antes do desbloqueio. Cupons têm validade até 30 dias após o fim da temporada, pertencem à conta e ficam reservados ao pedido que os usa. Cancelar esse pedido permite nova utilização, se o benefício continuar válido.
 
-A coleção permite aplicar tema/avatar/badge e baixar os arquivos disponíveis. O saldo de XP e a elegibilidade são reavaliados após reembolso. Não há sorteio, entrega de cesta, frete de prêmio ou promessa de recompensa física implementada nesta entrega.
+A coleção permite aplicar tema/avatar/badge e baixar os arquivos disponíveis. O saldo de XP e a elegibilidade são reavaliados após reembolso. Recompensas físicas usam o Baú e a logística dos pedidos, conforme as regras atuais abaixo.
 
 ## Banco, arquivos e atualização
 
@@ -79,3 +79,19 @@ Imagens novas ficam em `APP_STORAGE_DIR/products`, com nome aleatório, validaç
 ## Verificação
 
 O workflow executa compilação e testes em Java 17, H2, PostgreSQL 17, migração nova/atualização e navegador Chromium. A jornada de navegador usa banco descartável e pagamentos desativados. O teste de conciliação usa resposta simulada do provedor; aprovação real, credenciais, Webhook público e cookies do domínio hospedado precisam de validação de integração antes da ativação comercial.
+
+## Passe, Baú e VIP — regras atuais
+
+O Premium é uma compra única da temporada vigente. A validade termina na virada do mês, independentemente da data da compra. O progresso é único para as trilhas gratuita e Premium. Ambas têm recompensa final. As missões Premium são públicas, exigem Premium para progredir e usam ações sem gasto. A aprovação de um pedido de passe de temporada encerrada exige conciliação.
+
+Em Administração → Passe, VIP e Baú, configure preço, pontos, inatividade, níveis VIP, missões e até duas opções físicas por recompensa. Os preços dos pedidos e os pontos já concedidos são preservados. Configure as opções de prêmio antes de oferecer a temporada.
+
+O cliente escolhe o produto no resgate. Uma unidade sai do estoque disponível e fica reservada no Baú. A entrega pode ser solicitada depois do encerramento da temporada, usando endereço e contato. A solicitação gera um pedido confirmado de recompensa, com produto e frete gratuitos, integrado às ações de envio e entrega existentes. Repetir a solicitação retorna o mesmo pedido. Cancelar antes do envio mantém a unidade reservada para nova solicitação. O administrativo não oferece cancelamento direto após o envio.
+
+Variações físicas são cadastradas como produtos/SKUs separados nesta etapa. O tamanho escolhido fica registrado pelo produto resgatado. Os produtos digitais têm tipo próprio e não geram frete quando comprados sozinhos. Entrega comercial de arquivos/licenças permanece na etapa de operação de produtos digitais.
+
+O VIP usa um histórico independente do XP do passe. Compras aprovadas de produtos e passe geram pontos. A primeira compra de passe e cada temporada podem conceder bônus únicos. Missões e resgates de eventos também geram pontos. Após a inatividade configurada, o saldo do ciclo expira. Recompensas já resgatadas ficam no Baú e cada nível VIP concede seu prêmio uma única vez por conta. A expiração é aplicada no acesso ou na próxima atividade, sem exigir uma rotina externa.
+
+Valores demonstrativos iniciais — passe R$ 79, inatividade de 90 dias, 1 ponto por real, 2 por missão, 20 por evento, 50 no primeiro passe e 10 por temporada. Níveis demonstrativos Bronze (100), Prata (500) e Ouro (1.500). Compra direta de pontos VIP e campanha de retorno continuam pendentes de definição comercial.
+
+As contas e dados existentes são preservados pela migração V8. As recompensas antigas mantêm seus IDs e resgates. O acesso Premium passa a respeitar a temporada do pedido.
