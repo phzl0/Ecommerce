@@ -25,7 +25,7 @@
 
         <p th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></p>
         <form id="product-form" class="admin-product-form" th:action="@{/admin/produtos/salvar}" th:object="${produto}"
-                  method="post" enctype="multipart/form-data"><label>Tipo de produto<select th:field="*{tipo}"><option value="FISICO">Físico</option><option value="DIGITAL">Digital</option></select></label>
+                  method="post" enctype="multipart/form-data"><div class="form-group"><label for="tipo">Tipo de produto</label><select th:field="*{tipo}"><option value="FISICO">Físico</option><option value="DIGITAL">Digital</option></select></div>
 
                 <input type="hidden" th:field="*{id}">
                 <input type="hidden" name="estoqueOriginal" th:value="${estoqueOriginal}">

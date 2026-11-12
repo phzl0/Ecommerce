@@ -2054,7 +2054,7 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
         <div className="lc-rail-labels" aria-hidden="true"><strong className="premium">Premium</strong><span>Nível</span><strong className="free">Gratuito</strong></div>
         <div className="lc-rail-track" ref=${track} tabIndex="0" role="region" aria-label="Níveis e recompensas do passe">
           ${[...new Set(levels.map(r => r.nivel))].map(nivel => html`
-            <div className="lc-rail-level" key=${nivel} aria-label=${`Nível ${nivel}`}>
+            <div className=${`lc-rail-level ${levels.some(r => r.nivel === nivel && r.desbloqueado) ? "unlocked" : ""}`} key=${nivel} aria-label=${`Nível ${nivel}`}>
               ${rewardCell(levels.find(r => r.nivel === nivel && r.premium), true)}
               <span className="lc-rail-node" aria-current=${nivel === pass?.nivelAtual ? "step" : undefined}>${nivel}</span>
               ${rewardCell(levels.find(r => r.nivel === nivel && !r.premium), false)}

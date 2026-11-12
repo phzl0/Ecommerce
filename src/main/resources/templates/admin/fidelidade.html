@@ -22,20 +22,20 @@
 <label>Nome<input name="nome" maxlength="80" required></label>
 <label>Pontos necessários<input name="pontos" type="number" min="1" max="100000000" required></label>
 <label>Nome da recompensa<input name="premio" maxlength="120" required></label>
-<label>Produto físico<select name="produtoId"><option value="">Selo digital no Baú</option><option th:each="p : ${produtos}" th:value="${p.id}" th:text="${p.nome}"></option></select></label>
+<div class="form-group"><label for="fidelidade-select-1">Produto físico</label><select id="fidelidade-select-1" name="produtoId"><option value="">Selo digital no Baú</option><option th:each="p : ${produtos}" th:value="${p.id}" th:text="${p.nome}"></option></select></div>
 <button class="admin-button">Criar nível</button></form>
 <div th:each="n : ${niveis}" class="admin-data-grid"><span th:text="${n.nome + ' · ' + n.pontos + ' pontos · ' + n.premio}"></span>
 <form method="post" th:action="@{/admin/fidelidade/nivel/{id}/estado(id=${n.id})}"><button class="admin-button secondary" th:text="${n.ativo ? 'Desativar' : 'Ativar'}"></button></form></div></section>
 <section class="form-card"><h2>Produtos das recompensas do passe</h2><p>Cadastre uma opção para um prêmio fixo ou duas para permitir escolha. O estoque é reservado no resgate.</p>
 <form method="post" th:action="@{/admin/fidelidade/opcao}" class="lc-admin-event-form">
-<label>Recompensa<select name="recompensaId"><option th:each="r : ${recompensas}" th:value="${r.id}" th:text="${r.nivel + ' · ' + (r.premium ? 'Premium' : 'Gratuito') + ' · ' + r.titulo}"></option></select></label>
-<label>Produto e variação<select name="produtoId"><option th:each="p : ${produtos}" th:value="${p.id}" th:text="${p.nome + ' · estoque ' + p.estoque}"></option></select></label><button class="admin-button">Adicionar opção</button></form>
+<div class="form-group"><label for="fidelidade-select-2">Recompensa</label><select id="fidelidade-select-2" name="recompensaId"><option th:each="r : ${recompensas}" th:value="${r.id}" th:text="${r.nivel + ' · ' + (r.premium ? 'Premium' : 'Gratuito') + ' · ' + r.titulo}"></option></select></div>
+<div class="form-group"><label for="fidelidade-select-3">Produto e variação</label><select id="fidelidade-select-3" name="produtoId"><option th:each="p : ${produtos}" th:value="${p.id}" th:text="${p.nome + ' · estoque ' + p.estoque}"></option></select></div><button class="admin-button">Adicionar opção</button></form>
 <ul><li th:each="o : ${opcoes}" th:text="${o.recompensa.titulo + ' → ' + o.produto.nome}"></li></ul></section>
 <section class="form-card"><h2>Missões da temporada</h2>
 <form method="post" th:action="@{/admin/fidelidade/missao}" class="lc-admin-event-form">
 <label>Título<input name="titulo" required maxlength="120"></label>
-<label>Ação<select name="acao"><option value="CHECKIN">Check-in</option><option value="VIEW_PRODUCT">Ver produtos</option><option value="ADD_TO_CART">Adicionar à sacola</option></select></label>
-<label>Período<select name="periodicidade"><option value="DIARIA">Diária</option><option value="SEMANAL">Semanal</option><option value="MENSAL">Mensal</option></select></label>
+<div class="form-group"><label for="fidelidade-select-4">Ação</label><select id="fidelidade-select-4" name="acao"><option value="CHECKIN">Check-in</option><option value="VIEW_PRODUCT">Ver produtos</option><option value="ADD_TO_CART">Adicionar à sacola</option></select></div>
+<div class="form-group"><label for="fidelidade-select-5">Período</label><select id="fidelidade-select-5" name="periodicidade"><option value="DIARIA">Diária</option><option value="SEMANAL">Semanal</option><option value="MENSAL">Mensal</option></select></div>
 <label>Meta<input name="meta" type="number" min="1" max="100" required value="1"></label>
 <label>XP<input name="xp" type="number" min="1" max="3000" required value="100"></label>
 <label><input type="checkbox" name="premium" value="true">Exclusiva Premium</label><button class="admin-button">Criar missão</button></form>
