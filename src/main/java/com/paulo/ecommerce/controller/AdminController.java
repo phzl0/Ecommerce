@@ -39,7 +39,7 @@ public class AdminController {
 
   @InitBinder("produto")
   void restringirCamposProduto(WebDataBinder binder) {
-    binder.setAllowedFields("id", "nome", "sku", "marca", "descricaoCurta", "descricao", "preco", "estoque", "destaque");
+    binder.setAllowedFields("id", "nome", "sku", "marca", "descricaoCurta", "descricao", "preco", "estoque", "destaque", "tipo");
   }
 
   @GetMapping("/integracoes")

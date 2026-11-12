@@ -255,3 +255,14 @@ Para integração PostgreSQL, use `TEST_DB_URL`, `TEST_DB_USER`, `TEST_DB_PASSWO
 Esta entrega está na branch `develop`. Nenhuma publicação ou alteração do banco hospedado foi executada. Consulte [o guia operacional](https://github.com/phzl0/Ecommerce/blob/develop/docs/PAGAMENTOS_E_PASSE.md) antes de atualizar um ambiente existente.
 
 Desenvolvimento e manutenção: [phzl0](https://github.com/phzl0).
+
+### Estoque e produtos digitais (beta local)
+
+- **Admin → Estoque e reservas:** saldos disponíveis, reservas de pedidos/Baú, mínimo por produto e últimas 100 movimentações. Ajustes exigem motivo e registram o responsável; não alteram unidades reservadas. O saldo de cadastros existentes é alterado por essa tela.
+- **Admin → Produtos digitais:** selecione um produto do tipo Digital e configure arquivo (PDF/TXT/ZIP, até 5 MB) ou códigos/licenças (até 500 por importação). Para iniciar códigos, o saldo disponível deve ser zero; a importação aumenta o estoque e ignora duplicados. O formato fica fixo por SKU.
+- **Conta → Meus produtos digitais:** arquivos e códigos são liberados apenas após aprovação, com acesso restrito ao comprador. Cada pedido guarda a versão adquirida. O conteúdo fica no banco privado e não em URLs públicas. Os backups do PostgreSQL incluem esses arquivos e códigos; trate esses backups como dados sensíveis.
+- Cancelamentos antes da aprovação liberam reservas. Estornos revogam o acesso futuro; códigos já liberados nunca voltam à venda. Um arquivo já baixado ou código copiado não pode ser apagado do dispositivo do cliente.
+- Produtos físicos e digitais podem coexistir no pedido: digitais são disponibilizados após pagamento; apenas os físicos entram no envio. Reservas físicas são consumidas no envio. Após envio, devoluções físicas exigem conferência e ajuste de estoque com motivo.
+- A migração preserva saldos e reservas existentes; o histórico começa com o saldo anterior, sem inventar movimentações passadas. Pedidos digitais antigos não recebem conteúdo retroativamente.
+- Exemplos locais: `DEMO-WALLPAPER` entrega um TXT demonstrativo; `DEMO-LICENCA` contém três códigos sem valor comercial. Use **Simular pagamento aprovado** no detalhe do pedido para testar. Dados demonstrativos dependem de `DEMO_DATA_ENABLED=true`.
+- Antes de produção: escolher armazenamento de arquivos em escala, política de retenção, verificação antimalware, gestão de licenças no fornecedor e regras de devolução; conectar ERP, transportadora e pagamentos reais. Checkout digital ainda usa o formulário de dados do cliente/endereço compartilhado, sem cobrar frete em pedidos somente digitais.

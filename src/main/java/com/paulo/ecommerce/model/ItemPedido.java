@@ -25,6 +25,10 @@ public class ItemPedido extends BaseEntity  {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal precoUnitario;
 
+    @Enumerated(EnumType.STRING) @Column(nullable=false,length=20)
+    private Produto.Tipo tipo = Produto.Tipo.FISICO;
+    public Produto.Tipo getTipo() { return tipo; }
+    public void setTipo(Produto.Tipo tipo) { this.tipo=tipo; }
     // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

@@ -15,7 +15,9 @@
     </div>
     <div class="sidebar-group">
       <span>Catálogo</span>
-      <a th:href="@{/admin/produtos}" th:attr="aria-current=${activePage == 'produtos' ? 'page' : null}">Produtos e estoque</a>
+      <a th:href="@{/admin/produtos}" th:attr="aria-current=${activePage == 'produtos' ? 'page' : null}">Produtos</a>
+      <a th:href="@{/admin/estoque}" th:attr="aria-current=${activePage == 'estoque' ? 'page' : null}">Estoque e reservas</a>
+      <a th:href="@{/admin/digitais}" th:attr="aria-current=${activePage == 'digitais' ? 'page' : null}">Produtos digitais</a>
       <a th:href="@{/admin/categorias}" th:attr="aria-current=${activePage == 'categorias' ? 'page' : null}">Categorias</a>
     </div>
     <div class="sidebar-group">

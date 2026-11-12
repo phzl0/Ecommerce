@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ProdutoService {
 
+  @org.springframework.beans.factory.annotation.Autowired private EstoqueService estoque;
   private final ProdutoRepository produtoRepository;
 
   public ProdutoService(ProdutoRepository produtoRepository) {
@@ -97,15 +98,15 @@ public class ProdutoService {
   @CacheEvict(value = {"produto", "produtos"}, allEntries = true)
   public Produto salvarCadastro(Produto cadastro, Integer estoqueOriginal) {
     validarSkuComercial(cadastro);
-    if (cadastro.getId() == null) return salvar(cadastro);
+    if (cadastro.getId() == null) {
+      var novo=salvar(cadastro); estoque.registrar(novo,novo.getEstoque(),"ENTRADA","Cadastro inicial","administrador");return novo;
+    }
 
     Produto produto = produtoComercialBloqueado(cadastro.getId());
-    if (estoqueOriginal == null || !estoqueOriginal.equals(cadastro.getEstoque())) {
-      if (!produto.getEstoque().equals(estoqueOriginal)) {
-        throw new IllegalStateException("O estoque mudou durante a edição. Reabra o produto para conferir o saldo atual.");
-      }
-      produto.setEstoque(cadastro.getEstoque());
-    }
+    if (estoqueOriginal==null || !estoqueOriginal.equals(cadastro.getEstoque()))
+      throw new IllegalStateException("Use a tela de estoque para ajustar o saldo com um motivo.");
+    if(produto.getTipo()!=cadastro.getTipo())
+      throw new IllegalArgumentException("Crie um novo SKU para mudar o tipo de produto e preservar os pedidos existentes.");
     produto.setNome(cadastro.getNome());
     produto.setSku(cadastro.getSku());
     produto.setMarca(cadastro.getMarca());

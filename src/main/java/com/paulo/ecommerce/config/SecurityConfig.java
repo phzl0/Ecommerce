@@ -94,7 +94,7 @@ public class SecurityConfig {
                         "/produto/**",
                         "/sacola",
                         "/conta",
-                        "/conta/beneficios", "/conta/vip", "/conta/bau/{id}/entrega",
+                        "/conta/beneficios", "/conta/vip", "/conta/digitais", "/conta/bau/{id}/entrega",
                         "/conta/endereco",
                         "/checkout",
                         "/login",

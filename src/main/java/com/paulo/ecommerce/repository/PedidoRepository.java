@@ -74,6 +74,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
   @Query("SELECT COUNT(p) FROM Pedido p WHERE p.status = :status")
   long countByStatus(@Param("status") Pedido.Status status);
 
+  @Query("select count(p) from Pedido p where p.status=:status and p.temporadaPasseId is null and exists (select i.id from ItemPedido i where i.pedido=p and i.tipo='FISICO')")
   long countByStatusAndTemporadaPasseIdIsNull(Pedido.Status status);
 
   @EntityGraph(attributePaths = {"usuario", "pagamento"})
@@ -81,7 +82,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Long> {
       select p from Pedido p left join p.pagamento pg
       where (:status is null or p.status = :status)
         and (:pagamento is null or pg.status = :pagamento)
-        and (:envio = false or p.temporadaPasseId is null)
+        and (:envio = false or (p.temporadaPasseId is null and exists (select i.id from ItemPedido i where i.pedido=p and i.tipo='FISICO')))
         and (:busca = '' or locate(lower(:busca), lower(coalesce(p.numero, ''))) > 0
           or locate(lower(:busca), lower(p.usuario.nome)) > 0
           or locate(lower(:busca), lower(p.usuario.email)) > 0

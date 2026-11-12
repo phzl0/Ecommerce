@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class FidelidadeDemoService {
+  @org.springframework.beans.factory.annotation.Autowired private DigitalService digitais;
+  @org.springframework.beans.factory.annotation.Autowired private DigitalConfigRepository digitalConfigs;
   private final ProdutoRepository produtos;
   private final CategoriaRepository categorias;
   private final VipNivelRepository niveis;
@@ -26,7 +28,14 @@ public class FidelidadeDemoService {
   public void preparar() {
     var camisa = produto("DEMO-CAMISA-M", "Camisa LEVEL · tamanho M · demonstração", Produto.Tipo.FISICO, "Moda LEVEL");
     var mochila = produto("DEMO-MOCHILA", "Mochila LEVEL · demonstração", Produto.Tipo.FISICO, "Acessórios LEVEL");
-    produto("DEMO-WALLPAPER", "Pack digital LEVEL · demonstração", Produto.Tipo.DIGITAL, "Digitais LEVEL");
+    var pack = produto("DEMO-WALLPAPER", "Pack digital LEVEL · demonstração", Produto.Tipo.DIGITAL, "Digitais LEVEL");
+    if(!digitalConfigs.existsById(pack.getId())) digitais.arquivo(pack.getId(),"leia-me-level-demo.txt",
+        "LEVEL Commerce — arquivo demonstrativo. Nenhum conteúdo comercial incluído.".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    var licenca=produto("DEMO-LICENCA", "Código LEVEL · demonstração", Produto.Tipo.DIGITAL,"Digitais LEVEL");
+    if(!digitalConfigs.existsById(licenca.getId())) {
+      licenca.setEstoque(0);
+      digitais.importarCodigos(licenca.getId(),"DEMO-SEM-VALOR-001\nDEMO-SEM-VALOR-002\nDEMO-SEM-VALOR-003", "demo");
+    }
     if (niveis.count() == 0) {
       nivel("Bronze", 100, "Selo Bronze LEVEL", null);
       nivel("Prata", 500, "Selo Prata LEVEL", null);

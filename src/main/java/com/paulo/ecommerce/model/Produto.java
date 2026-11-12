@@ -40,6 +40,9 @@ public class Produto extends BaseEntity{
     @Column(nullable = false)
     private Integer estoque = 0;
 
+    @Min(0) @Column(nullable=false) private Integer estoqueMinimo = 5;
+    public Integer getEstoqueMinimo() { return estoqueMinimo; }
+    public void setEstoqueMinimo(Integer valor) { estoqueMinimo = valor; }
     private String imagemUrl;
 
     private boolean ativo = true;
@@ -51,6 +54,7 @@ public class Produto extends BaseEntity{
     private Categoria categoria;
 
     public enum Tipo { FISICO, DIGITAL }
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Tipo tipo = Tipo.FISICO;

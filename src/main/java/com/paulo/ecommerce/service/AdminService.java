@@ -58,7 +58,7 @@ public class AdminService {
   }
 
   public long produtosComEstoqueBaixo() {
-    return produtoRepository.countByAtivoTrueAndEstoqueBetween(1, LIMITE_ESTOQUE_BAIXO);
+    return produtoRepository.countAbaixoMinimo();
   }
 
   public long eventosAtivos() {

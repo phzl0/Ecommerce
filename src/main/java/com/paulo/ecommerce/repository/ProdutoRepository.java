@@ -13,6 +13,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
   java.util.Optional<Produto> findLockedById(
       @org.springframework.data.repository.query.Param("value") Long value);
 
+  List<Produto> findByTipoOrderByNomeAsc(Produto.Tipo tipo);
   Optional<Produto> findBySku(String sku);
 
   boolean existsByNomeIgnoreCase(String nome);
@@ -47,6 +48,8 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
   long countByAtivoTrue();
 
   long countByAtivoTrueAndEstoqueBetween(int minimo, int maximo);
+  @Query("select count(p) from Produto p where p.ativo=true and p.estoque <= p.estoqueMinimo")
+  long countAbaixoMinimo();
 
   @Query("""
       select produto from Produto produto
@@ -68,7 +71,7 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
       where (p.sku is null or lower(p.sku) not like 'passe-mensal-%')
       and (:ativo is null or p.ativo = :ativo)
       and (:semEstoque = false or p.estoque = 0)
-      and (:estoqueBaixo = false or p.estoque between 1 and :limiteEstoque)
+      and (:estoqueBaixo = false or p.estoque between 1 and p.estoqueMinimo and :limiteEstoque >= 0)
       and (:busca = '' or locate(lower(:busca), lower(p.nome)) > 0
         or locate(lower(:busca), lower(coalesce(p.sku, ''))) > 0)
       """)

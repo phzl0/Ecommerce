@@ -87,7 +87,7 @@
                 </section>
                 <div class="admin-editor-side">
                 <section class="form-card" aria-labelledby="product-price">
-                <h2 id="product-price">Preço e estoque</h2>
+                <h2 id="product-price">Preço e estoque</h2><p th:if="${produto.id != null}" class="table-subtext">Ajustes de saldo são registrados na tela de estoque.</p><a th:if="${produto.id != null}" th:href="@{/admin/estoque(produtoId=${produto.id})}" class="btn-link">Gerenciar estoque</a><a th:if="${produto.id != null and produto.tipo.name() == 'DIGITAL'}" th:href="@{/admin/digitais(produtoId=${produto.id})}" class="btn-link">Configurar entrega digital</a>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="preco">Preço *</label>
@@ -96,7 +96,7 @@
                     </div>
                     <div class="form-group">
                         <label for="estoque">Estoque *</label>
-                        <input type="number" th:field="*{estoque}" min="0" placeholder="0">
+                        <input type="number" th:field="*{estoque}" th:readonly="${produto.id != null}" min="0" placeholder="0">
                         <span class="erro" th:if="${#fields.hasErrors('estoque')}" th:errors="*{estoque}"></span>
                     </div>
                 </div>

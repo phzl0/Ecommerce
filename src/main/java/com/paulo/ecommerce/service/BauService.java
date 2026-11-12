@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BauService {
+  @org.springframework.beans.factory.annotation.Autowired private EstoqueService estoque;
   private final BauItemRepository itens;
   private final ProdutoRepository produtos;
   private final UsuarioRepository usuarios;
@@ -41,14 +42,16 @@ public class BauService {
       produto = produtos.findLockedById(produto.getId()).orElseThrow();
       if (produto.getTipo() != Produto.Tipo.FISICO || produto.getEstoque() < 1)
         throw new IllegalStateException("Prêmio sem estoque disponível para reserva.");
-      produto.setEstoque(produto.getEstoque() - 1);
+
     }
     var item = new BauItem();
     item.usuarioId = usuario;
     item.origem = origem;
     item.titulo = titulo;
     item.produto = produto;
-    return itens.save(item);
+    itens.saveAndFlush(item);
+    if(produto!=null) estoque.reservar(produto,1,"BAU:"+item.id);
+    return item;
   }
 
   @Transactional(readOnly = true)

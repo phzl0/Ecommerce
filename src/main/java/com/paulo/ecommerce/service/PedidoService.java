@@ -33,6 +33,9 @@ public class PedidoService {
 
   @org.springframework.beans.factory.annotation.Autowired private PasseService passes;
   @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
+  @org.springframework.beans.factory.annotation.Autowired private EstoqueService estoque;
+  @org.springframework.beans.factory.annotation.Autowired private DigitalService digitais;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.BauItemRepository bauItens;
   private final PedidoRepository pedidoRepository;
   private final PedidoMovimentacaoRepository movimentacoes;
   private final ProdutoRepository produtoRepository;
@@ -167,12 +170,12 @@ public class PedidoService {
 
       validarDisponibilidade(produto, ci.quantidade());
 
-      produto.setEstoque(produto.getEstoque() - ci.quantidade());
-      produtoRepository.save(produto);
+
 
       ItemPedido item = new ItemPedido();
       item.setPedido(pedido);
       item.setProduto(produto);
+      item.setTipo(produto.getTipo());
       item.setQuantidade(ci.quantidade());
       item.setPrecoUnitario(produto.getPreco());
       itens.add(item);
@@ -189,7 +192,11 @@ public class PedidoService {
         ? calcularFrete(subtotal) : BigDecimal.ZERO);
     pedido.setTotal(subtotal.add(pedido.getFrete()));
     pedido.setItens(itens);
-    Pedido salvo = pedidoRepository.save(pedido);
+    Pedido salvo = pedidoRepository.saveAndFlush(pedido);
+    Map<Long,Integer> totais = new java.util.TreeMap<>();
+    for(var item : itens) totais.merge(item.getProduto().getId(),item.getQuantidade(),Math::addExact);
+    for(var entry : totais.entrySet()) estoque.reservar(produtoRepository.findLockedById(entry.getKey()).orElseThrow(),entry.getValue(),"PEDIDO:"+salvo.getId());
+    digitais.reservar(salvo);
     if (checkoutForm.getCupom() != null && !checkoutForm.getCupom().isBlank()) {
       salvo.setDesconto(passes.usarCupom(usuario, checkoutForm.getCupom(), salvo));
       salvo.setTotal(salvo.getSubtotal().add(salvo.getFrete()).subtract(salvo.getDesconto()));
@@ -253,7 +260,7 @@ public class PedidoService {
 
   public List<Pedido.Status> acoesOperacionais(Pedido pedido) {
     List<Pedido.Status> acoes = new ArrayList<>();
-    boolean fisico = pedido.getTemporadaPasseId() == null;
+    boolean fisico = pedido.getTemporadaPasseId() == null && pedido.getItens().stream().anyMatch(i -> i.getTipo() == Produto.Tipo.FISICO);
     boolean pagamentoAprovado = pedido.isRecompensa() || (pedido.getPagamento() != null
         && pedido.getPagamento().getStatus() == Pagamento.StatusPagamento.APROVADO);
     if (fisico && pagamentoAprovado && pedido.getStatus() == Pedido.Status.CONFIRMADO) {
@@ -315,6 +322,12 @@ public class PedidoService {
             "O pagamento aprovado precisa ser estornado no provedor antes do cancelamento.");
       if (pedido.getStatus() == Pedido.Status.PENDENTE
           || pedido.getStatus() == Pedido.Status.CONFIRMADO) devolverEstoque(pedido);
+    }
+    if(status == Pedido.Status.CONFIRMADO && pedido.getTemporadaPasseId()==null) digitais.liberar(pedido);
+    if(status == Pedido.Status.CANCELADO) digitais.revogar(pedido);
+    if(status == Pedido.Status.ENVIADO) {
+      if(pedido.isRecompensa()) bauItens.findByPedidoId(pedido.getId()).ifPresent(b -> estoque.consumir("BAU:"+b.id,false));
+      else estoque.consumir("PEDIDO:"+pedido.getId(),false);
     }
     pedido.setStatus(status);
     pedidoRepository.save(pedido);
@@ -386,14 +399,8 @@ public class PedidoService {
 
   private void devolverEstoque(Pedido pedido) {
     if (pedido.getTemporadaPasseId() != null || pedido.isRecompensa()) return;
-    for (ItemPedido item :
-        pedido.getItens().stream()
-            .sorted(Comparator.comparing(i -> i.getProduto().getId()))
-            .toList()) {
-      Produto produto = produtoRepository.findLockedById(item.getProduto().getId()).orElseThrow();
-      produto.setEstoque(produto.getEstoque() + item.getQuantidade());
-      produtoRepository.save(produto);
-    }
+    estoque.liberar("PEDIDO:"+pedido.getId());
+    digitais.revogar(pedido);
   }
 
   private void validarDisponibilidade(Produto produto, int quantidade) {

@@ -400,7 +400,7 @@ function NavBar({ totalItems, onSearch, auth, categories, notificationProps, rou
               if (event.target.closest("a")) closeAccount();
             }}>
               ${auth.authenticated ? html`
-                <${AppLink} href="/perfil">Meu perfil<//><${AppLink} href="/conta/vip">Meu VIP<//>
+                <${AppLink} href="/perfil">Meu perfil<//><${AppLink} href="/conta/vip">Meu VIP<//><${AppLink} href="/conta/digitais">Meus produtos digitais<//>
                 <${AppLink} href="/pedidos">Meus pedidos<//>
                 <${AppLink} href="/conta/beneficios">Meu Baú<//>
                 <${AppLink} href="/conta">Gerenciar conta<//>
@@ -1500,7 +1500,7 @@ function ProfilePage({ auth, route, onAuthRefresh, notify }) {
     </header>
     <nav className="lc-profile-tabs" aria-label="Seções do perfil">
       <${AppLink} href="/perfil" current=${active === "conta"}>Dados da conta<//>
-      <${AppLink} href="/perfil?aba=progresso" current=${active === "progresso"}>Progresso e XP<//><${AppLink} href="/conta/vip">Meu VIP<//>
+      <${AppLink} href="/perfil?aba=progresso" current=${active === "progresso"}>Progresso e XP<//><${AppLink} href="/conta/vip">Meu VIP<//><${AppLink} href="/conta/digitais">Meus produtos digitais<//>
     </nav>
     ${message && (!profile || active === "conta") ? html`<p className="lc-form-notice error" role="alert">${message}</p>` : null}
     ${!profile ? !message ? html`<p role="status">Carregando perfil…</p>` : null
@@ -1566,7 +1566,7 @@ function OrdersPage() {
     <section className="lc-account-shell">
       <header className="lc-section-header">
         <div><h1>Meus pedidos</h1><p>Acompanhe o pagamento e a entrega das suas compras.</p></div>
-        <${AppLink} href="/perfil">Meu perfil<//><${AppLink} href="/conta/vip">Meu VIP<//>
+        <${AppLink} href="/perfil">Meu perfil<//><${AppLink} href="/conta/vip">Meu VIP<//><${AppLink} href="/conta/digitais">Meus produtos digitais<//>
       </header>
       ${error ? html`<p role="alert">Não foi possível carregar os pedidos.</p>`
         : !orders ? html`<p role="status">Carregando pedidos…</p>`
@@ -2176,6 +2176,40 @@ function VipPage({ auth }) {
   </main>`;
 }
 
+
+function DigitalProductsPage({ auth }) {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState("");
+  const [codes, setCodes] = useState({});
+  const [busy, setBusy] = useState(null);
+  useEffect(() => {
+    let active = true;
+    setItems(null); setCodes({});
+    if (auth.authenticated) getJson("/api/account/digitais").then(data => { if(active) setItems(data); })
+      .catch(() => { if(active) setError("Não foi possível carregar seus produtos digitais."); });
+    return () => { active = false; };
+  }, [auth.authenticated]);
+  async function reveal(id) {
+    if (busy !== null) return;
+    setBusy(id); setError("");
+    try { const data = await postJson(`/api/account/digitais/${id}/codigo`, {}); setCodes(old => ({...old, [id]:data.codigo})); }
+    catch(e) { setError(e.message || "Código indisponível."); }
+    finally { setBusy(null); }
+  }
+  return html`<main className="lc-page"><div className="lc-section-header"><h1>Meus produtos digitais</h1><${AppLink} href="/conta">Minha conta<//></div>
+    <p>Seus arquivos e códigos ficam disponíveis após a aprovação do pagamento.</p>
+    ${error ? html`<p className="lc-form-notice error" role="alert">${error}</p>` : null}
+    ${!auth.authenticated ? html`<${AppLink} href=${buildLoginUrl()}>Entrar para acessar<//>` : items ?
+      items.length ? html`<section className="lc-digital-list" aria-label="Compras digitais">${items.map(item => html`<article key=${item.id}>
+        <div><h2>${item.titulo}</h2><${AppLink} href=${`/pedidos/${item.pedidoId}`}>Ver pedido #${item.pedidoId}<//>
+        <p>${item.estado === "LIBERADO" ? "Disponível" : item.estado === "PENDENTE" ? "Aguardando pagamento" : "Acesso revogado"} · ${item.modo === "ARQUIVO" ? "Download" : "Código / licença"}</p></div>
+        ${item.estado === "LIBERADO" ? item.modo === "ARQUIVO" ? html`<a className="lc-btn lc-btn-primary" href=${`/api/account/digitais/${item.id}/arquivo`}>Baixar arquivo</a>` : html`<button className="lc-btn lc-btn-primary" disabled=${busy !== null} onClick=${() => reveal(item.id)}>Ver código</button>` : null}
+        ${codes[item.id] ? html`<code className="lc-digital-code">${codes[item.id]}</code>` : null}
+      </article>`)}</section>` : html`<p>Você ainda não possui compras digitais. <${AppLink} href="/catalogo">Explorar produtos<//></p>`
+      : html`<p role="status">Carregando produtos…</p>`}
+  </main>`;
+}
+
 function BenefitsPage({ auth, onAuthRefresh, notify }) {
   const [collection, setCollection] = useState(null);
   const [error, setError] = useState("");
@@ -2531,6 +2565,7 @@ function App() {
       return html`<${AddressPage} address=${address} onSaved=${setAddress} notify=${notify}
         backHref=${parseRoute(route).params.get("voltar") === "sacola" ? "/sacola" : "/conta"} />`;
     }
+    if (path === "/conta/digitais") return html`<${DigitalProductsPage} auth=${auth} />`;
     if (path === "/conta/vip") return html`<${VipPage} auth=${auth} />`;
     const rewardDelivery = path.match(/^\/conta\/bau\/(\d+)\/entrega$/);
     if (rewardDelivery) return html`<${RewardDeliveryPage} id=${rewardDelivery[1]} auth=${auth} />`;
