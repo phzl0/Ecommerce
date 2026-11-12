@@ -53,7 +53,7 @@
                     <tr th:each="cat : ${categorias}">
                         <td th:text="${cat.nome}"></td>
                         <td th:text="${cat.descricao != null ? cat.descricao : '—'}"></td>
-                        <td th:text="${cat.produtos != null ? cat.produtos.size() : 0}"></td>
+                        <td th:text="${cat.totalProdutos}"></td>
                         <td>
                             <form th:action="@{/admin/categorias/{id}/deletar(id=${cat.id})}"
                                   method="post"

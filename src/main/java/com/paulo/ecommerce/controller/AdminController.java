@@ -154,7 +154,7 @@ public class AdminController {
   // ── Categorias ─────────────────────────────────────────
   @GetMapping("/categorias")
   public String categorias(Model model) {
-    model.addAttribute("categorias", categoriaService.listarTodas());
+    model.addAttribute("categorias", categoriaService.listarResumo());
     model.addAttribute("categoria", new Categoria());
     return "admin/categorias";
   }
@@ -166,7 +166,7 @@ public class AdminController {
       Model model,
       RedirectAttributes redirectAttributes) {
     if (result.hasErrors()) {
-      model.addAttribute("categorias", categoriaService.listarTodas());
+      model.addAttribute("categorias", categoriaService.listarResumo());
       return "admin/categorias";
     }
     categoriaService.salvar(categoria);
