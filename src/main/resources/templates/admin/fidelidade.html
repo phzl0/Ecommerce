@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Passe, VIP e Baú | LEVEL</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css"></head>
+<title>Passe, VIP e Baú | LEVEL</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css"><script src="/js/admin.js" defer></script></head>
 <body class="admin-body"><div class="admin-layout">
 <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='fidelidade')}"></div>
 <main class="admin-main"><header class="admin-header"><div><h1>Passe, VIP e Baú</h1>
-<p>Configure pontos, recompensas e missões. Os valores iniciais são exemplos de desenvolvimento.</p></div></header>
-<p th:if="${msg}" th:text="${msg}" role="status"></p><p th:if="${erro}" th:text="${erro}" role="alert"></p>
-<section class="form-card"><h2>Regras comerciais</h2><p>O passe termina no último dia da temporada. O VIP expira após o período de inatividade configurado.</p>
+<p class="admin-subtitle">Configure pontos, recompensas e missões. Os valores iniciais são exemplos de desenvolvimento.</p></div></header><nav class="admin-section-nav" aria-label="Seções de fidelidade"><a href="#regras">Regras</a><a href="#niveis">VIP</a><a href="#premios">Prêmios</a><a href="#missoes">Missões</a><a href="#resgates">Baú</a></nav>
+<p th:if="${msg}" th:text="${msg}" role="status" class="alert alert-sucesso"></p><p th:if="${erro}" th:text="${erro}" role="alert" class="alert alert-erro"></p>
+<section id="regras" class="form-card"><h2>Regras comerciais</h2><p>O passe termina no último dia da temporada. O VIP expira após o período de inatividade configurado.</p>
 <form method="post" th:action="@{/admin/fidelidade/config}" class="lc-admin-event-form">
 <label>Preço da compra única do passe<input type="number" name="precoPasse" min="0.01" max="9999.99" step="0.01" required th:value="${config.precoPasse}"></label>
 <label>Dias de inatividade VIP<input type="number" name="diasInatividade" min="1" max="3650" step="1" required th:value="${config.diasInatividade}"></label>
@@ -17,7 +17,7 @@
 <label>Bônus VIP do primeiro passe<input type="number" name="bonusPrimeiroPasse" min="0" max="10000" step="1" required th:value="${config.bonusPrimeiroPasse}"></label>
 <label>Bônus VIP por temporada adquirida<input type="number" name="bonusPasseTemporada" min="0" max="10000" step="1" required th:value="${config.bonusPasseTemporada}"></label>
 <button class="admin-button">Salvar configuração</button></form></section>
-<section class="form-card"><h2>Níveis VIP</h2>
+<section id="niveis" class="form-card"><h2>Níveis VIP</h2>
 <form method="post" th:action="@{/admin/fidelidade/nivel}" class="lc-admin-event-form">
 <label>Nome<input name="nome" maxlength="80" required></label>
 <label>Pontos necessários<input name="pontos" type="number" min="1" max="100000000" required></label>
@@ -26,22 +26,22 @@
 <button class="admin-button">Criar nível</button></form>
 <div th:each="n : ${niveis}" class="admin-data-grid"><span th:text="${n.nome + ' · ' + n.pontos + ' pontos · ' + n.premio}"></span>
 <form method="post" th:action="@{/admin/fidelidade/nivel/{id}/estado(id=${n.id})}"><button class="admin-button secondary" th:text="${n.ativo ? 'Desativar' : 'Ativar'}"></button></form></div></section>
-<section class="form-card"><h2>Produtos das recompensas do passe</h2><p>Cadastre uma opção para um prêmio fixo ou duas para permitir escolha. O estoque é reservado no resgate.</p>
+<section id="premios" class="form-card"><h2>Produtos das recompensas do passe</h2><p>Cadastre uma opção para um prêmio fixo ou duas para permitir escolha. O estoque é reservado no resgate.</p>
 <form method="post" th:action="@{/admin/fidelidade/opcao}" class="lc-admin-event-form">
 <div class="form-group"><label for="fidelidade-select-2">Recompensa</label><select id="fidelidade-select-2" name="recompensaId"><option th:each="r : ${recompensas}" th:value="${r.id}" th:text="${r.nivel + ' · ' + (r.premium ? 'Premium' : 'Gratuito') + ' · ' + r.titulo}"></option></select></div>
 <div class="form-group"><label for="fidelidade-select-3">Produto e variação</label><select id="fidelidade-select-3" name="produtoId"><option th:each="p : ${produtos}" th:value="${p.id}" th:text="${p.nome + ' · estoque ' + p.estoque}"></option></select></div><button class="admin-button">Adicionar opção</button></form>
-<ul><li th:each="o : ${opcoes}" th:text="${o.recompensa.titulo + ' → ' + o.produto.nome}"></li></ul></section>
-<section class="form-card"><h2>Missões da temporada</h2>
+<ul class="admin-record-list"><li th:each="o : ${opcoes}" th:text="${o.recompensa.titulo + ' → ' + o.produto.nome}"></li></ul></section>
+<section id="missoes" class="form-card"><h2>Missões da temporada</h2>
 <form method="post" th:action="@{/admin/fidelidade/missao}" class="lc-admin-event-form">
 <label>Título<input name="titulo" required maxlength="120"></label>
 <div class="form-group"><label for="fidelidade-select-4">Ação</label><select id="fidelidade-select-4" name="acao"><option value="CHECKIN">Check-in</option><option value="VIEW_PRODUCT">Ver produtos</option><option value="ADD_TO_CART">Adicionar à sacola</option></select></div>
 <div class="form-group"><label for="fidelidade-select-5">Período</label><select id="fidelidade-select-5" name="periodicidade"><option value="DIARIA">Diária</option><option value="SEMANAL">Semanal</option><option value="MENSAL">Mensal</option></select></div>
 <label>Meta<input name="meta" type="number" min="1" max="100" required value="1"></label>
 <label>XP<input name="xp" type="number" min="1" max="3000" required value="100"></label>
-<label><input type="checkbox" name="premium" value="true">Exclusiva Premium</label><button class="admin-button">Criar missão</button></form>
-<ul><li th:each="m : ${missoes}" th:text="${m.titulo + ' · ' + m.xpRecompensa + ' XP · ' + (m.premium ? 'Premium' : 'Gratuita')}"></li></ul>
+<label class="admin-checkbox"><input type="checkbox" name="premium" value="true">Exclusiva Premium</label><button class="admin-button">Criar missão</button></form>
+<ul class="admin-record-list"><li th:each="m : ${missoes}" th:text="${m.titulo + ' · ' + m.xpRecompensa + ' XP · ' + (m.premium ? 'Premium' : 'Gratuita')}"></li></ul>
 </section>
-<section class="form-card"><h2>Últimos resgates no Baú</h2>
+<section id="resgates" class="form-card"><h2>Últimos resgates no Baú</h2>
 <p>Produtos físicos aguardando solicitação já têm uma unidade reservada no estoque.</p>
 <div class="admin-table-wrap"><table class="admin-table">
 <thead><tr><th>Resgate</th><th>Cliente</th><th>Prêmio</th><th>Origem</th><th>Entrega</th></tr></thead>

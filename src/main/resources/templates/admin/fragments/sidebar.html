@@ -6,6 +6,7 @@
     <span class="sidebar-logo" aria-hidden="true">L.</span>
     <span><strong>LEVEL COMMERCE</strong><small>Administração</small></span>
   </a>
+  <details class="admin-navigation" open><summary>Menu da administração</summary>
   <nav class="sidebar-nav" aria-label="Administração da loja">
     <div class="sidebar-group">
       <span>Operação</span>
@@ -19,6 +20,7 @@
     </div>
     <div class="sidebar-group">
       <span>Engajamento</span>
+      <a th:href="@{/admin/fidelidade}" th:attr="aria-current=${activePage == 'fidelidade' ? 'page' : null}">Passe, VIP e Baú</a>
       <a th:href="@{/admin/eventos}" th:attr="aria-current=${activePage == 'eventos' ? 'page' : null}">Eventos</a>
     </div>
     <div class="sidebar-group">
@@ -31,8 +33,8 @@
         <button type="submit">Encerrar sessão</button>
       </form>
     </div>
-  <a href="/admin/fidelidade">Passe, VIP e Baú</a>
-</nav>
+
+</nav></details>
 </aside>
 </body>
 </html>

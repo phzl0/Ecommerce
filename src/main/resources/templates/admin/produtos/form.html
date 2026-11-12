@@ -6,7 +6,7 @@
     <title>Produto - Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
-</head>
+<script src="/js/admin.js" defer></script></head>
 <body class="admin-body">
 <div class="admin-layout">
     <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='produtos')}"></div>
@@ -25,12 +25,13 @@
 
         <p th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></p>
         <form id="product-form" class="admin-product-form" th:action="@{/admin/produtos/salvar}" th:object="${produto}"
-                  method="post" enctype="multipart/form-data"><div class="form-group"><label for="tipo">Tipo de produto</label><select th:field="*{tipo}"><option value="FISICO">Físico</option><option value="DIGITAL">Digital</option></select></div>
+                  method="post" enctype="multipart/form-data">
 
                 <input type="hidden" th:field="*{id}">
                 <input type="hidden" name="estoqueOriginal" th:value="${estoqueOriginal}">
                 <section class="form-card admin-editor-description" aria-labelledby="product-info">
                 <h2 id="product-info">Informações do produto</h2>
+<div class="form-group"><label for="tipo">Tipo de produto</label><select th:field="*{tipo}"><option value="FISICO">Físico</option><option value="DIGITAL">Digital</option></select></div>
                 <div class="form-row">
                     <div class="form-group">
                         <label for="nome">Nome *</label>
