@@ -497,3 +497,7 @@
  .metric-card { padding: 16px; }
  .admin-table-wrap .admin-table { min-width: 600px; }
 }
+@media (max-width: 800px) {
+ .admin-layout { align-content: start; }
+ .admin-sidebar { align-self: start; }
+}

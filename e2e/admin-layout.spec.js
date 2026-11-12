@@ -21,6 +21,7 @@ test('administrative screens keep controls usable on desktop and mobile', async 
   for (const route of ['/admin', '/admin/produtos', '/admin/categorias', '/admin/pedidos', '/admin/fidelidade', '/admin/eventos', '/admin/integracoes']) {
     await page.goto(route);
     await expect(page.locator('.sidebar-nav')).not.toBeVisible();
+    expect((await page.locator('.admin-sidebar').boundingBox()).height).toBeLessThan(160);
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
   await page.locator('.admin-navigation > summary').click();
