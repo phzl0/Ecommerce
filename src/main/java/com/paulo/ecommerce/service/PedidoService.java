@@ -260,7 +260,7 @@ public class PedidoService {
 
   public List<Pedido.Status> acoesOperacionais(Pedido pedido) {
     List<Pedido.Status> acoes = new ArrayList<>();
-    boolean fisico = pedido.getTemporadaPasseId() == null && pedido.getItens().stream().anyMatch(i -> i.getTipo() == Produto.Tipo.FISICO);
+    boolean fisico = pedido.getTemporadaPasseId() == null && pedido.getItens()!=null && pedido.getItens().stream().anyMatch(i -> i.getTipo() == Produto.Tipo.FISICO);
     boolean pagamentoAprovado = pedido.isRecompensa() || (pedido.getPagamento() != null
         && pedido.getPagamento().getStatus() == Pagamento.StatusPagamento.APROVADO);
     if (fisico && pagamentoAprovado && pedido.getStatus() == Pedido.Status.CONFIRMADO) {

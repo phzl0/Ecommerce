@@ -36,7 +36,7 @@ class OperacaoIntegrationTest {
  @Autowired EstoqueReservaRepository reservas;
  @Autowired PlatformTransactionManager transactions;
  @Autowired MockMvc mvc;
- private Usuario cliente(String email) {var u=new Usuario();u.setNome("Cliente digital");u.setEmail(email);u.setSenha("hash");return usuarios.saveAndFlush(u);}
+ private Usuario cliente(String email) {var u=new Usuario();u.setNome("Cliente digital");u.setEmail(email);u.setSenha("hashed-test");return usuarios.saveAndFlush(u);}
  private Produto produto(Produto.Tipo tipo,int saldo) {var p=new Produto();p.setNome("Produto "+UUID.randomUUID());p.setTipo(tipo);p.setPreco(BigDecimal.TEN);p.setEstoque(saldo);return produtos.saveAndFlush(p);}
  private CheckoutForm endereco() {var f=new CheckoutForm();f.setNomeDestinatario("Cliente");f.setTelefoneContato("11999999999");f.setCep("06400000");f.setLogradouro("Rua Teste");f.setNumero("10");f.setBairro("Centro");f.setCidade("Barueri");f.setUf("SP");return f;}
  private Pedido comprar(Usuario u,Produto... ps) {return pedidos.finalizarPedidoApi(u.getEmail(),endereco(),Arrays.stream(ps).map(p->new CheckoutItemRequest(p.getId(),1)).toList(),UUID.randomUUID().toString());}

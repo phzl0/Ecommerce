@@ -25,6 +25,7 @@ class CommerceIntegrationTest {
   @Autowired ProdutoRepository products;
   @Autowired PedidoRepository orders;
   @Autowired com.paulo.ecommerce.service.PedidoService orderService;
+  @Autowired com.paulo.ecommerce.service.EstoqueService estoque;
   @Autowired PasseService passes;
   @Autowired PasseProgressoUsuarioRepository progress;
 
@@ -226,8 +227,7 @@ class CommerceIntegrationTest {
   void expiredReservationReturnsStockOnlyOnce() {
     var u = account();
     var p = product();
-    p.setEstoque(3);
-    products.saveAndFlush(p);
+
     var order = new Pedido();
     order.setUsuario(u);
     order.setNumero("EXPIRED-TEST");
@@ -241,6 +241,7 @@ class CommerceIntegrationTest {
     item.setPrecoUnitario(new BigDecimal("100"));
     order.setItens(java.util.List.of(item));
     order = orders.saveAndFlush(order);
+    estoque.reservar(p,2,"PEDIDO:"+order.getId());
     orderService.expirarReserva(order.getId());
     orderService.expirarReserva(order.getId());
     assertEquals(5, products.findById(p.getId()).orElseThrow().getEstoque());

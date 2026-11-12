@@ -35,7 +35,18 @@ class MigrationIntegrationTest {
       sql.execute("drop table flyway_schema_history");
       sql.execute("drop table passe_eventos");
       sql.execute("alter table pagamentos drop column checkout_url");
+      migrations.target("8").load().migrate();
+      sql.execute("insert into produtos(id,nome,preco,estoque,ativo,destaque,tipo) values (90001,'Preservado',10,7,true,false,'FISICO')");
+      sql.execute("insert into pedidos(id,usuario_id,numero,total,subtotal,frete,desconto,data_pedido,status,passe_mensal,recompensa) select 90001,id,'RESERVA-MIGRACAO',20,20,0,0,current_timestamp,'PENDENTE',false,false from usuarios where email='preserved@example.test'");
+      sql.execute("insert into itens_pedido(pedido_id,produto_id,quantidade,preco_unitario) values (90001,90001,2,10)");
+      sql.execute("insert into bau_itens(usuario_id,origem,titulo,produto_id,criado_em) select id,'TESTE','Premio',90001,current_timestamp from usuarios where email='preserved@example.test'");
       migrations.target(MigrationVersion.LATEST).load().migrate();
+      try(var row=sql.executeQuery("select estoque from produtos where id=90001")) {
+        assertTrue(row.next());assertEquals(7,row.getInt(1));
+      }
+      try(var row=sql.executeQuery("select sum(quantidade) from estoque_reservas where produto_id=90001 and estado='RESERVADO'")) {
+        assertTrue(row.next());assertEquals(3,row.getInt(1));
+      }
       try (var result =
           sql.executeQuery("select count(*) from usuarios where email='preserved@example.test'")) {
         assertTrue(result.next());
