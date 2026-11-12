@@ -30,7 +30,7 @@
                 <option value="todos" th:selected="${visibilidade == 'todos'}">Todos</option>
             </select></label>
             <label class="admin-filter-check"><input type="checkbox" name="estoqueBaixo" value="true" th:checked="${estoqueBaixo}">
-                <span th:text="'Estoque baixo (até ' + ${limiteEstoque} + ')'">Estoque baixo</span></label>
+                <span>Estoque baixo (mínimo do produto)</span></label>
             <label class="admin-filter-check"><input type="checkbox" name="semEstoque" value="true" th:checked="${semEstoque}"> Apenas sem estoque</label>
             <button type="submit" class="admin-button">Filtrar</button>
             <a th:href="@{/admin/produtos}" class="btn-link">Limpar</a>
@@ -64,7 +64,7 @@
                 <td class="admin-number" th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}"></td>
                 <td class="admin-number">
                     <strong th:text="${produto.estoque}" th:classappend="${produto.estoque == 0 ? 'text-danger' : ''}"></strong>
-                    <div class="table-subtext" th:if="${produto.estoque > 0 and produto.estoque <= limiteEstoque}">Estoque baixo</div>
+                    <div class="table-subtext" th:if="${produto.estoque > 0 and produto.estoque <= produto.estoqueMinimo}">Estoque baixo</div>
                 </td>
                 <td>
                     <span class="status-badge" th:classappend="${produto.ativo ? 'status-confirmado' : 'status-cancelado'}"

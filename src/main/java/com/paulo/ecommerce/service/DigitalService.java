@@ -14,6 +14,7 @@ import org.springframework.security.access.AccessDeniedException;
 @Service
 @Transactional
 public class DigitalService {
+  @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
   private final DigitalConfigRepository configs;
   private final DigitalArquivoRepository arquivos;
   private final DigitalCodigoRepository codigos;
@@ -86,12 +87,16 @@ public class DigitalService {
   public void liberar(Pedido pedido) {
     if(pedido.getPagamento()==null || pedido.getPagamento().getStatus()!=Pagamento.StatusPagamento.APROVADO)
       throw new IllegalStateException("Entrega digital exige pagamento aprovado.");
+    int novas=0;
     for(var e:entregas.findByPedidoIdOrderByIdAsc(pedido.getId())) {
       if(!"PENDENTE".equals(e.estado)) continue;
+      novas++;
       e.estado="LIBERADO";e.liberadoEm=LocalDateTime.now();
       if(e.codigoId!=null) codigos.findById(e.codigoId).orElseThrow().estado="ENTREGUE";
     }
     estoque.consumir("PEDIDO:"+pedido.getId(),true);
+    if(novas>0) notificacoes.registrar(pedido.getUsuario().getId(),"Produtos digitais disponíveis",
+        "Acesse o conteúdo do pedido "+pedido.getNumero(),"/conta/digitais");
   }
   public void revogar(Pedido pedido) {
     for(var e:entregas.findByPedidoIdOrderByIdAsc(pedido.getId())) {

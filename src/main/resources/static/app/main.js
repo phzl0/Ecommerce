@@ -1714,6 +1714,7 @@ function OrderDetailPage({ orderId, route, notify }) {
 
           <div className="lc-checkout-card">
             <h3>Itens do pedido</h3>
+            ${order.itens.some(item => item.tipo === "DIGITAL") ? html`<p><${AppLink} href="/conta/digitais">Acessar meus produtos digitais →<//></p>` : null}
             <div className="lc-order-items">
               ${order.itens.map(
                 (item) => html`

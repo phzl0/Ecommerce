@@ -10,6 +10,7 @@ public record AccountOrderItemResponse(
         BigDecimal precoUnitario,
         BigDecimal subtotal,
         String descricaoCurta,
-        boolean produtoDisponivel
+        boolean produtoDisponivel,
+        String tipo
 ) {
 }

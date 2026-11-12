@@ -158,7 +158,8 @@ public class AccountApiController {
       return new AccountOrderItemResponse(produto.getId(), produto.getNome(), produto.getImagemUrl(),
           item.getQuantidade(), item.getPrecoUnitario(),
           item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade())),
-          produto.getDescricaoCurta(), produto.isAtivo() && pedido.getTemporadaPasseId() == null);
+          produto.getDescricaoCurta(), produto.isAtivo() && pedido.getTemporadaPasseId() == null,
+          pedido.getTemporadaPasseId() == null ? item.getTipo().name() : "PASSE");
     }).toList();
   }
 
