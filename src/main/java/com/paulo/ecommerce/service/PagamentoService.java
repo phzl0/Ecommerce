@@ -27,6 +27,7 @@ public class PagamentoService {
   @Value("${app.url:http://localhost:8080}")
   private String appUrl;
 
+  @org.springframework.beans.factory.annotation.Autowired private ImpactoReembolsoService impactosReembolso;
   @Value("${app.payments.enabled:false}")
   private boolean paymentsEnabled;
 
@@ -203,11 +204,14 @@ public class PagamentoService {
           if (pagamento.getStatus() == StatusPagamento.REEMBOLSADO) return;
           if (pagamento.getMpPaymentId() != null && !pagamento.getMpPaymentId().equals(paymentId))
             throw new IllegalStateException("Estorno de tentativa diferente.");
+          var restante=pedido.getTotal().subtract(pedido.getValorReembolsado());
+          var aviso=impactosReembolso.prever(pedido,restante);
+          impactosReembolso.aplicar(pedido,restante,aviso.token());
+          pedido.setValorReembolsado(pedido.getTotal());
           pagamento.setStatus(StatusPagamento.REEMBOLSADO);
           if (pedido.getStatus() != Pedido.Status.CANCELADO)
             pedidoService.atualizarStatus(pedidoId, Pedido.Status.CANCELADO);
-          passeService.estornarCompra(pedido.getUsuario().getEmail(), pedidoId);
-          fidelidade.estornar(pedidoId);
+
         }
         case "rejected" -> {
           if (pagamento.getStatus() != StatusPagamento.APROVADO
@@ -274,7 +278,7 @@ public class PagamentoService {
 
   @Transactional
   public String iniciarFluxoPagamento(Long pedidoId, MetodoPagamento metodoPagamento) {
-    if (pedidoService.buscarPorId(pedidoId).isRecompensa())
+    if (pedidoService.buscarPorId(pedidoId).isRecompensa() || pedidoService.buscarPorId(pedidoId).getPedidoOrigemId()!=null)
       throw new IllegalStateException("Recompensas não exigem pagamento.");
     if (!paymentsEnabled) return "/pedidos/" + pedidoId + "?paymentsDisabled=true";
     try {

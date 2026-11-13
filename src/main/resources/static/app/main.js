@@ -296,6 +296,7 @@ function paymentStatusLabel(status) {
     REEMBOLSADO: "Pagamento reembolsado",
     SEM_PAGAMENTO: "Pagamento nao iniciado",
     ISENTO: "Entrega gratuita de recompensa",
+    TROCA_ISENTA: "Troca sem cobrança",
   };
   return labels[status] || status;
 }
@@ -1327,6 +1328,7 @@ function CheckoutPage({ items, auth, clearCart, address, initialCoupon }) {
                 ? "Cupom aplicado." : "O desconto aparece no resumo depois da validação.")}
             </p>
             <h3>Forma de pagamento</h3>
+            <p className="lc-checkout-note">Ganhos de XP, VIP e eventos dependem do pagamento aprovado e das regras de cada campanha. Reembolsos podem reverter esses ganhos e recalcular seu progresso.</p>
             ${paymentConfig && !paymentConfig.enabled ? html`<p role="status" className="lc-checkout-note">Modo demonstração: nenhuma cobrança será feita. O pedido será salvo como pendente para testar a jornada.</p>` : null}
             <div className="lc-payment-options">
               ${[
@@ -1605,22 +1607,33 @@ function OrderOperation({ order, notify }) {
   const [request, setRequest] = useState({ itemId: "", quantidade: 1, tipo: "DEVOLUCAO", motivo: "" });
   const messageKey = useRef(crypto.randomUUID());
   const requestKey = useRef(crypto.randomUUID());
+  const [impact, setImpact] = useState(null);
+  const [impactError, setImpactError] = useState("");
+  const [ciente, setCiente] = useState(false);
+  const [impactVersion, setImpactVersion] = useState(0);
   const url = `/api/account/orders/${order.id}/operation`;
   async function refresh() { setData(await getJson(url)); }
+  useEffect(() => {
+    let active=true; setImpact(null); setCiente(false); setImpactError("");
+    if(!request.itemId || Number(request.quantidade)<1) return;
+    const timer=setTimeout(()=>getJson(`${url}/impact?itemId=${encodeURIComponent(request.itemId)}&quantidade=${encodeURIComponent(request.quantidade)}`)
+      .then(value=>{if(active)setImpact(value);}).catch(()=>{if(active)setImpactError("Não foi possível calcular o impacto. Atualize o aviso antes de enviar.");}),200);
+    return ()=>{active=false;clearTimeout(timer);};
+  },[request.itemId,request.quantidade,request.tipo,impactVersion]);
   useEffect(() => {
     let active = true;
     getJson(url).then(d => { if(active) setData(d); }).catch(() => { if(active) setError("Não foi possível carregar o acompanhamento."); });
     return () => { active = false; };
   }, [order]);
   async function submit(event, kind) {
-    event.preventDefault(); if(busy) return; setBusy(true); setError("");
+    event.preventDefault(); if(busy || (kind === "requests" && (!impact || !ciente))) return; setBusy(true); setError("");
     try {
       await postJson(`${url}/${kind}`,kind === "messages" ? { mensagem: message, chave: messageKey.current }
-        : {...request, itemId: Number(request.itemId), quantidade: Number(request.quantidade), chave: requestKey.current });
+        : {...request, itemId: Number(request.itemId), quantidade: Number(request.quantidade), chave: requestKey.current, token: impact?.token, ciente });
       if(kind === "messages") { setMessage(""); messageKey.current = crypto.randomUUID(); }
       else { setRequest({ itemId: "", quantidade: 1, tipo: "DEVOLUCAO", motivo: "" }); requestKey.current = crypto.randomUUID(); }
       await refresh(); notify(kind === "messages" ? "Mensagem registrada no atendimento." : "Solicitação enviada para análise.");
-    } catch(e) { setError(e.message || "Não foi possível enviar. Tente novamente."); }
+    } catch(e) { setError(e.message || "Não foi possível enviar. Tente novamente."); if(kind === "requests") setImpactVersion(v=>v+1); }
     finally { setBusy(false); }
   }
   const available = data?.itens.filter(i => i.disponivel > 0) || [];
@@ -1641,10 +1654,20 @@ function OrderOperation({ order, notify }) {
           <label>Quantidade<input type="number" min="1" max=${selected?.disponivel || 1} required value=${request.quantidade} onChange=${e=>setRequest({...request,quantidade:e.target.value})} /></label>
           <label>Tipo de solicitação<select aria-label="Tipo de solicitação" value=${request.tipo} onChange=${e=>setRequest({...request,tipo:e.target.value})}><option value="DEVOLUCAO">Devolução</option><option value="TROCA">Troca</option></select></label>
           <label>Motivo<textarea required minLength="10" maxLength="1000" value=${request.motivo} onChange=${e=>setRequest({...request,motivo:e.target.value})}></textarea></label>
-          <button className="lc-btn lc-btn-primary" disabled=${busy}>Enviar solicitação</button>
+          ${impact ? html`<div className="lc-impact-notice" role="status">
+            ${request.tipo === "TROCA" ? html`<p>A troca não gera novos XP, pontos VIP ou pontos de eventos. Se a solução mudar para reembolso, o progresso será recalculado:</p>` : null}
+            <p>${impact.mensagem}</p><p>Estimativa para os itens selecionados: ${currency(impact.valor)}, sem frete. O valor final será analisado pela loja; os pontos só serão retirados na confirmação do reembolso.</p>
+            ${impact.eventos.length ? html`<ul>${impact.eventos.map(e=>html`<li key=${e.id}>${e.titulo}: ${e.antes} → ${e.depois} pontos</li>`)}</ul>` : null}
+          </div>` : request.itemId ? html`<p role="status">${impactError || "Calculando impacto no progresso…"}</p>` : null}
+          ${impactError ? html`<button type="button" className="lc-btn lc-btn-ghost" onClick=${()=>setImpactVersion(v=>v+1)}>Atualizar aviso</button>` : null}
+          <label className="lc-impact-check"><input type="checkbox" required checked=${ciente} onChange=${e=>setCiente(e.target.checked)} />Li o aviso sobre reembolso, troca e progresso.</label>
+          <button className="lc-btn lc-btn-primary" disabled=${busy || !impact || !ciente}>Enviar solicitação</button>
         </form>` : html`<p>Para outras dúvidas ou situações, utilize o atendimento abaixo.</p>`}
         ${data.solicitacoes.map(d=>html`<article key=${d.id} className="lc-service-entry"><strong>Solicitação #${d.id} · ${operationLabels[d.estado]}</strong><p>${d.tipo === "TROCA" ? "Troca" : "Devolução"} · ${d.quantidade} unidade(s)</p><p>${d.motivo}</p>${d.resposta ? html`<p>${d.resposta}</p>` : null}</article>`)}
       </details>
+      ${data.pedidoOrigemId ? html`<div className="lc-checkout-card"><h3>Remessa de troca</h3><p>Sem nova cobrança ou ganhos de XP, VIP e eventos.</p><${AppLink} href=${`/pedidos/${data.pedidoOrigemId}`}>Ver pedido original<//></div>` : null}
+      ${data.trocas.length ? html`<div className="lc-checkout-card"><h3>Pedidos de troca</h3>${data.trocas.map(t=>html`<p key=${t.id}><${AppLink} href=${`/pedidos/${t.id}`}>${t.numero} · ${orderStatusLabel(t.status)}<//></p>`)}</div>` : null}
+      ${data.reembolsos.length ? html`<div className="lc-checkout-card"><h3>Reembolsos</h3><p>Total confirmado: ${currency(data.valorReembolsado)}</p>${data.reembolsos.map(r=>html`<article className="lc-service-entry" key=${r.id}><strong>Reembolso #${r.id} · ${currency(r.valor)} · ${r.estado === "PENDENTE" ? "Em análise" : r.estado === "CONFIRMADO" ? "Confirmado (simulação local)" : "Cancelado"}</strong><p>${r.impacto}</p>${r.analiseBeneficios ? html`<p>Benefícios resgatados em análise pela equipe.</p>` : null}</article>`)}</div>` : null}
       <div className="lc-checkout-card"><h3>Atendimento do pedido</h3><form className="lc-operation-form" onSubmit=${e=>submit(e,"messages")}>
         <label>Mensagem para a loja<textarea required minLength="2" maxLength="2000" value=${message} onChange=${e=>setMessage(e.target.value)}></textarea></label>
         <button className="lc-btn lc-btn-primary" disabled=${busy}>Enviar mensagem</button></form>
@@ -2086,6 +2109,7 @@ function RewardTrail({ auth, overview, notifyGain, standalone = false }) {
     ${!pass ? html`<${AppLink} href=${buildLoginUrl()} className="lc-btn lc-neon-btn">Entrar<//>`
       : !pass.premiumAtivo && auth.ambienteLocal ? html`<button type="button" className="lc-btn lc-neon-btn"
         disabled=${busy !== null} onClick=${buyPremium}>Liberar Premium</button>` : null}
+    ${pass && !pass.premiumAtivo ? html`<small>Compra válida nesta temporada. Bônus VIP seguem as regras atuais; reembolso integral revoga o Premium e reverte os bônus vinculados.</small>` : null}
   </div>`;
 
   return html`<section id="trilha-do-passe" className=${`lc-level-trail ${standalone ? "lc-page" : ""}`} aria-label=${standalone ? undefined : "Trilha de recompensas"}

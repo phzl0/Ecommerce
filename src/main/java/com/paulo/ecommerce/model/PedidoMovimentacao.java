@@ -17,7 +17,7 @@ public class PedidoMovimentacao {
   @Column(nullable = false, length = 24)
   private Pedido.Status status;
 
-  @Column(nullable = false, length = 120)
+  @Column(nullable = false, length = 600)
   private String descricao;
 
   @Column(nullable = false)

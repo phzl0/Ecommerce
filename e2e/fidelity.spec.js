@@ -88,6 +88,8 @@ test("premium reward enters the chest and ships as a normal free order", async (
     await page.getByText("Troca ou devolução de produto físico", { exact: true }).click();
     await page.getByLabel("Produto", { exact: true }).selectOption({index:1});
     await page.getByLabel("Motivo", { exact: true }).fill("Produto recebido apresentou divergência de tamanho.");
+    await expect(page.getByText(/Caso seu reembolso seja confirmado/)).toBeVisible();
+    await page.getByLabel("Li o aviso sobre reembolso, troca e progresso.").check();
     await page.getByRole("button", { name: "Enviar solicitação" }).click();
     await expect(page.getByText(/Solicitação #.*Em análise/)).toBeVisible();
     await admin.reload();

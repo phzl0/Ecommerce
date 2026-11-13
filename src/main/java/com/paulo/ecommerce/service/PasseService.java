@@ -447,7 +447,7 @@ public class PasseService {
     }
   }
 
-  private void recalcularXp(Usuario usuario, PasseTemporada temporada) {
+  public void recalcularXp(Usuario usuario, PasseTemporada temporada) {
     int total =
         (int)
             Math.min(
@@ -456,7 +456,7 @@ public class PasseService {
                     .findByUsuarioIdAndTemporadaId(usuario.getId(), temporada.getId())
                     .stream()
                     .filter(h -> !h.isEstornado())
-                    .mapToLong(PasseXpHistorico::getXpGanho)
+                    .mapToLong(PasseXpHistorico::xpLiquido)
                     .sum());
     PasseProgressoUsuario progresso = obterOuCriarProgresso(usuario, temporada);
     progresso.setXpTotal(

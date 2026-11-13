@@ -14,6 +14,7 @@ public class PedidoDevolucao {
  @Column(length=1000) public String resposta;
  @Column(nullable=false) public int reposta;
  @Column(nullable=false) public java.time.LocalDateTime criadoEm=java.time.LocalDateTime.now();
+ public Long pedidoTrocaId;
  public java.time.LocalDateTime recebidoEm;
  @Column(length=254) public String conferidoPor;
 }

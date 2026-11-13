@@ -164,6 +164,7 @@ public class AccountApiController {
   }
 
   private String resolvePaymentStatus(Pedido pedido) {
+    if (pedido.getPedidoOrigemId()!=null) return "TROCA_ISENTA";
     if (pedido.isRecompensa()) return "ISENTO";
     Pagamento pagamento = findPagamento(pedido);
     return pagamento == null ? "SEM_PAGAMENTO" : pagamento.getStatus().name();

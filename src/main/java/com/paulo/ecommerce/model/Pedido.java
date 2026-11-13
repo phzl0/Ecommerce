@@ -24,6 +24,19 @@ public class Pedido extends BaseEntity {
   public boolean isRecompensa() { return recompensa; }
   public void setRecompensa(boolean value) { recompensa = value; }
 
+  @Column(nullable=false, precision=10, scale=2)
+  private BigDecimal valorReembolsado = BigDecimal.ZERO;
+  private Long pedidoOrigemId;
+  public BigDecimal getValorReembolsado() { return valorReembolsado; }
+  public void setValorReembolsado(BigDecimal valor) { valorReembolsado=valor; }
+  public Long getPedidoOrigemId() { return pedidoOrigemId; }
+  public void setPedidoOrigemId(Long valor) { pedidoOrigemId=valor; }
+  public BigDecimal valorElegivel() { return valorElegivel(valorReembolsado); }
+  public BigDecimal valorElegivel(BigDecimal devolvido) {
+    if (total.signum()<=0) return BigDecimal.ZERO;
+    return subtotal.subtract(desconto).multiply(total.subtract(devolvido).max(BigDecimal.ZERO))
+        .divide(total,2,java.math.RoundingMode.DOWN);
+  }
   private Long temporadaPasseId;
 
   @Column(nullable = false)

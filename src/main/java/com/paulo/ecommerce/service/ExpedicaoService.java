@@ -17,7 +17,7 @@ public class ExpedicaoService {
  private Pedido preparar(Long id) {
   var p=pedidos.bloquearPedido(id);
   if(p.getStatus()!=Pedido.Status.CONFIRMADO || p.getTemporadaPasseId()!=null || p.getItens().stream().noneMatch(i->i.getTipo()==Produto.Tipo.FISICO)
-     || (!p.isRecompensa() && (p.getPagamento()==null || p.getPagamento().getStatus()!=Pagamento.StatusPagamento.APROVADO)))
+     || (!p.isRecompensa() && p.getPedidoOrigemId()==null && (p.getPagamento()==null || p.getPagamento().getStatus()!=Pagamento.StatusPagamento.APROVADO)))
     throw new IllegalStateException("A separação exige um pedido físico confirmado.");
   return p;
  }

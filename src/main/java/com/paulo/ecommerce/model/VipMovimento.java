@@ -10,6 +10,8 @@ public class VipMovimento {
   @Column(nullable=false, length=160) public String referencia;
   public Long pedidoId;
   public long pontos;
+  @Column(nullable=false) public long pontosEstornados;
+  public long liquido() { return estornado ? 0 : Math.max(0,pontos-pontosEstornados); }
   public boolean estornado;
   public java.time.LocalDateTime criadoEm = java.time.LocalDateTime.now();
 }

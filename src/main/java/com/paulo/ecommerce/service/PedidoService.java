@@ -262,7 +262,7 @@ public class PedidoService {
   public List<Pedido.Status> acoesOperacionais(Pedido pedido) {
     List<Pedido.Status> acoes = new ArrayList<>();
     boolean fisico = pedido.getTemporadaPasseId() == null && pedido.getItens()!=null && pedido.getItens().stream().anyMatch(i -> i.getTipo() == Produto.Tipo.FISICO);
-    boolean pagamentoAprovado = pedido.isRecompensa() || (pedido.getPagamento() != null
+    boolean pagamentoAprovado = pedido.isRecompensa() || pedido.getPedidoOrigemId()!=null || (pedido.getPagamento() != null
         && pedido.getPagamento().getStatus() == Pagamento.StatusPagamento.APROVADO);
     if (fisico && pagamentoAprovado && pedido.getStatus() == Pedido.Status.CONFIRMADO) {
       acoes.add(Pedido.Status.ENVIADO);
@@ -271,7 +271,7 @@ public class PedidoService {
       acoes.add(Pedido.Status.ENTREGUE);
     }
     if ((!pagamentoAprovado && pedido.getStatus() == Pedido.Status.PENDENTE)
-        || (pedido.isRecompensa() && pedido.getStatus() == Pedido.Status.CONFIRMADO)) {
+        || ((pedido.isRecompensa() || pedido.getPedidoOrigemId()!=null) && pedido.getStatus() == Pedido.Status.CONFIRMADO)) {
       acoes.add(Pedido.Status.CANCELADO);
     }
     return acoes;

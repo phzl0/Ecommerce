@@ -10,6 +10,25 @@ import org.springframework.security.access.AccessDeniedException;
 @Transactional
 public class PosVendaService {
  @org.springframework.beans.factory.annotation.Autowired private DigitalEntregaRepository digitais;
+ @org.springframework.beans.factory.annotation.Autowired private PedidoReembolsoRepository reembolsos;
+ @org.springframework.beans.factory.annotation.Autowired private PedidoRepository pedidoRepo;
+ @org.springframework.beans.factory.annotation.Autowired private ImpactoReembolsoService impactos;
+ public ImpactoReembolsoService.Aviso preverSolicitacao(Long id,String email,Long itemId,int quantidade) {
+  var p=pedidos.buscarPorIdDoUsuario(id,email);
+  var item=p.getItens().stream().filter(i->i.getId().equals(itemId)).findFirst().orElseThrow(()->new IllegalArgumentException("Item não pertence ao pedido."));
+  if(quantidade<1||quantidade>item.getQuantidade())throw new IllegalArgumentException("Quantidade inválida.");
+  var bruto=item.getPrecoUnitario().multiply(java.math.BigDecimal.valueOf(quantidade));
+  var valor=p.getSubtotal().signum()==0?java.math.BigDecimal.ZERO:bruto.multiply(p.getSubtotal().subtract(p.getDesconto())).divide(p.getSubtotal(),2,java.math.RoundingMode.DOWN);
+  valor=valor.min(p.getTotal().subtract(p.getValorReembolsado()));
+  return impactos.prever(p,valor);
+ }
+ public Long solicitarComAviso(Long pedido,String email,Long item,int quantidade,String tipo,String motivo,String chave,String token,boolean ciente){
+  pedidos.bloquearPedidoParaConciliacao(pedido);
+  if(!ciente)throw new IllegalArgumentException("Leia e confirme o aviso antes de solicitar.");
+  var aviso=preverSolicitacao(pedido,email,item,quantidade);
+  if(!aviso.token().equals(token))throw new IllegalStateException("O progresso mudou. Atualize o aviso antes de enviar.");
+  return solicitar(pedido,email,item,quantidade,tipo,motivo,chave);
+ }
  private final PedidoService pedidos;
  private final PedidoDevolucaoRepository devolucoes;
  private final PedidoAtendimentoRepository mensagens;
@@ -78,7 +97,7 @@ public class PosVendaService {
  }
  public record Rastreio(String etapa,String transportadora,String codigo,String url,LocalDateTime enviadoEm,LocalDateTime entregueEm) {}
  public record MensagemView(Long id,String mensagem,String autor,LocalDateTime criadoEm) {}
- public record SolicitacaoView(Long id,Long itemId,int quantidade,String tipo,String estado,String motivo,String resposta,int reposta) {}
+ public record SolicitacaoView(Long id,Long itemId,int quantidade,String tipo,String estado,String motivo,String resposta,int reposta,Long pedidoTrocaId) {}
  public record ItemView(Long id,String nome,int quantidade,long disponivel) {}
  @Transactional(readOnly=true)
  public Map<String,Object> acompanhar(Long id,String email) {
@@ -89,9 +108,13 @@ public class PosVendaService {
   var rastreio=new Rastreio(etapa,e==null?null:e.transportadora,e==null?null:e.codigo,e==null?null:e.url,e==null?null:e.enviadoEm,e==null?null:e.entregueEm);
   var mapa=new LinkedHashMap<String,Object>();mapa.put("rastreio",rastreio);mapa.put("fisico",fisico);
   mapa.put("mensagens",mensagens.findTop100ByPedidoIdAndPublicoTrueOrderByIdDesc(id).stream().map(m->new MensagemView(m.id,m.mensagem,m.cliente?"Você":"Atendimento LEVEL",m.criadoEm)).toList());
-  mapa.put("solicitacoes",devolucoes.findByPedidoIdOrderByIdDesc(id).stream().map(d->new SolicitacaoView(d.id,d.itemId,d.quantidade,d.tipo,d.estado,d.motivo,d.resposta,d.reposta)).toList());
+  mapa.put("solicitacoes",devolucoes.findByPedidoIdOrderByIdDesc(id).stream().map(d->new SolicitacaoView(d.id,d.itemId,d.quantidade,d.tipo,d.estado,d.motivo,d.resposta,d.reposta,d.pedidoTrocaId)).toList());
   mapa.put("itens",p.getItens().stream().filter(i->i.getTipo()==Produto.Tipo.FISICO && p.getTemporadaPasseId()==null).map(i->new ItemView(i.getId(),i.getProduto().getNome(),i.getQuantidade(),Math.max(0,i.getQuantidade()-devolucoes.quantidadeSolicitada(i.getId())))).toList());
   mapa.put("digitais",digitais.findByPedidoIdOrderByIdAsc(id).stream().map(d->Map.of("titulo",d.titulo,"estado",d.estado)).toList());
+  mapa.put("pedidoOrigemId",p.getPedidoOrigemId());
+  mapa.put("trocas",pedidoRepo.findByPedidoOrigemId(id).stream().map(o->Map.of("id",o.getId(),"numero",o.getNumero(),"status",o.getStatus())).toList());
+  mapa.put("valorReembolsado",p.getValorReembolsado());
+  mapa.put("reembolsos",reembolsos.findByPedidoIdOrderByIdDesc(id).stream().map(r->Map.of("id",r.id,"valor",r.valor,"estado",r.estado,"impacto",r.impacto,"analiseBeneficios",r.analiseBeneficios&&r.analisadoEm==null)).toList());
   mapa.put("podeSolicitar",e!=null && Set.of("ENVIADO","ENTREGUE").contains(e.etapa));return mapa;
  }
 }

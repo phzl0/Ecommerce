@@ -504,3 +504,7 @@
 
 .admin-service-entry { padding: 16px 0; border-top: 1px solid #dfe3e8; }
 .admin-preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-impact-notice { padding: 16px; margin-block: 16px; background: #fff6dc; color: #483500; border-left: 4px solid #c79400; border-radius: 8px; line-height: 1.6; }
+.admin-check { display: flex !important; align-items: flex-start; gap: 8px; }
+.admin-check input[type="checkbox"] { width: auto; flex: 0 0 auto; margin-top: 4px; }
+.admin-service-entry > form { margin-top: 16px; }

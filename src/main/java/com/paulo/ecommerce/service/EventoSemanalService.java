@@ -121,8 +121,28 @@ public class EventoSemanalService {
   }
 
   private long xpBruto(EventoSemanal evento, Long usuarioId) {
-    return pedidos.comprasEvento(usuarioId, evento.inicio, evento.fim, evento.minimoCompra)
-        .stream().mapToLong(valor -> pontos(evento, valor)).sum();
+    return compras(usuarioId).stream().filter(p->p.getPagamento().getPagoEm()!=null
+        &&!p.getPagamento().getPagoEm().isBefore(evento.inicio)&&p.getPagamento().getPagoEm().isBefore(evento.fim))
+        .map(p->p.valorElegivel()).filter(v->v.compareTo(evento.minimoCompra)>=0).mapToLong(v->pontos(evento,v)).sum();
+  }
+  private List<com.paulo.ecommerce.model.Pedido> compras(Long usuario) {
+    return pedidos.findByUsuarioIdOrderByDataPedidoDesc(usuario).stream().filter(p->!p.isRecompensa()&&p.getPedidoOrigemId()==null&&p.getTemporadaPasseId()==null
+      &&p.getStatus()!=com.paulo.ecommerce.model.Pedido.Status.CANCELADO&&p.getPagamento()!=null
+      &&p.getPagamento().getStatus()==com.paulo.ecommerce.model.Pagamento.StatusPagamento.APROVADO).toList();
+  }
+  public boolean metaAtingida(Long id,int xp) {return xp>=eventos.findById(id).orElseThrow().metaXp;}
+  public List<ImpactoReembolsoService.EventoImpacto> impactos(com.paulo.ecommerce.model.Pedido pedido,BigDecimal acumulado) {
+    var compras=compras(pedido.getUsuario().getId());
+    return eventos.findAll().stream().sorted(java.util.Comparator.comparing(e->e.id)).map(e->{
+      long antes=0,depois=0;
+      for(var p:compras) {
+        var pago=p.getPagamento().getPagoEm();if(pago==null||pago.isBefore(e.inicio)||!pago.isBefore(e.fim))continue;
+        var atual=p.valorElegivel();var novo=p.getId().equals(pedido.getId())?p.valorElegivel(acumulado):atual;
+        if(atual.compareTo(e.minimoCompra)>=0)antes+=pontos(e,atual);
+        if(novo.compareTo(e.minimoCompra)>=0)depois+=pontos(e,novo);
+      }
+      return new ImpactoReembolsoService.EventoImpacto(e.id,e.titulo,(int)Math.min(e.limiteXp,antes),(int)Math.min(e.limiteXp,depois));
+    }).filter(e->e.antes()!=e.depois()).toList();
   }
 
   private long pontos(EventoSemanal evento, BigDecimal valor) {

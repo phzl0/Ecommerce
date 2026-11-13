@@ -22,6 +22,10 @@ import jakarta.persistence.UniqueConstraint;
 public class PasseXpHistorico extends BaseEntity {
   @Column(nullable = false, columnDefinition = "boolean default false")
   private boolean estornado;
+  @Column(nullable=false) private int xpEstornado;
+  public int getXpEstornado() { return xpEstornado; }
+  public void setXpEstornado(int valor) { xpEstornado=valor; }
+  public int xpLiquido() { return estornado ? 0 : Math.max(0,xpGanho-xpEstornado); }
 
   public boolean isEstornado() {
     return estornado;

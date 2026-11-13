@@ -1039,3 +1039,7 @@ html:has(.lc-mobile-drawer[open]) { overflow: hidden; }
 .lc-order-detail-main .lc-order-item-row > div { display: grid; gap: 8px; min-width: 0; }
 .lc-order-detail-main .lc-order-item-row strong,
 .lc-order-detail-main .lc-section-header h2 { overflow-wrap: anywhere; }
+.lc-impact-notice { padding: 16px; background: #fff2ca; color: #493700; border-left: 4px solid #b68400; border-radius: 8px; line-height: 1.6; }
+.lc-impact-notice p { margin: 0 0 8px; }
+.lc-operation-form .lc-impact-check { display: flex; gap: 8px; align-items: flex-start; }
+.lc-operation-form .lc-impact-check input { width: auto; margin-top: 4px; }

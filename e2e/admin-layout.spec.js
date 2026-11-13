@@ -6,7 +6,7 @@ test('administrative screens keep controls usable on desktop and mobile', async 
   await page.getByLabel('Senha', { exact: true }).fill('AdminLocal123!');
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
   await expect(page).not.toHaveURL(/\/login/);
-  for (const route of ['/admin', '/admin/produtos', '/admin/categorias', '/admin/pedidos', '/admin/fidelidade', '/admin/eventos', '/admin/integracoes', '/admin/estoque', '/admin/digitais', '/admin/expedicao', '/admin/atendimento']) {
+  for (const route of ['/admin', '/admin/produtos', '/admin/categorias', '/admin/pedidos', '/admin/fidelidade', '/admin/eventos', '/admin/integracoes', '/admin/estoque', '/admin/digitais', '/admin/expedicao', '/admin/atendimento', '/admin/reembolsos']) {
     await page.goto(route);
     await expect(page.locator('main h1')).toBeVisible();
     await expect(page.locator('.sidebar-nav [aria-current="page"]')).toHaveCount(1);
@@ -18,7 +18,7 @@ test('administrative screens keep controls usable on desktop and mobile', async 
   await expect(page.locator('#missoes')).toBeInViewport();
   await page.screenshot({ path: 'test-results/admin-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  for (const route of ['/admin', '/admin/produtos', '/admin/categorias', '/admin/pedidos', '/admin/fidelidade', '/admin/eventos', '/admin/integracoes', '/admin/estoque', '/admin/digitais', '/admin/expedicao', '/admin/atendimento']) {
+  for (const route of ['/admin', '/admin/produtos', '/admin/categorias', '/admin/pedidos', '/admin/fidelidade', '/admin/eventos', '/admin/integracoes', '/admin/estoque', '/admin/digitais', '/admin/expedicao', '/admin/atendimento', '/admin/reembolsos']) {
     await page.goto(route);
     await expect(page.locator('.sidebar-nav')).not.toBeVisible();
     expect((await page.locator('.admin-sidebar').boundingBox()).height).toBeLessThan(160);

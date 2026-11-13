@@ -92,7 +92,7 @@ public class FidelidadeService {
 
   private long saldo(VipConta conta) {
     return movimentos.findByUsuarioIdAndEstornadoFalseOrderByCriadoEmDesc(conta.usuarioId).stream()
-        .filter(m -> !m.criadoEm.isBefore(conta.cicloInicio)).mapToLong(m -> m.pontos).sum();
+        .filter(m -> !m.criadoEm.isBefore(conta.cicloInicio)).mapToLong(m -> m.liquido()).sum();
   }
 
   @Transactional
@@ -114,7 +114,7 @@ public class FidelidadeService {
         "fisico", n.produto != null, "disponivel", pontos >= n.pontos && !bau.existe(usuario.getId(), "VIP-" + n.id),
         "resgatado", bau.existe(usuario.getId(), "VIP-" + n.id))).toList());
     resposta.put("historico", movimentos.findByUsuarioIdAndEstornadoFalseOrderByCriadoEmDesc(usuario.getId())
-        .stream().limit(20).map(m -> Map.of("origem", m.referencia, "pontos", m.pontos, "data", m.criadoEm)).toList());
+        .stream().limit(20).map(m -> Map.of("origem", m.referencia, "pontos", m.liquido(), "data", m.criadoEm)).toList());
     return resposta;
   }
 

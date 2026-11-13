@@ -12,11 +12,13 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+  java.util.List<Pedido> findByPedidoOrigemId(Long pedidoOrigemId);
+
   @EntityGraph(attributePaths={"usuario","pagamento"})
   @Query("""
     select p from Pedido p left join PedidoExpedicao e on e.pedidoId=p.id left join p.pagamento pg
     where p.status in ('CONFIRMADO','ENVIADO','ENTREGUE') and p.temporadaPasseId is null
-    and (p.recompensa=true or pg.status='APROVADO')
+    and (p.recompensa=true or p.pedidoOrigemId is not null or pg.status='APROVADO')
     and exists(select i.id from ItemPedido i where i.pedido=p and i.tipo='FISICO')
     and (:etapa='' or coalesce(e.etapa,'NA_FILA')=:etapa)
     """)

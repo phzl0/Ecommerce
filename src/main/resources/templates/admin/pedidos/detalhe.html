@@ -15,7 +15,7 @@
         <div class="admin-header">
             <div><span class="admin-eyebrow">OPERAÇÃO</span>
                 <h1 th:text="'Pedido ' + ${pedido.numero}">Pedido</h1>
-                <p class="admin-subtitle" th:text="${pedido.recompensa ? 'Recompensa do Baú · entrega gratuita' : (pedido.temporadaPasseId == null ? 'Pedido de produtos' : 'Passe digital')}"></p>
+                <p class="admin-subtitle" th:text="${pedido.pedidoOrigemId != null ? 'Remessa de troca · sem cobrança' : pedido.recompensa ? 'Recompensa do Baú · entrega gratuita' : (pedido.temporadaPasseId == null ? 'Pedido de produtos' : 'Passe digital')}"></p>
             </div>
             <a th:href="@{/admin/pedidos}" class="btn-link">← Voltar</a>
         </div>
@@ -86,7 +86,7 @@
             <aside class="form-card" style="height:fit-content;">
                 <h2>Pagamento e operação</h2>
                 <dl class="admin-data-grid">
-                    <div><dt>Pagamento</dt><dd th:text="${pedido.recompensa ? 'Isento · recompensa' : (pedido.pagamento == null ? 'Sem pagamento' : pedido.pagamento.status)}"></dd></div>
+                    <div><dt>Pagamento</dt><dd th:text="${pedido.pedidoOrigemId != null ? 'Isento · troca' : pedido.recompensa ? 'Isento · recompensa' : (pedido.pagamento == null ? 'Sem pagamento' : pedido.pagamento.status)}"></dd></div>
                     <div><dt>Pedido</dt><dd th:text="${pedido.status}"></dd></div>
                     <div th:if="${pedido.pagamento != null and pedido.pagamento.pagoEm != null}">
                         <dt>Aprovado em</dt><dd th:text="${#temporals.format(pedido.pagamento.pagoEm, 'dd/MM/yyyy HH:mm')}"></dd>
