@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** The preview and execution use the same projection; no writes are made while previewing. */
 @Service
 public class ImpactoReembolsoService {
+ @org.springframework.beans.factory.annotation.Autowired private FidelidadeConfigRepository config;
  private final PedidoRepository pedidos;
  private final PasseXpHistoricoRepository xp;
  private final PasseMissaoProgressoRepository missoes;
@@ -45,8 +46,6 @@ public class ImpactoReembolsoService {
   for(var a:plano.vip){a.registro.pontosEstornados=a.estorno;a.registro.estornado=a.cancelado;}
   xp.flush();vip.flush();
   plano.xp.stream().map(a->a.registro.getTemporada()).distinct().forEach(t->passe.recalcularXp(p.getUsuario(),t));
-  contas.findById(p.getUsuario().getId()).ifPresent(c->c.ultimaAtividade=vip.findByUsuarioIdAndEstornadoFalseOrderByCriadoEmDesc(c.usuarioId).stream()
-   .filter(m->m.liquido()>0&&!m.criadoEm.isBefore(c.cicloInicio)).map(m->m.criadoEm).findFirst().orElse(null));
   return plano.aviso;
  }
  private Plano plano(Pedido p,BigDecimal valor) {
@@ -81,7 +80,9 @@ public class ImpactoReembolsoService {
   }
   var conta=contas.findById(usuario).orElse(null);
   long perdaXp=xa.stream().mapToLong(a->a.registro.xpLiquido()-(a.cancelado?0:a.registro.getXpGanho()-a.estorno)).sum();
-  long perdaVip=va.values().stream().filter(a->conta==null||!a.registro.criadoEm.isBefore(conta.cicloInicio))
+  int dias=config.findById(1L).map(c->c.diasInatividade).orElse(90);
+  boolean expirou=conta!=null && (conta.expirado || (conta.ultimaAtividade!=null&&!conta.ultimaAtividade.plusDays(dias).isAfter(java.time.LocalDateTime.now())));
+  long perdaVip=va.values().stream().filter(a->!expirou&&(conta==null||!a.registro.criadoEm.isBefore(conta.cicloInicio)))
    .mapToLong(a->a.registro.liquido()-(a.cancelado?0:a.registro.pontos-a.estorno)).sum();
   boolean analisar=(perdaXp>0&&!resgates.findByUsuarioId(usuario).isEmpty())
    ||(perdaVip>0&&!bau.findByUsuarioIdOrderByIdDesc(usuario).isEmpty())
@@ -95,7 +96,7 @@ public class ImpactoReembolsoService {
   StringBuilder fingerprint=new StringBuilder(p.getId()+"|"+p.getValorReembolsado()+"|"+valor.setScale(2)+"|"+mensagem);
   xa.forEach(a->fingerprint.append("|x").append(a.registro.getId()).append(':').append(a.registro.xpLiquido()).append(':').append(a.estorno).append(':').append(a.cancelado));
   va.values().forEach(a->fingerprint.append("|v").append(a.registro.id).append(':').append(a.registro.liquido()).append(':').append(a.estorno).append(':').append(a.cancelado));
-  fingerprint.append(eventoImpactos);
+  fingerprint.append(eventoImpactos).append(conta==null?"":conta.cicloInicio).append(expirou);
   String token;try{token=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(fingerprint.toString().getBytes(StandardCharsets.UTF_8)));}catch(Exception ex){throw new IllegalStateException(ex);}
   return new Plano(xa,ma,new ArrayList<>(va.values()),new Aviso(valor,Math.max(0,perdaXp),Math.max(0,perdaVip),eventoImpactos,analisar,mensagem,token));
  }

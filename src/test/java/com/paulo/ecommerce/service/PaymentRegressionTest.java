@@ -19,6 +19,8 @@ class PaymentRegressionTest {
     var passes = mock(PasseService.class);
     var service = spy(new PagamentoService(repo, orders, mock(EmailService.class), passes,
         mock(EventoSemanalService.class), new org.springframework.mock.env.MockEnvironment()));
+    var impact = mock(ImpactoReembolsoService.class);
+    ReflectionTestUtils.setField(service, "impactosReembolso", impact);
     var vip = mock(FidelidadeService.class);
     ReflectionTestUtils.setField(service, "fidelidade", vip);
     ReflectionTestUtils.setField(service, "paymentsEnabled", true);
@@ -52,15 +54,19 @@ class PaymentRegressionTest {
         .registrarXpCompraAprovada("a@example.test", 10L, new BigDecimal("100"));
     assertEquals(Pagamento.StatusPagamento.APROVADO, payment.getStatus());
 
+    var aviso=new ImpactoReembolsoService.Aviso(order.getTotal(),10,100,java.util.List.of(),false,"Aviso","token");
+    when(impact.prever(order,order.getTotal())).thenReturn(aviso);
     when(mp.getStatus()).thenReturn("refunded");
+    service.processarWebhook("1", "payment");
     service.processarWebhook("1", "payment");
     for (String staleStatus : java.util.List.of("rejected", "cancelled")) {
       when(mp.getStatus()).thenReturn(staleStatus);
       service.processarWebhook("1", "payment");
       assertEquals(Pagamento.StatusPagamento.REEMBOLSADO, payment.getStatus());
     }
-    verify(passes).estornarCompra("a@example.test", 10L);
+    verify(impact,times(1)).aplicar(order,order.getTotal(),"token");
+    assertEquals(order.getTotal(),order.getValorReembolsado());
     verify(vip).compra(order);
-    verify(vip).estornar(10L);
+
   }
 }

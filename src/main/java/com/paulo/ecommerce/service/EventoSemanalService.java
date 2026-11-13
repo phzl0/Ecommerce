@@ -106,6 +106,8 @@ public class EventoSemanalService {
 
   public void notificarMeta(Long usuarioId, LocalDateTime aprovadoEm, BigDecimal valor) {
     for (var evento : eventos.findByInicioLessThanEqualAndFimGreaterThan(aprovadoEm, aprovadoEm)) {
+      if(resgates.existsByEventoIdAndUsuarioId(evento.id,usuarioId))
+        fidelidade.reconciliarMissao(usuarioId,"EVENTO-"+evento.id,xp(evento,usuarioId)>=evento.metaXp);
       if (valor.compareTo(evento.minimoCompra) < 0) continue;
       long pontos = pontos(evento, valor);
       long total = xpBruto(evento, usuarioId);

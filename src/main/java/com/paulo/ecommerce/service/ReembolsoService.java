@@ -47,7 +47,7 @@ public class ReembolsoService {
   var aviso=impactos.prever(p,r.valor);confirmarAviso(aviso,token,ciente);impactos.aplicar(p,r.valor,token);
   p.setValorReembolsado(p.getValorReembolsado().add(r.valor));
   if(p.getValorReembolsado().compareTo(p.getTotal())==0){p.getPagamento().setStatus(Pagamento.StatusPagamento.REEMBOLSADO);pedidos.atualizarStatus(pedidoId,Pedido.Status.CANCELADO);}
-  r.estado="CONFIRMADO";r.confirmadoPor=autor;r.confirmadoEm=LocalDateTime.now();r.impacto=aviso.mensagem();r.analiseBeneficios=aviso.analisarBeneficios();
+  r.estado="CONFIRMADO";r.confirmadoPor=autor;r.confirmadoEm=LocalDateTime.now();r.impacto=aviso.mensagem().replace("Caso seu reembolso seja confirmado, serão retirados", "Reembolso confirmado. Foram retirados");r.analiseBeneficios=aviso.analisarBeneficios();
   historico.save(new PedidoMovimentacao(pedidoId,p.getStatus(),"Reembolso simulado confirmado #"+id+" · R$ "+r.valor+" · "+autor));
   notificacoes.registrar(p.getUsuario().getId(),"Reembolso simulado confirmado","Foram retirados "+aviso.xp()+" XP, "+aviso.vip()+" pontos VIP e os pontos dos eventos indicados no pedido. Consulte os detalhes.","/pedidos/"+pedidoId);
  }

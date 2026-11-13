@@ -184,8 +184,8 @@ public class PasseService {
                     new PasseHistoricoXpResponse(
                         item.isEstornado()
                             ? "Estornado: " + item.getDescricao()
-                            : item.getDescricao(),
-                        item.isEstornado() ? 0 : item.getXpGanho(),
+                            : (item.getXpEstornado()>0 ? "Ajustado (-"+item.getXpEstornado()+" XP): " : "") + item.getDescricao(),
+                        item.xpLiquido(),
                         item.getCriadoEm() == null
                             ? ""
                             : item.getCriadoEm().format(DATE_TIME_FORMATTER)))
