@@ -33,6 +33,7 @@ public class PedidoService {
 
   @org.springframework.beans.factory.annotation.Autowired private PasseService passes;
   @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoExpedicaoRepository expedicoes;
   @org.springframework.beans.factory.annotation.Autowired private EstoqueService estoque;
   @org.springframework.beans.factory.annotation.Autowired private DigitalService digitais;
   @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.BauItemRepository bauItens;
@@ -326,9 +327,17 @@ public class PedidoService {
     if(status == Pedido.Status.CONFIRMADO && pedido.getTemporadaPasseId()==null) digitais.liberar(pedido);
     if(status == Pedido.Status.CANCELADO) digitais.revogar(pedido);
     if(status == Pedido.Status.ENVIADO) {
+      var envio=expedicoes.findById(pedido.getId()).orElseThrow(()->new IllegalStateException("Separe e confira os itens antes de enviar."));
+      if(!"CONFERIDO".equals(envio.etapa) || envio.transportadora==null || envio.codigo==null)
+        throw new IllegalStateException("Conferência e rastreamento são obrigatórios para o envio.");
+      if(!acoesOperacionais(pedido).contains(status))throw new IllegalStateException("Pedido não autorizado para envio.");
+      envio.etapa="ENVIADO";envio.enviadoEm=java.time.LocalDateTime.now();
       if(pedido.isRecompensa()) bauItens.findByPedidoId(pedido.getId()).ifPresent(b -> estoque.consumir("BAU:"+b.id,false));
       else estoque.consumir("PEDIDO:"+pedido.getId(),false);
     }
+    if(status == Pedido.Status.ENTREGUE) expedicoes.findById(pedido.getId()).ifPresent(e -> {
+      e.etapa="ENTREGUE";e.entregueEm=java.time.LocalDateTime.now();
+    });
     pedido.setStatus(status);
     pedidoRepository.save(pedido);
     String titulo = switch (status) {

@@ -1596,6 +1596,63 @@ function OrdersPage() {
   </main>`;
 }
 
+const operationLabels = { NA_FILA: "Aguardando separação", SEPARANDO: "Em separação", CONFERIDO: "Conferido para envio", ENVIADO: "Enviado", ENTREGUE: "Entregue", PENDENTE: "Aguardando pagamento", CANCELADO: "Cancelado", SEM_ENVIO: "Não exige entrega física", SOLICITADA: "Em análise", AUTORIZADA: "Retorno autorizado", RECEBIDA: "Recebido e conferido", CONCLUIDA: "Atendimento concluído", RECUSADA: "Solicitação recusada" };
+function OrderOperation({ order, notify }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [request, setRequest] = useState({ itemId: "", quantidade: 1, tipo: "DEVOLUCAO", motivo: "" });
+  const messageKey = useRef(crypto.randomUUID());
+  const requestKey = useRef(crypto.randomUUID());
+  const url = `/api/account/orders/${order.id}/operation`;
+  async function refresh() { setData(await getJson(url)); }
+  useEffect(() => {
+    let active = true;
+    getJson(url).then(d => { if(active) setData(d); }).catch(() => { if(active) setError("Não foi possível carregar o acompanhamento."); });
+    return () => { active = false; };
+  }, [order]);
+  async function submit(event, kind) {
+    event.preventDefault(); if(busy) return; setBusy(true); setError("");
+    try {
+      await postJson(`${url}/${kind}`,kind === "messages" ? { mensagem: message, chave: messageKey.current }
+        : {...request, itemId: Number(request.itemId), quantidade: Number(request.quantidade), chave: requestKey.current });
+      if(kind === "messages") { setMessage(""); messageKey.current = crypto.randomUUID(); }
+      else { setRequest({ itemId: "", quantidade: 1, tipo: "DEVOLUCAO", motivo: "" }); requestKey.current = crypto.randomUUID(); }
+      await refresh(); notify(kind === "messages" ? "Mensagem registrada no atendimento." : "Solicitação enviada para análise.");
+    } catch(e) { setError(e.message || "Não foi possível enviar. Tente novamente."); }
+    finally { setBusy(false); }
+  }
+  const available = data?.itens.filter(i => i.disponivel > 0) || [];
+  const selected = available.find(i => String(i.id) === request.itemId);
+  return html`<section className="lc-order-operation" aria-label="Acompanhamento e atendimento">
+    ${error ? html`<p role="alert" className="lc-form-notice error">${error}</p>` : null}
+    ${data ? html`
+      <div className="lc-checkout-card"><h3>Acompanhamento da entrega</h3>
+        <p><strong>${operationLabels[data.rastreio.etapa] || data.rastreio.etapa}</strong></p>
+        ${data.rastreio.transportadora ? html`<p>${data.rastreio.transportadora} · <strong>${data.rastreio.codigo}</strong></p>` : null}
+        ${data.rastreio.url ? html`<a className="lc-btn lc-btn-ghost" href=${data.rastreio.url} target="_blank" rel="noopener noreferrer">Rastrear entrega ↗</a>` : null}
+        ${data.digitais.length ? html`<h4>Conteúdo digital</h4><ul>${data.digitais.map((d,i)=>html`<li key=${i}>${d.titulo} · ${d.estado === "LIBERADO" ? "Disponível" : d.estado === "REVOGADO" ? "Acesso revogado" : "Aguardando pagamento"}</li>`)}</ul><${AppLink} href="/conta/digitais">Acessar produtos digitais<//>` : null}
+      </div>
+      <details className="lc-checkout-card"><summary>Troca ou devolução de produto físico</summary>
+        <p>A solicitação será analisada pela loja. Aguarde as orientações de retorno antes de enviar o produto.</p>
+        ${data.podeSolicitar && available.length ? html`<form className="lc-operation-form" onSubmit=${e => submit(e,"requests")}>
+          <label>Produto<select required value=${request.itemId} onChange=${e=>setRequest({...request,itemId:e.target.value,quantidade:1})}><option value="">Selecione</option>${available.map(i=>html`<option key=${i.id} value=${i.id}>${i.nome} · ${i.disponivel} disponível(is)</option>`)}</select></label>
+          <label>Quantidade<input type="number" min="1" max=${selected?.disponivel || 1} required value=${request.quantidade} onChange=${e=>setRequest({...request,quantidade:e.target.value})} /></label>
+          <label>Tipo de solicitação<select value=${request.tipo} onChange=${e=>setRequest({...request,tipo:e.target.value})}><option value="DEVOLUCAO">Devolução</option><option value="TROCA">Troca</option></select></label>
+          <label>Motivo<textarea required minLength="10" maxLength="1000" value=${request.motivo} onChange=${e=>setRequest({...request,motivo:e.target.value})}></textarea></label>
+          <button className="lc-btn lc-btn-primary" disabled=${busy}>Enviar solicitação</button>
+        </form>` : html`<p>Para outras dúvidas ou situações, utilize o atendimento abaixo.</p>`}
+        ${data.solicitacoes.map(d=>html`<article key=${d.id} className="lc-service-entry"><strong>Solicitação #${d.id} · ${operationLabels[d.estado]}</strong><p>${d.tipo === "TROCA" ? "Troca" : "Devolução"} · ${d.quantidade} unidade(s)</p><p>${d.motivo}</p>${d.resposta ? html`<p>${d.resposta}</p>` : null}</article>`)}
+      </details>
+      <div className="lc-checkout-card"><h3>Atendimento do pedido</h3><form className="lc-operation-form" onSubmit=${e=>submit(e,"messages")}>
+        <label>Mensagem para a loja<textarea required minLength="2" maxLength="2000" value=${message} onChange=${e=>setMessage(e.target.value)}></textarea></label>
+        <button className="lc-btn lc-btn-primary" disabled=${busy}>Enviar mensagem</button></form>
+        ${data.mensagens.length ? data.mensagens.map(m=>html`<article key=${m.id} className="lc-service-entry"><strong>${m.autor}</strong><time>${new Date(m.criadoEm).toLocaleString("pt-BR")}</time><p>${m.mensagem}</p></article>`) : html`<p>Nenhuma mensagem neste pedido.</p>`}
+      </div>` : !error ? html`<p role="status">Carregando acompanhamento…</p>` : null}
+  </section>`;
+}
+
 function OrderDetailPage({ orderId, route, notify }) {
   const [order, setOrder] = useState(null);
   const { params } = parseRoute(route);
@@ -1734,8 +1791,9 @@ function OrderDetailPage({ orderId, route, notify }) {
             </div>
           </div>
 
+          <${OrderOperation} order=${order} notify=${notify} />
           <div className="lc-checkout-card">
-            <h3>Entrega</h3>
+            <h3>${order.itens.some(i=>i.tipo === "FISICO") ? "Endereço de entrega" : "Dados do pedido"}</h3>
             <div className="lc-order-card-grid">
               <div>
                 <small>Destinatario</small

@@ -266,3 +266,14 @@ Desenvolvimento e manutenção: [phzl0](https://github.com/phzl0).
 - A migração preserva saldos e reservas existentes; o histórico começa com o saldo anterior, sem inventar movimentações passadas. Pedidos digitais antigos não recebem conteúdo retroativamente.
 - Exemplos locais: `DEMO-WALLPAPER` entrega um TXT demonstrativo; `DEMO-LICENCA` contém três códigos sem valor comercial. Use **Simular pagamento aprovado** no detalhe do pedido para testar. Dados demonstrativos dependem de `DEMO_DATA_ENABLED=true`.
 - Antes de produção: escolher armazenamento de arquivos em escala, política de retenção, verificação antimalware, gestão de licenças no fornecedor e regras de devolução; conectar ERP, transportadora e pagamentos reais. Checkout digital ainda usa o formulário de dados do cliente/endereço compartilhado, sem cobrar frete em pedidos somente digitais.
+
+### Separação, rastreamento e pós-venda (beta local)
+
+1. Em **Admin → Separação e envios**, abra um pedido físico confirmado (compra ou prêmio do Baú).
+2. Clique em **Iniciar separação** e informe a quantidade conferida de cada item físico. A quantidade deve corresponder exatamente ao pedido; os digitais não entram nessa conferência.
+3. Informe transportadora, código e, opcionalmente, um link HTTPS. **Registrar envio** consome a reserva e notifica o cliente uma vez. O botão **Confirmar entrega** registra a entrega manualmente. Correções de rastreio também ficam no histórico.
+4. Na conta do cliente, o detalhe do pedido mostra o acompanhamento físico e a situação digital separadamente, além do atendimento e de solicitações de troca/devolução de itens físicos enviados.
+5. Em **Admin → Atendimento e devoluções**, acompanhe solicitações por etapa e as últimas 50 mensagens de clientes (inclui mensagens já respondidas). Responda dentro do pedido. Observações internas são visíveis apenas à equipe.
+6. Autorize ou recuse com resposta ao cliente. Após receber e conferir todas as unidades solicitadas, informe quantas estão aptas para voltar ao estoque. A reposição é registrada uma única vez, com responsável e referência à solicitação.
+
+**Limites desta etapa:** um envio completo por pedido, sem remessas parciais. Rastreamento e entrega são manuais; não há consulta automática à transportadora. Concluir uma solicitação registra a solução do atendimento, mas não executa estorno financeiro, compra de frete, etiqueta ou novo pedido de troca. Essas operações devem ser resolvidas separadamente e documentadas na resposta. Prazos/políticas comerciais e integrações serão definidos antes da produção. Pedidos enviados anteriores à migração preservam a etapa, sem inventar transportadora, código ou datas de despacho.

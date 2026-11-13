@@ -501,3 +501,6 @@
  .admin-layout { align-content: start; }
  .admin-sidebar { align-self: start; }
 }
+
+.admin-service-entry { padding: 16px 0; border-top: 1px solid #dfe3e8; }
+.admin-preserve-lines { white-space: pre-wrap; overflow-wrap: anywhere; }

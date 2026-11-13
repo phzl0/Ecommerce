@@ -25,6 +25,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @AutoConfigureMockMvc
 @Transactional
 class OperacaoIntegrationTest {
+ @Autowired ExpedicaoService expedicao;
  @Autowired ProdutoRepository produtos;
  @Autowired UsuarioRepository usuarios;
  @Autowired PagamentoRepository pagamentos;
@@ -55,7 +56,11 @@ class OperacaoIntegrationTest {
   mvc.perform(get("/api/account/digitais/"+e.id+"/arquivo").with(user("other-digital@example.test").roles("CLIENTE"))).andExpect(status().isForbidden());
   mvc.perform(get("/api/account/digitais/"+e.id+"/arquivo").with(user(u.getEmail()).roles("CLIENTE")))
    .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"));
-  pedidos.atualizarStatusOperacional(p.getId(),Pedido.Status.ENVIADO);
+  expedicao.iniciar(p.getId());
+  var quantidades=new java.util.HashMap<Long,Integer>();
+  for(var item:p.getItens())if(item.getTipo()==Produto.Tipo.FISICO)quantidades.put(item.getId(),item.getQuantidade());
+  expedicao.conferir(p.getId(),quantidades,"teste");
+  expedicao.enviar(p.getId(),"Transportadora demo","DEMO-123","https://example.com/rastreio");
   assertEquals(0,reservas.totalReservado(physical.getId(),"PEDIDO:%"));assertEquals(1,physical.getEstoque());
  }
  @Test void cancelledPendingCodeIsReleasedButRefundedApprovedCodeIsNeverRecycled() {

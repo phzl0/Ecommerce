@@ -21,6 +21,9 @@ public class AdminController {
   @org.springframework.beans.factory.annotation.Autowired
   private com.paulo.ecommerce.service.PagamentoService payments;
 
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoExpedicaoRepository expedicoes;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoAtendimentoRepository atendimentos;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoDevolucaoRepository devolucoes;
   private final AdminService adminService;
   private final ProdutoService produtoService;
   private final CategoriaService categoriaService;
@@ -217,7 +220,12 @@ public class AdminController {
   public String detalharPedido(@PathVariable Long id, Model model) {
     Pedido pedido = pedidoService.buscarPorId(id);
     model.addAttribute("pedido", pedido);
-    model.addAttribute("statusOpcoes", pedidoService.acoesOperacionais(pedido));
+    model.addAttribute("statusOpcoes", pedidoService.acoesOperacionais(pedido).stream().filter(s->s==Pedido.Status.CANCELADO).toList());
+    model.addAttribute("expedicao", expedicoes.findById(id).orElse(null));
+    model.addAttribute("itensFisicos", pedido.getItens().stream().filter(i->i.getTipo()==Produto.Tipo.FISICO && pedido.getTemporadaPasseId()==null).toList());
+    model.addAttribute("atendimentos", atendimentos.findTop100ByPedidoIdOrderByIdDesc(id));
+    model.addAttribute("devolucoes", devolucoes.findByPedidoIdOrderByIdDesc(id));
+    model.addAttribute("notaChave", java.util.UUID.randomUUID().toString());
     model.addAttribute("historico", pedidoService.historico(id));
     model.addAttribute("simulacaoDisponivel", payments.simulacaoDisponivel());
     return "admin/pedidos/detalhe";

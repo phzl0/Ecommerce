@@ -1024,3 +1024,14 @@ html:has(.lc-mobile-drawer[open]) { overflow: hidden; }
 .lc-digital-list h2 { font-size: 18px; margin: 0 0 8px; }
 .lc-digital-list p { margin: 8px 0 0; }
 .lc-digital-code { flex-basis: 100%; padding: 16px; background: #12261c; color: #b5ffca; border-radius: 8px; overflow-wrap: anywhere; user-select: all; }
+
+.lc-order-operation { display: grid; gap: 16px; min-width: 0; }
+.lc-order-operation summary { cursor: pointer; font-weight: 700; padding-block: 8px; }
+.lc-operation-form { display: grid; gap: 16px; margin-block: 16px; }
+.lc-operation-form label { display: grid; gap: 8px; font-weight: 600; }
+.lc-operation-form input, .lc-operation-form select, .lc-operation-form textarea { width: 100%; min-width: 0; padding: 12px; border: 1px solid #85978b; border-radius: 8px; font: inherit; background: var(--surface, #fff); color: #14251b; }
+.lc-operation-form textarea { min-height: 96px; resize: vertical; }
+.lc-operation-form button { justify-self: start; }
+.lc-service-entry { padding-block: 16px; border-top: 1px solid #85978b55; }
+.lc-service-entry time { display: block; font-size: 12px; margin-top: 4px; }
+.lc-service-entry p { white-space: pre-wrap; overflow-wrap: anywhere; }

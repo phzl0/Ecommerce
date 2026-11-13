@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @Transactional
 class FidelidadeIntegrationTest {
+ @Autowired ExpedicaoService expedicao;
   @Autowired UsuarioRepository usuarios;
   @Autowired ProdutoRepository produtos;
   @Autowired PedidoRepository pedidos;
@@ -51,7 +52,11 @@ class FidelidadeIntegrationTest {
     assertEquals(0, pedido.getFrete().signum());
     assertNull(pedido.getPagamento());
     assertTrue(operacao.acoesOperacionais(pedido).contains(Pedido.Status.ENVIADO));
-    operacao.atualizarStatusOperacional(id, Pedido.Status.ENVIADO);
+    expedicao.iniciar(id);
+    var quantidades = new java.util.HashMap<Long,Integer>();
+    for(var item : pedido.getItens()) quantidades.put(item.getId(),item.getQuantidade());
+    expedicao.conferir(id,quantidades,"teste");
+    expedicao.enviar(id,"Transportadora demo","DEMO-123","https://example.com/rastreio");
     operacao.atualizarStatusOperacional(id, Pedido.Status.ENTREGUE);
     assertEquals(Pedido.Status.ENTREGUE, pedido.getStatus());
     assertEquals(1, p.getEstoque());
