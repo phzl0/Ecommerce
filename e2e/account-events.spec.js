@@ -134,7 +134,13 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(purchaseGains.getByText(/Recompensa disponível/)).toBeVisible();
     const history = admin.getByRole("region", { name: "Histórico do pedido" });
     await expect(history.getByText("Pagamento confirmado", { exact: true })).toBeVisible();
-    await admin.getByRole("button", { name: "Aplicar ação" }).click();
+    await admin.getByRole("button", { name: "Iniciar separação" }).click();
+    const quantities = admin.locator('form[action$="/conferir"] input[type="number"]');
+    for (const input of await quantities.all()) await input.fill(await input.getAttribute("max"));
+    await admin.getByRole("button", { name: "Confirmar conferência" }).click();
+    await admin.getByLabel("Transportadora", { exact: true }).fill("Transportadora demo");
+    await admin.getByLabel("Código de rastreio", { exact: true }).fill("EVENTO-DEMO-123");
+    await admin.getByRole("button", { name: "Registrar envio" }).click();
     await expect(history.getByText("Pedido enviado", { exact: true })).toBeVisible();
     await admin.goto("/admin/pedidos?pagamento=APROVADO&busca=" + orderId);
     await expect(admin.getByRole("combobox", { name: "Pagamento", exact: true })).toHaveValue("APROVADO");

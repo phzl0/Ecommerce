@@ -1637,9 +1637,9 @@ function OrderOperation({ order, notify }) {
       <details className="lc-checkout-card"><summary>Troca ou devolução de produto físico</summary>
         <p>A solicitação será analisada pela loja. Aguarde as orientações de retorno antes de enviar o produto.</p>
         ${data.podeSolicitar && available.length ? html`<form className="lc-operation-form" onSubmit=${e => submit(e,"requests")}>
-          <label>Produto<select required value=${request.itemId} onChange=${e=>setRequest({...request,itemId:e.target.value,quantidade:1})}><option value="">Selecione</option>${available.map(i=>html`<option key=${i.id} value=${i.id}>${i.nome} · ${i.disponivel} disponível(is)</option>`)}</select></label>
+          <label>Produto<select aria-label="Produto" required value=${request.itemId} onChange=${e=>setRequest({...request,itemId:e.target.value,quantidade:1})}><option value="">Selecione</option>${available.map(i=>html`<option key=${i.id} value=${i.id}>${i.nome} · ${i.disponivel} disponível(is)</option>`)}</select></label>
           <label>Quantidade<input type="number" min="1" max=${selected?.disponivel || 1} required value=${request.quantidade} onChange=${e=>setRequest({...request,quantidade:e.target.value})} /></label>
-          <label>Tipo de solicitação<select value=${request.tipo} onChange=${e=>setRequest({...request,tipo:e.target.value})}><option value="DEVOLUCAO">Devolução</option><option value="TROCA">Troca</option></select></label>
+          <label>Tipo de solicitação<select aria-label="Tipo de solicitação" value=${request.tipo} onChange=${e=>setRequest({...request,tipo:e.target.value})}><option value="DEVOLUCAO">Devolução</option><option value="TROCA">Troca</option></select></label>
           <label>Motivo<textarea required minLength="10" maxLength="1000" value=${request.motivo} onChange=${e=>setRequest({...request,motivo:e.target.value})}></textarea></label>
           <button className="lc-btn lc-btn-primary" disabled=${busy}>Enviar solicitação</button>
         </form>` : html`<p>Para outras dúvidas ou situações, utilize o atendimento abaixo.</p>`}
