@@ -29,7 +29,7 @@ class ReembolsoIntegrationTest {
  @Autowired PasseXpHistoricoRepository xp; @Autowired VipMovimentoRepository movimentos;
  @Autowired EventoSemanalRepository eventosRepo; @Autowired EventoSemanalService eventos;
  @Autowired PosVendaService pos; @Autowired TrocaService trocas; @Autowired ExpedicaoService envio;
- @Autowired MockMvc mvc;
+ @Autowired MockMvc mvc; @Autowired VipContaRepository contas;
  private Pedido compra(){
   var u=new Usuario();u.setNome("Cliente reembolso");u.setEmail("refund@example.test");u.setSenha("hashed-test");usuarios.saveAndFlush(u);
   var p=new Produto();p.setNome("Camisa teste");p.setPreco(new BigDecimal("100"));p.setEstoque(10);produtos.saveAndFlush(p);
@@ -80,6 +80,21 @@ class ReembolsoIntegrationTest {
   var novo=repo.findById(novoId).orElseThrow();assertEquals(p.getId(),novo.getPedidoOrigemId());assertEquals(0,novo.getTotal().signum());assertEquals(saldo-1,produto.getEstoque());assertEquals(pontos,vip.perfil(p.getUsuario().getEmail()).get("pontos"));
   envio.iniciar(novoId);envio.conferir(novoId,Map.of(novo.getItens().get(0).getId(),1),"admin");envio.enviar(novoId,"Demo","TROCA-1",null);assertEquals(Pedido.Status.ENVIADO,novo.getStatus());
   assertThrows(IllegalStateException.class,()->solicitar(p,BigDecimal.TEN));
+ }
+ @Test void expiredVipPointsAreNotAdvertisedAsCurrentLossAndRefundDoesNotRenewActivity(){
+  var p=compra();var conta=contas.findById(p.getUsuario().getId()).orElseThrow();
+  var antiga=LocalDateTime.now().minusDays(91);conta.ultimaAtividade=antiga;
+  var a=impactos.prever(p,BigDecimal.TEN);assertEquals(0,a.vip());
+  confirmar(p,solicitar(p,BigDecimal.TEN));assertEquals(antiga,conta.ultimaAtividade);
+  assertEquals(0L,vip.perfil(p.getUsuario().getEmail()).get("pontos"));
+ }
+ @Test void refundOfPremiumRevokesAccessAndIncludesPurchaseAndSeasonBonuses(){
+  var comum=compra();String email=comum.getUsuario().getEmail();
+  Long id=passe.criarPedidoPremium(email);pagamentos.simularAprovacao(id);var p=repo.findById(id).orElseThrow();
+  assertTrue(passe.carregarDashboard(email).premiumAtivo());
+  long bonus=movimentos.findByPedidoId(id).stream().mapToLong(v->v.liquido()).sum();
+  var aviso=impactos.prever(p,p.getTotal());assertEquals(bonus,aviso.vip());assertTrue(aviso.mensagem().contains("revoga o Premium"));
+  confirmar(p,solicitar(p,p.getTotal()));assertFalse(passe.carregarDashboard(email).premiumAtivo());
  }
  @Test void impactEndpointAndRefundOperationsArePrivate() throws Exception {
   var p=compra();var path="/api/account/orders/"+p.getId()+"/operation/impact?itemId="+p.getItens().get(0).getId()+"&quantidade=1";
