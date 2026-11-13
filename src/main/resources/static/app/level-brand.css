@@ -1035,3 +1035,7 @@ html:has(.lc-mobile-drawer[open]) { overflow: hidden; }
 .lc-service-entry { padding-block: 16px; border-top: 1px solid #85978b55; }
 .lc-service-entry time { display: block; font-size: 12px; margin-top: 4px; }
 .lc-service-entry p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.lc-order-detail-main .lc-order-card-top > div,
+.lc-order-detail-main .lc-order-item-row > div { display: grid; gap: 8px; min-width: 0; }
+.lc-order-detail-main .lc-order-item-row strong,
+.lc-order-detail-main .lc-section-header h2 { overflow-wrap: anywhere; }
