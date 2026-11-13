@@ -1029,7 +1029,7 @@ html:has(.lc-mobile-drawer[open]) { overflow: hidden; }
 .lc-order-operation summary { cursor: pointer; font-weight: 700; padding-block: 8px; }
 .lc-operation-form { display: grid; gap: 16px; margin-block: 16px; }
 .lc-operation-form label { display: grid; gap: 8px; font-weight: 600; }
-.lc-operation-form input, .lc-operation-form select, .lc-operation-form textarea { width: 100%; min-width: 0; padding: 12px; border: 1px solid #85978b; border-radius: 8px; font: inherit; background: var(--surface, #fff); color: #14251b; }
+.lc-operation-form input, .lc-operation-form select, .lc-operation-form textarea { width: 100%; min-width: 0; padding: 12px; border: 1px solid #85978b; border-radius: 8px; font: inherit; background: var(--lc-surface); color: var(--lc-text); }
 .lc-operation-form textarea { min-height: 96px; resize: vertical; }
 .lc-operation-form button { justify-self: start; }
 .lc-service-entry { padding-block: 16px; border-top: 1px solid #85978b55; }
