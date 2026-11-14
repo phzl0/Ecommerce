@@ -44,7 +44,7 @@ public class AdminController {
 
   @InitBinder("produto")
   void restringirCamposProduto(WebDataBinder binder) {
-    binder.setAllowedFields("id", "nome", "sku", "marca", "descricaoCurta", "descricao", "preco", "estoque", "destaque", "tipo");
+    binder.setAllowedFields("id", "nome", "sku", "marca", "descricaoCurta", "descricao", "preco", "estoque", "destaque", "tipo", "produtoPrincipalId", "publicacao", "tamanho", "cor", "modelo", "pesoKg", "comprimentoCm", "larguraCm", "alturaCm", "xpExtra", "xpExtraInicio", "xpExtraFim");
   }
 
   @GetMapping("/integracoes")
@@ -93,8 +93,16 @@ public class AdminController {
   }
 
   @GetMapping("/produtos/novo")
-  public String novoProdutoForm(Model model) {
-    model.addAttribute("produto", new Produto());
+  public String novoProdutoForm(@RequestParam(required=false) Long produtoPrincipalId, Model model) {
+    Produto novo = new Produto();
+    novo.setPublicacao(Produto.Publicacao.RASCUNHO);
+    if (produtoPrincipalId != null) {
+      Produto raiz = produtoService.buscarPorId(produtoPrincipalId);
+      if (raiz.getProdutoPrincipalId() != null) throw new IllegalArgumentException("Escolha o produto principal.");
+      novo.setProdutoPrincipalId(raiz.getId()); novo.setNome(raiz.getNome()); novo.setTipo(raiz.getTipo());
+      novo.setCategoria(raiz.getCategoria()); novo.setMarca(raiz.getMarca()); novo.setPreco(raiz.getPreco());
+    }
+    model.addAttribute("produto", novo);
     model.addAttribute("categorias", categoriaService.listarTodas());
     return "admin/produtos/form";
   }
@@ -104,6 +112,7 @@ public class AdminController {
     Produto produto = produtoService.buscarPorId(id);
     model.addAttribute("produto", produto);
     model.addAttribute("estoqueOriginal", produto.getEstoque());
+    model.addAttribute("familia", produtoService.familia(produto));
     model.addAttribute("categorias", categoriaService.listarTodas());
     return "admin/produtos/form";
   }
@@ -136,10 +145,30 @@ public class AdminController {
       Produto atual = produtoService.buscarPorId(produto.getId());
       produto.setImagemUrl(atual.getImagemUrl());
       produto.setAtivo(atual.isAtivo());
+      model.addAttribute("familia", produtoService.familia(atual));
     }
     model.addAttribute("categorias", categoriaService.listarTodas());
     model.addAttribute("estoqueOriginal", estoqueOriginal);
     return "admin/produtos/form";
+  }
+
+  @PostMapping("/produtos/{id}/galeria")
+  public String galeriaProduto(@PathVariable Long id,
+      @RequestParam(required=false) MultipartFile[] imagens,
+      @RequestParam(required=false) Integer indice,
+      @RequestParam(defaultValue="adicionar") String acao, RedirectAttributes flash) {
+    try {
+      var novas = new java.util.ArrayList<String>();
+      long quantidade = imagens == null ? 0 : java.util.Arrays.stream(imagens).filter(i -> !i.isEmpty()).count();
+      if (produtoService.buscarPorId(id).imagens().size() + quantidade > 8)
+        throw new IllegalArgumentException("A galeria aceita até 8 imagens.");
+      if (imagens != null) for (var imagem : imagens) if (!imagem.isEmpty()) novas.add(imageStorage.save(imagem));
+      produtoService.galeria(id, novas, indice, acao);
+      flash.addFlashAttribute("msg", "Galeria atualizada.");
+    } catch (IllegalArgumentException | IllegalStateException | IOException error) {
+      flash.addFlashAttribute("erro", error.getMessage());
+    }
+    return "redirect:/admin/produtos/" + id + "/editar#galeria";
   }
 
   @PostMapping("/produtos/{id}/deletar")

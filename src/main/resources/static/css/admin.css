@@ -508,3 +508,5 @@
 .admin-check { display: flex !important; align-items: flex-start; gap: 8px; }
 .admin-check input[type="checkbox"] { width: auto; flex: 0 0 auto; margin-top: 4px; }
 .admin-service-entry > form { margin-top: 16px; }
+
+.admin-gallery{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0}.admin-gallery-item{border:1px solid var(--admin-border,#ddd);padding:16px;border-radius:8px;max-width:100%}.admin-gallery-item img{object-fit:contain;display:block;margin:auto auto 16px}.admin-gallery-item form{display:flex;gap:4px;flex-wrap:wrap}.admin-product-form + .form-card,.admin-main > #galeria{margin-top:24px}

@@ -12,6 +12,7 @@ public record StoreProductCardResponse(
         BigDecimal preco,
         Integer estoque,
         boolean destaque,
-        StoreCategoryResponse categoria
+        StoreCategoryResponse categoria,
+        boolean temVariacoes, int xpExtra
 ) {
 }

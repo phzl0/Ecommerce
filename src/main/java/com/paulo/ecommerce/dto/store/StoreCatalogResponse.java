@@ -5,6 +5,6 @@ import java.util.List;
 public record StoreCatalogResponse(
         List<StoreCategoryResponse> categorias,
         List<StoreProductCardResponse> produtos,
-        long total
+        long total, int pagina, boolean temProxima
 ) {
 }

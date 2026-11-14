@@ -6,7 +6,7 @@ async function login(page) {
 }
 test('stock adjustments and paid file/code delivery operate through the administration',async({page})=>{
  await login(page);
- await page.goto('/admin/produtos/novo');
+ await page.goto('/admin/produtos/novo');await page.getByLabel('Publicação',{exact:true}).selectOption('PUBLICADO');
  await page.getByLabel('Tipo de produto').selectOption('DIGITAL');
  await page.getByLabel('Nome *',{exact:true}).fill('Arquivo e2e privado');
  await page.getByLabel('SKU',{exact:true}).fill('DIGITAL-E2E');

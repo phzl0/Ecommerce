@@ -36,6 +36,16 @@ public class FidelidadeDemoService {
       licenca.setEstoque(0);
       digitais.importarCodigos(licenca.getId(),"DEMO-SEM-VALOR-001\nDEMO-SEM-VALOR-002\nDEMO-SEM-VALOR-003", "demo");
     }
+    if (produtos.findBySku("DEMO-CATALOGO-P").isEmpty()) {
+      var principal = produto("DEMO-CATALOGO-P", "Camiseta LEVEL Essential · demo", Produto.Tipo.FISICO, "Moda LEVEL");
+      principal.setTamanho("P"); principal.setCor("Preto"); principal.setPesoKg(new BigDecimal("0.250"));
+      principal.setImagemUrl("/app/level-free.webp"); principal.setGaleria("/app/level-premium.webp");
+      principal.setXpExtra(50); principal.setXpExtraInicio(java.time.LocalDateTime.now().minusDays(1)); principal.setXpExtraFim(java.time.LocalDateTime.now().plusDays(30));
+      produtos.saveAndFlush(principal);
+      var variacao = produto("DEMO-CATALOGO-M", principal.getNome(), Produto.Tipo.FISICO, "Moda LEVEL");
+      variacao.setProdutoPrincipalId(principal.getId()); variacao.setTamanho("M"); variacao.setCor("Verde"); variacao.setPreco(new BigDecimal("59.90"));
+      variacao.setImagemUrl("/app/level-premium.webp"); produtos.save(variacao);
+    }
     if (niveis.count() == 0) {
       nivel("Bronze", 100, "Selo Bronze LEVEL", null);
       nivel("Prata", 500, "Selo Prata LEVEL", null);

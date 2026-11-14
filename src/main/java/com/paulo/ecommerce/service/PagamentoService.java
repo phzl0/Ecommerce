@@ -265,7 +265,9 @@ public class PagamentoService {
     fidelidade.compra(pedido);
     if (pedido.getTemporadaPasseId() == null) {
       var valor = pedido.getSubtotal().subtract(pedido.getDesconto());
-      passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(), pedido.getId(), valor);
+      int extra=pedido.getItens()==null?0:Math.toIntExact(pedido.getItens().stream().mapToLong(i->(long)i.getXpExtraSnapshot()*i.getQuantidade()).sum());
+      if(extra>0)passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(),pedido.getId(),valor,extra);
+      else passeService.registrarXpCompraAprovada(pedido.getUsuario().getEmail(), pedido.getId(), valor);
       eventos.notificarMeta(pedido.getUsuario().getId(), pagamento.getPagoEm(), valor);
     }
   }

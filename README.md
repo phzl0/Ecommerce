@@ -288,3 +288,23 @@ Desenvolvimento e manutenção: [phzl0](https://github.com/phzl0).
 - Após receber uma solicitação de **Troca**, escolha o produto físico, confira o endereço original e gere a remessa. Ela reserva estoque, vincula o pedido original e segue separação/conferência/envio normalmente, sem cobrança e sem novos XP/VIP/eventos. Cada solicitação gera uma única remessa. Reembolso pendente ou confirmado impede a troca; remessa ativa impede reembolsar o pedido original até resolução manual.
 - No pedido do cliente, a seleção de item e quantidade mostra uma estimativa do impacto (itens com desconto, sem frete). A leitura do aviso é obrigatória antes de enviar a solicitação. O valor final pode ser ajustado na análise administrativa. Se o progresso relevante mudar, a confirmação antiga é rejeitada e exige revisão do aviso.
 - Integração de estorno real, etiqueta reversa, política de trocas com diferença de preço e logística de remessas canceladas continuam pendentes. Não use este fluxo simulado para confirmar estornos reais.
+
+
+### Catálogo com variações (beta local)
+
+- **Produtos → Novo produto:** cadastros começam como rascunho. Selecione “Publicado na loja” para vender. Desativar o produto principal também bloqueia a compra de suas variações.
+- **Cada opção é um SKU:** o produto principal representa a primeira opção; “Adicionar variação” cria outras combinações de tamanho, cor e modelo, com preço e estoque próprios. A família aparece uma única vez no catálogo. Não é permitido trocar o tipo ou o vínculo de um SKU já criado.
+- **Galeria:** salve o produto e envie até oito JPG/PNG de até 5 MB cada. Defina a capa, reordene ou remova fotos. Uma variação sem fotos usa as imagens do principal.
+- **Físicos:** peso e dimensões de embalagem ficam preparados para integração de frete/ERP. O frete atual continua demonstrativo. **Digitais:** configure o arquivo privado ou os códigos na tela de entrega digital antes de vender.
+- **XP extra:** informe bônus por unidade e início/fim no horário configurado no servidor. A cotação mostra o bônus vigente; o pedido guarda esse valor na criação e o pagamento aprovado concede uma única vez. Reembolsos revertem o XP proporcionalmente, junto do XP da compra, com aviso de impacto antes da confirmação.
+- Pedidos novos preservam nome, SKU, imagem, preço e XP da compra. Alterações posteriores no catálogo não reescrevem esse histórico. A migração preserva os pedidos antigos com os dados disponíveis no momento da atualização.
+- Catálogo com filtros por categoria, cor, tamanho, tipo e preço; paginação de 24 famílias. A demonstração inclui a Camiseta LEVEL Essential em duas opções.
+
+Atualizar a instalação existente (dentro da pasta do projeto):
+
+```bash
+git pull origin develop
+docker compose up -d --build
+```
+
+Não remova os volumes para atualizar: eles mantêm os dados locais.

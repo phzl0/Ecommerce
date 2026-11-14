@@ -353,6 +353,10 @@ public class PasseService {
   @Transactional
   public void registrarXpCompraAprovada(
       String emailUsuario, Long pedidoId, BigDecimal totalPedido) {
+    registrarXpCompraAprovada(emailUsuario,pedidoId,totalPedido,0);
+  }
+  @Transactional
+  public void registrarXpCompraAprovada(String emailUsuario,Long pedidoId,BigDecimal totalPedido,int xpExtra) {
     PasseTemporada temporada = obterPasseAtual();
     Usuario usuario = buscarUsuario(emailUsuario);
     String referencia = "PURCHASE-" + pedidoId;
@@ -368,10 +372,10 @@ public class PasseService {
     adicionarXp(
         usuario,
         temporada,
-        xpCompra,
+        Math.addExact(xpCompra,xpExtra),
         PasseOrigemXpTipo.PURCHASE,
         referencia,
-        "Compra aprovada do pedido #" + pedidoId);
+        "Compra aprovada do pedido #" + pedidoId + (xpExtra>0?" · inclui "+xpExtra+" XP extra":""));
 
     registrarAcao(emailUsuario, PasseAcaoTipo.PURCHASE_APPROVED, 1, referencia);
     registrarAcao(

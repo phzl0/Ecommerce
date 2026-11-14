@@ -93,6 +93,7 @@ function parseCatalogFilters(route) {
   const { params } = parseRoute(route);
   return {
     busca: params.get("busca") || "",
+    cor: params.get("cor") || "", tamanho: params.get("tamanho") || "", tipo: params.get("tipo") || "", pagina: Number(params.get("pagina")) || 0,
     categoriaId: params.get("categoriaId") || "",
     precoMin: params.get("precoMin") || "",
     precoMax: params.get("precoMax") || "",
@@ -566,7 +567,8 @@ function ProductCard({ product, href = `/produto/${product.id}`, badge }) {
         ${badge ? html`<span className="lc-mission-product-tag">${badge}</span>` : null}
         <h3>${product.nome}</h3>
         <p>${product.descricaoCurta?.trim() || "Veja os detalhes do produto."}</p>
-        <strong className="lc-card-price">${currency(product.preco)}</strong>
+        ${product.xpExtra > 0 ? html`<span className="lc-mission-product-tag">${product.temVariacoes ? "Até " : "+"}${product.xpExtra} XP extra</span>` : null}
+        <strong className="lc-card-price">${product.temVariacoes ? html`<small>A partir de </small>` : null}${currency(product.preco)}</strong>
       </div>
     <//>
   </article>`;
@@ -726,7 +728,7 @@ function CatalogFilters({ categories, initialFilters, onApply }) {
   const [expanded, setExpanded] = useState(false);
   const change = (field, value) => setFilters(current => ({ ...current, [field]: value }));
   const activeCount = [initialFilters.busca, initialFilters.categoriaId, initialFilters.precoMin,
-    initialFilters.precoMax, initialFilters.ordenacao !== "relevancia"].filter(Boolean).length;
+    initialFilters.precoMax, initialFilters.cor, initialFilters.tamanho, initialFilters.tipo, initialFilters.ordenacao !== "relevancia"].filter(Boolean).length;
 
   return html`<aside className="lc-catalog-filters" data-expanded=${expanded}>
     <button type="button" className="lc-btn lc-btn-ghost lc-filter-toggle" aria-expanded=${expanded}
@@ -735,7 +737,7 @@ function CatalogFilters({ categories, initialFilters, onApply }) {
     </button>
     <form id="catalog-filters" className="lc-filter-card" aria-label="Filtrar catálogo" onSubmit=${event => {
       event.preventDefault();
-      onApply(filters);
+      onApply({ ...filters, pagina: 0 });
       setExpanded(false);
     }}>
       <h2>Filtros</h2>
@@ -759,6 +761,9 @@ function CatalogFilters({ categories, initialFilters, onApply }) {
             onChange=${event => change("precoMax", event.target.value)} />
         </label>
       </div>
+      <label>Cor<input value=${filters.cor} onChange=${e => change("cor", e.target.value)} placeholder="Ex.: Preto" /></label>
+      <label>Tamanho<input value=${filters.tamanho} onChange=${e => change("tamanho", e.target.value)} placeholder="Ex.: M" /></label>
+      <label>Tipo<select value=${filters.tipo} onChange=${e => change("tipo", e.target.value)}><option value="">Todos</option><option value="FISICO">Físico</option><option value="DIGITAL">Digital</option></select></label>
       <label>Ordenar por
         <select value=${filters.ordenacao} onChange=${event => change("ordenacao", event.target.value)}>
           <option value="relevancia">Relevância</option>
@@ -821,6 +826,7 @@ function CatalogPage({ route }) {
           : html`<div className="lc-product-grid">${data.produtos.map(product => html`
               <${ProductCard} key=${product.id} product=${product} />`)}
             </div>`}
+        ${!loading && !error && (data.pagina > 0 || data.temProxima) ? html`<nav className="lc-catalog-pagination" aria-label="Páginas do catálogo"><button className="lc-btn lc-btn-ghost" disabled=${data.pagina === 0} onClick=${() => updateFilters({...filters, pagina: data.pagina - 1})}>Anterior</button><span>Página ${data.pagina + 1}</span><button className="lc-btn lc-btn-ghost" disabled=${!data.temProxima} onClick=${() => updateFilters({...filters, pagina: data.pagina + 1})}>Próxima</button></nav>` : null}
       </div>
     </section>
   </main>`;
@@ -828,6 +834,7 @@ function CatalogPage({ route }) {
 
 function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, reviewRequested, address }) {
   const [product, setProduct] = useState(null);
+  const [galleryIndex, setGalleryIndex] = useState(0);
   const [reviewForm, setReviewForm] = useState({ nota: "5", comentario: "" });
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewMissions, setReviewMissions] = useState([]);
@@ -837,6 +844,7 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
 
   useEffect(() => {
     let active = true;
+    setProduct(null); setGalleryIndex(0); reviewSubmitted.current = false; setReviewMissions([]); setReviewMessage("");
     getJson(`/api/store/products/${productId}`).then(data => { if (active) setProduct(data); })
       .catch(() => { if (active) setProduct(false); });
     return () => { active = false; };
@@ -909,12 +917,13 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
       <section className="lc-detail-shell">
         <div className="lc-detail-visual">
           <img
-            src=${product.imagemUrl || "/images/sem-foto.png"}
+            src=${product.imagens?.[galleryIndex] || product.imagemUrl || "/images/sem-foto.png"}
             alt=${product.nome}
             onError=${event => {
               if (!event.currentTarget.src.endsWith("/images/sem-foto.png")) event.currentTarget.src = "/images/sem-foto.png";
             }}
           />
+          ${product.imagens?.length > 1 ? html`<div className="lc-product-thumbnails">${product.imagens.map((foto, index) => html`<button key=${foto} type="button" aria-label=${`Ver foto ${index + 1}`} aria-pressed=${galleryIndex === index} onClick=${() => setGalleryIndex(index)}><img src=${foto} alt="" /></button>`)}</div>` : null}
         </div>
         <div className="lc-detail-copy">
           <div className="lc-detail-meta">
@@ -931,23 +940,25 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
               ? `${product.totalAvaliacoes} ${product.totalAvaliacoes === 1 ? "avaliação" : "avaliações"}`
               : "Ainda sem avaliações"}</a>
           </div>
+          ${product.variacoes?.length > 1 ? html`<label className="lc-variant-picker">Escolha uma opção<select value=${product.id} onChange=${e => { setProduct(null); navigate(`/produto/${e.target.value}`); }}>${product.variacoes.map(v => html`<option key=${v.id} value=${v.id}>${v.opcao} — ${currency(v.preco)}${v.estoque <= 0 ? " · Sem estoque" : ""}</option>`)}</select></label>` : product.opcao ? html`<p>${product.opcao}</p>` : null}
           <p className="lc-detail-price">${currency(product.preco)}</p>
           ${product.descricaoCurta ? html`<p className="lc-detail-short">${product.descricaoCurta}</p>` : null}
           <p className="lc-detail-stock" data-available=${product.estoque > 0}>
             ${product.estoque > 0 ? "Em estoque" : "Produto indisponível"}
           </p>
+          ${product.xpExtra > 0 ? html`<p className="lc-form-notice">Ganhe +${product.xpExtra} XP extra por unidade após o pagamento aprovado. Reembolsos revertem o progresso correspondente.</p>` : null}
           <div className="lc-detail-actions">
             <button
               className="lc-btn lc-btn-primary"
               disabled=${product.estoque <= 0}
-              onClick=${() => onBuyNow(product)}
+              onClick=${() => onBuyNow({...product, nome: product.nome + (product.opcao ? ` · ${product.opcao}` : "")})}
             >
               Comprar agora
             </button>
             <button
               className="lc-btn lc-btn-ghost"
               disabled=${product.estoque <= 0}
-              onClick=${() => onAddToCart(product)}
+              onClick=${() => onAddToCart({...product, nome: product.nome + (product.opcao ? ` · ${product.opcao}` : "")})}
             >
               Adicionar à sacola
             </button>
@@ -1099,7 +1110,7 @@ function PurchaseTotals({ quote, loading, error }) {
     ${Number(quote.desconto) > 0 ? html`<div className="lc-summary-line lc-summary-discount">
       <span>Desconto</span><strong>− ${currency(quote.desconto)}</strong>
     </div>` : null}
-    <div className="lc-summary-line lc-summary-total"><span>Total</span><strong>${currency(quote.total)}</strong></div>`;
+    <div className="lc-summary-line lc-summary-total"><span>Total</span><strong>${currency(quote.total)}</strong></div>${quote.xpExtra > 0 ? html`<p className="lc-checkout-note">Esta compra concede +${quote.xpExtra} XP extra após o pagamento aprovado. Se houver reembolso, o progresso correspondente será revertido.</p>` : null}`;
 }
 
 function CartPage({ items, updateQuantity, removeItem, auth, address, coupon, setCoupon }) {

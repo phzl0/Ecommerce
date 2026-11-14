@@ -41,8 +41,9 @@ public class StorefrontApiController {
       @RequestParam(required = false) Long categoriaId,
       @RequestParam(required = false) BigDecimal precoMin,
       @RequestParam(required = false) BigDecimal precoMax,
-      @RequestParam(defaultValue = "relevancia") String ordenacao) {
-    return storefrontService.carregarCatalogo(busca, categoriaId, precoMin, precoMax, ordenacao);
+      @RequestParam(defaultValue = "relevancia") String ordenacao,
+      @RequestParam(defaultValue="") String cor,@RequestParam(defaultValue="") String tamanho,@RequestParam(defaultValue="") String tipo,@RequestParam(defaultValue="0") int pagina) {
+    return storefrontService.carregarCatalogo(busca, categoriaId, precoMin, precoMax, ordenacao,cor,tamanho,tipo,pagina);
   }
 
   @GetMapping("/products/{id}")

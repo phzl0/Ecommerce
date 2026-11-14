@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PedidoService {
+  @org.springframework.beans.factory.annotation.Autowired private ProdutoService catalogo;
 
   @org.springframework.beans.factory.annotation.Autowired private PasseService passes;
   @org.springframework.beans.factory.annotation.Autowired private NotificacaoService notificacoes;
@@ -103,7 +104,7 @@ public class PedidoService {
   }
 
   public record Cotacao(BigDecimal subtotal, BigDecimal frete, BigDecimal desconto, BigDecimal total,
-      Map<Long, BigDecimal> precos, String cupomErro) {}
+      Map<Long, BigDecimal> precos, String cupomErro, int xpExtra) {}
 
   @Transactional(readOnly = true)
   public Cotacao cotar(String email, String cupom, List<CheckoutItemRequest> itens) {
@@ -111,10 +112,12 @@ public class PedidoService {
     for (var item : itens) quantidades.merge(item.produtoId(), item.quantidade(), Integer::sum);
     Map<Long, BigDecimal> precos = new HashMap<>();
     BigDecimal subtotal = BigDecimal.ZERO;
+    int xpExtra = 0;
     for (var produto : produtoRepository.findAllById(quantidades.keySet())) {
       int quantidade = quantidades.get(produto.getId());
       validarDisponibilidade(produto, quantidade);
       precos.put(produto.getId(), produto.getPreco());
+      xpExtra = Math.addExact(xpExtra, Math.multiplyExact(produto.xpExtraAtual(), quantidade));
       subtotal = subtotal.add(produto.getPreco().multiply(BigDecimal.valueOf(quantidade)));
     }
     if (precos.size() != quantidades.size()) {
@@ -138,7 +141,7 @@ public class PedidoService {
         }
       }
     }
-    return new Cotacao(subtotal, frete, desconto, subtotal.add(frete).subtract(desconto), precos, cupomErro);
+    return new Cotacao(subtotal, frete, desconto, subtotal.add(frete).subtract(desconto), precos, cupomErro, xpExtra);
   }
 
   private Pedido criarPedido(
@@ -177,6 +180,7 @@ public class PedidoService {
       item.setPedido(pedido);
       item.setProduto(produto);
       item.setTipo(produto.getTipo());
+      item.setXpExtraSnapshot(produto.xpExtraAtual());
       item.setQuantidade(ci.quantidade());
       item.setPrecoUnitario(produto.getPreco());
       itens.add(item);
@@ -413,7 +417,7 @@ public class PedidoService {
   }
 
   private void validarDisponibilidade(Produto produto, int quantidade) {
-    if (!produto.isAtivo() || quantidade <= 0 || produto.getEstoque() < quantidade) {
+    if (!catalogo.disponivelNaLoja(produto) || quantidade <= 0 || produto.getEstoque() < quantidade) {
       throw new EstoqueInsuficienteException(produto.getNome());
     }
   }

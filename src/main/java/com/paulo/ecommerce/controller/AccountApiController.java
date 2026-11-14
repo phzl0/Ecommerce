@@ -155,7 +155,7 @@ public class AccountApiController {
     if (pedido.getItens() == null) return List.of();
     return pedido.getItens().stream().map(item -> {
       var produto = item.getProduto();
-      return new AccountOrderItemResponse(produto.getId(), produto.getNome(), produto.getImagemUrl(),
+      return new AccountOrderItemResponse(produto.getId(), item.getNomeSnapshot(), item.getImagemSnapshot(),
           item.getQuantidade(), item.getPrecoUnitario(),
           item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade())),
           produto.getDescricaoCurta(), produto.isAtivo() && pedido.getTemporadaPasseId() == null,

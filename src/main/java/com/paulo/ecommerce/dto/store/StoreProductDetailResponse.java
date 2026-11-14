@@ -19,6 +19,9 @@ public record StoreProductDetailResponse(
         StoreCategoryResponse categoria,
         List<StoreProductCardResponse> relacionados,
         List<StoreReviewResponse> avaliacoes,
-        String tipo
+        String tipo, Long familiaId, String opcao, List<Variacao> variacoes, List<String> imagens,
+        BigDecimal pesoKg, BigDecimal comprimentoCm, BigDecimal larguraCm, BigDecimal alturaCm,
+        int xpExtra, java.time.LocalDateTime xpExtraFim
 ) {
+ public record Variacao(Long id,String sku,String opcao,BigDecimal preco,int estoque,String imagemUrl) {}
 }

@@ -52,7 +52,7 @@
                     </thead>
                     <tbody>
                     <tr th:each="item : ${pedido.itens}">
-                        <td th:text="${item.produto.nome}"></td>
+                        <td th:text="${item.nomeSnapshot}"></td>
                         <td th:text="${item.quantidade}"></td>
                         <td th:text="'R$ ' + ${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}"></td>
                         <td th:text="'R$ ' + ${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}"></td>

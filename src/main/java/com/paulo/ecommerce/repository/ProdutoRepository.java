@@ -13,6 +13,31 @@ public interface ProdutoRepository extends JpaRepository<Produto, Long> {
   java.util.Optional<Produto> findLockedById(
       @org.springframework.data.repository.query.Param("value") Long value);
 
+  List<Produto> findByProdutoPrincipalIdOrderByIdAsc(Long principal);
+  @Query("select p from Produto p where p.id=:principal or p.produtoPrincipalId=:principal order by p.id")
+  List<Produto> familia(Long principal);
+  String FILTRO = """
+    from Produto p where p.produtoPrincipalId is null and p.ativo=true and p.publicacao='PUBLICADO'
+    and (:categoriaId is null or p.categoria.id=:categoriaId)
+    and exists(select s.id from Produto s where (s.id=p.id or s.produtoPrincipalId=p.id)
+      and s.ativo=true and s.publicacao='PUBLICADO'
+      and (:busca='' or lower(p.nome) like lower(concat('%',:busca,'%')) or lower(coalesce(p.marca,'')) like lower(concat('%',:busca,'%')) or lower(coalesce(s.sku,'')) like lower(concat('%',:busca,'%')) or lower(coalesce(s.modelo,'')) like lower(concat('%',:busca,'%')))
+      and (:cor='' or lower(coalesce(s.cor,''))=lower(:cor))
+      and (:tamanho='' or lower(coalesce(s.tamanho,''))=lower(:tamanho))
+      and (:tipo='' or str(s.tipo)=:tipo)
+      and (:precoMin is null or s.preco>=:precoMin) and (:precoMax is null or s.preco<=:precoMax))
+    """;
+  @EntityGraph(attributePaths={"categoria"})
+  @Query(value="select p " + FILTRO + """
+    order by
+    case when :ordem='preco-asc' then (select min(v.preco) from Produto v where (v.id=p.id or v.produtoPrincipalId=p.id) and v.ativo=true and v.publicacao='PUBLICADO') end asc,
+    case when :ordem='preco-desc' then (select min(v.preco) from Produto v where (v.id=p.id or v.produtoPrincipalId=p.id) and v.ativo=true and v.publicacao='PUBLICADO') end desc,
+    case when :ordem='recentes' then p.criadoEm end desc,
+    case when :ordem='nome-desc' then p.nome end desc,
+    case when :ordem='relevancia' then p.destaque end desc,p.nome asc,p.id asc
+    """,countQuery="select count(p) "+FILTRO)
+  Page<Produto> catalogo(String busca,Long categoriaId,java.math.BigDecimal precoMin,java.math.BigDecimal precoMax,String cor,String tamanho,String tipo,String ordem,Pageable page);
+
   List<Produto> findByTipoOrderByNomeAsc(Produto.Tipo tipo);
   Optional<Produto> findBySku(String sku);
 

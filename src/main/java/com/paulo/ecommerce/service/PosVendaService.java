@@ -109,7 +109,7 @@ public class PosVendaService {
   var mapa=new LinkedHashMap<String,Object>();mapa.put("rastreio",rastreio);mapa.put("fisico",fisico);
   mapa.put("mensagens",mensagens.findTop100ByPedidoIdAndPublicoTrueOrderByIdDesc(id).stream().map(m->new MensagemView(m.id,m.mensagem,m.cliente?"Você":"Atendimento LEVEL",m.criadoEm)).toList());
   mapa.put("solicitacoes",devolucoes.findByPedidoIdOrderByIdDesc(id).stream().map(d->new SolicitacaoView(d.id,d.itemId,d.quantidade,d.tipo,d.estado,d.motivo,d.resposta,d.reposta,d.pedidoTrocaId)).toList());
-  mapa.put("itens",p.getItens().stream().filter(i->i.getTipo()==Produto.Tipo.FISICO && p.getTemporadaPasseId()==null).map(i->new ItemView(i.getId(),i.getProduto().getNome(),i.getQuantidade(),Math.max(0,i.getQuantidade()-devolucoes.quantidadeSolicitada(i.getId())))).toList());
+  mapa.put("itens",p.getItens().stream().filter(i->i.getTipo()==Produto.Tipo.FISICO && p.getTemporadaPasseId()==null).map(i->new ItemView(i.getId(),i.getNomeSnapshot(),i.getQuantidade(),Math.max(0,i.getQuantidade()-devolucoes.quantidadeSolicitada(i.getId())))).toList());
   mapa.put("digitais",digitais.findByPedidoIdOrderByIdAsc(id).stream().map(d->Map.of("titulo",d.titulo,"estado",d.estado)).toList());
   mapa.put("pedidoOrigemId",p.getPedidoOrigemId());
   mapa.put("trocas",pedidoRepo.findByPedidoOrigemId(id).stream().map(o->Map.of("id",o.getId(),"numero",o.getNumero(),"status",o.getStatus())).toList());

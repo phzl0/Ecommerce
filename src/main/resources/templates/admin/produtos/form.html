@@ -23,14 +23,19 @@
             </div>
         </header>
 
+        <p th:if="${msg}" class="alert" role="status" th:text="${msg}"></p>
         <p th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></p>
         <form id="product-form" class="admin-product-form" th:action="@{/admin/produtos/salvar}" th:object="${produto}"
                   method="post" enctype="multipart/form-data">
 
                 <input type="hidden" th:field="*{id}">
+                <input type="hidden" th:field="*{produtoPrincipalId}">
+                <ul class="alert alert-erro" th:if="${#fields.hasAnyErrors()}" role="alert"><li th:each="e : ${#fields.allErrors()}" th:text="${e}"></li></ul>
                 <input type="hidden" name="estoqueOriginal" th:value="${estoqueOriginal}">
                 <section class="form-card admin-editor-description" aria-labelledby="product-info">
                 <h2 id="product-info">Informações do produto</h2>
+                <p th:if="${produto.produtoPrincipalId != null}" class="table-subtext">Variação: preço, estoque e entrega próprios. O produto principal precisa estar publicado.</p>
+                <div class="form-group"><label for="publicacao">Publicação</label><select th:field="*{publicacao}"><option value="RASCUNHO">Rascunho</option><option value="PUBLICADO">Publicado na loja</option><option value="DESATIVADO">Desativado</option></select></div>
 <div class="form-group"><label for="tipo">Tipo de produto</label><select th:field="*{tipo}"><option value="FISICO">Físico</option><option value="DIGITAL">Digital</option></select></div>
                 <div class="form-row">
                     <div class="form-group">
@@ -84,6 +89,12 @@
                               placeholder="Descreva o produto com mais detalhes"></textarea>
                 </div>
 
+                <h2>Opções desta unidade</h2><p class="table-subtext">Cada combinação tem seu próprio SKU. Preencha as opções antes de criar outras variações.</p>
+                <div class="form-row"><div class="form-group"><label for="tamanho">Tamanho</label><input th:field="*{tamanho}" maxlength="40" placeholder="M"></div><div class="form-group"><label for="cor">Cor</label><input th:field="*{cor}" maxlength="40" placeholder="Preto"></div></div>
+                <div class="form-group"><label for="modelo">Modelo</label><input th:field="*{modelo}" maxlength="80" placeholder="Modelo ou edição"></div>
+                <h2>Embalagem para envio</h2><p class="table-subtext">Somente produtos físicos. Medidas da embalagem; cotação de transportadora será conectada depois.</p>
+                <div class="form-row"><div class="form-group"><label for="pesoKg">Peso (kg)</label><input type="number" th:field="*{pesoKg}" min="0.001" max="1000" step="0.001"></div><div class="form-group"><label for="comprimentoCm">Comprimento (cm)</label><input type="number" th:field="*{comprimentoCm}" min="0.1" max="1000" step="0.01"></div></div>
+                <div class="form-row"><div class="form-group"><label for="larguraCm">Largura (cm)</label><input type="number" th:field="*{larguraCm}" min="0.1" max="1000" step="0.01"></div><div class="form-group"><label for="alturaCm">Altura (cm)</label><input type="number" th:field="*{alturaCm}" min="0.1" max="1000" step="0.01"></div></div>
                 </section>
                 <div class="admin-editor-side">
                 <section class="form-card" aria-labelledby="product-price">
@@ -103,7 +114,11 @@
 
                 </section>
                 <section class="form-card" aria-labelledby="product-image">
-                <h2 id="product-image">Imagem</h2>
+                <h2>Campanha de XP extra</h2><p class="table-subtext">Bônus por unidade, além do XP da compra. Registrado no pedido e liberado após pagamento aprovado; reembolsos revertem o progresso correspondente.</p>
+                <div class="form-group"><label for="xpExtra">XP extra por unidade</label><input type="number" th:field="*{xpExtra}" min="0" max="10000"></div>
+                <div class="form-group"><label for="xpExtraInicio">Início do bônus</label><input type="datetime-local" th:field="*{xpExtraInicio}"></div>
+                <div class="form-group"><label for="xpExtraFim">Fim do bônus</label><input type="datetime-local" th:field="*{xpExtraFim}"></div>
+                <h2 id="product-image">Imagem de capa</h2>
                 <div class="admin-media-preview" th:if="${produto.imagemUrl != null}">
                     <img th:src="${produto.imagemUrl}" width="64" height="64" alt="Imagem atual">
                     <span>Imagem atual</span>
@@ -116,6 +131,17 @@
                 </section>
                 </div>
         </form>
+        <section class="form-card" th:if="${produto.id != null}">
+          <h2>Variações e estoque</h2><p class="table-subtext">Uma página na loja, com opções de compra e estoque separados.</p>
+          <a class="admin-button secondary" th:href="@{/admin/produtos/novo(produtoPrincipalId=${produto.produtoPrincipalId != null ? produto.produtoPrincipalId : produto.id})}">Adicionar variação</a>
+          <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Opção / SKU</th><th>Preço</th><th>Estoque</th><th>Publicação</th><th>Ações</th></tr></thead><tbody><tr th:each="v : ${familia}"><td><strong th:text="${v.opcao().isBlank() ? 'Opção padrão' : v.opcao()}"></strong><small class="table-subtext" th:text="${v.sku}"></small></td><td th:text="${v.preco}"></td><td th:text="${v.estoque}"></td><td th:text="${v.publicacao}"></td><td><a class="btn-link" th:href="@{/admin/produtos/{id}/editar(id=${v.id})}">Editar</a></td></tr></tbody></table></div>
+        </section>
+        <section id="galeria" class="form-card" th:if="${produto.id != null}">
+          <h2>Galeria do produto</h2><p class="table-subtext">Até 8 imagens JPG ou PNG. A primeira é a capa. Variações sem imagens usam a galeria principal.</p>
+          <div class="admin-gallery"><div th:each="foto, st : ${produto.imagens()}" class="admin-gallery-item"><img th:src="${foto}" alt="Foto do produto" width="96" height="96">
+          <form method="post" th:action="@{/admin/produtos/{id}/galeria(id=${produto.id})}"><input type="hidden" name="indice" th:value="${st.index}"><button class="admin-button secondary" name="acao" value="capa" th:disabled="${st.first}">Capa</button><button class="admin-button secondary" name="acao" value="subir" th:disabled="${st.first}" aria-label="Mover foto para antes">←</button><button class="admin-button secondary" name="acao" value="descer" th:disabled="${st.last}" aria-label="Mover foto para depois">→</button><button class="admin-button secondary" name="acao" value="remover">Remover</button></form></div></div>
+          <form method="post" enctype="multipart/form-data" th:action="@{/admin/produtos/{id}/galeria(id=${produto.id})}"><div class="form-group"><label for="imagens">Adicionar fotos</label><input id="imagens" name="imagens" type="file" accept="image/jpeg,image/png" multiple required></div><button class="admin-button">Enviar fotos</button></form>
+        </section>
     </main>
 </div>
 </body>
