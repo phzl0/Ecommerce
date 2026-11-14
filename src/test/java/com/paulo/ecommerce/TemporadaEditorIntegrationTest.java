@@ -20,9 +20,20 @@ class TemporadaEditorIntegrationTest {
  @Autowired PasseRecompensaNivelRepository premios; @Autowired ProdutoRepository produtos;
  @Autowired RecompensaOpcaoRepository opcoes; @Autowired FidelidadeService fidelidade;
  @Autowired PasseService passes; @Autowired MockMvc mvc;
+ @Autowired UsuarioRepository usuarios; @Autowired PedidoRepository pedidos; @Autowired BauItemRepository bau;
  private PasseTemporada draft(){fidelidade.config();var mes=YearMonth.now().plusMonths(2);return editor.criar("Operação Neon",mes.atDay(1),mes.atEndOfMonth(),new BigDecimal("79.00"),100,3,5);}
  private void preparar(PasseTemporada t){editor.exemplos(t.getId());editor.missao(t.getId(),"Presença Premium",PasseAcaoTipo.CHECKIN,PassePeriodicidade.DIARIA,1,300,true);}
  private Produto produto(String nome){var p=new Produto();p.setNome(nome);p.setPreco(new BigDecimal("100"));p.setEstoque(100);return produtos.saveAndFlush(p);}
+ @Test void seasonPriceIsUsedByCheckoutAndDraftCannotBeBought(){
+  var mes=YearMonth.now();var t=temporadas.findByAnoAndMes(mes.getYear(),mes.getMonthValue()).orElseThrow();
+  t.setGerenciada(true);t.setPreco(new BigDecimal("89.00"));
+  var u=new Usuario();u.setNome("Cliente editor");u.setEmail("editor-season@example.test");u.setSenha("hashed");usuarios.saveAndFlush(u);
+  var id=passes.criarPedidoPremium(u.getEmail());var pedido=pedidos.findById(id).orElseThrow();
+  assertEquals(0,pedido.getTotal().compareTo(new BigDecimal("89.00")));assertEquals(0,pedido.getItens().get(0).getPrecoUnitario().compareTo(new BigDecimal("89.00")));
+  fidelidade.config().precoPasse=new BigDecimal("99.00");assertEquals(0,pedido.getTotal().compareTo(new BigDecimal("89.00")));
+  t.setEstado("RASCUNHO");t.setAtiva(false);assertThrows(IllegalStateException.class,()->passes.criarPedidoPremium(u.getEmail()));
+  assertThrows(IllegalStateException.class,()->passes.validarTemporadaCompra(t.getId()));
+ }
  @Test void draftsArePrivateAndPublishedRulesCannotBeEdited()throws Exception{
   var t=draft();preparar(t);assertFalse(t.disponivel());assertEquals("RASCUNHO",t.getEstado());
   mvc.perform(get("/admin/temporadas/"+t.getId()).with(user("cliente").roles("CLIENTE"))).andExpect(status().isForbidden());
@@ -56,6 +67,7 @@ class TemporadaEditorIntegrationTest {
  @Test void publishedOverlapIsRejectedAndEndedSeasonKeepsItsRewards(){
   var t=draft();preparar(t);var outra=new PasseTemporada();outra.setNome("Conflito");outra.setSlug("conflito-editor");outra.setAno(2099);outra.setMes(1);outra.setTotalNiveis(30);outra.setXpPorNivel(100);outra.setInicioEm(t.getInicioEm());outra.setFimEm(t.getFimEm());temporadas.saveAndFlush(outra);
   assertThrows(IllegalStateException.class,()->editor.publicar(t.getId(),"admin"));outra.setEstado("ENCERRADO");editor.publicar(t.getId(),"admin");
-  t.setFimEm(LocalDate.now().minusDays(1));int antes=premios.findByTemporadaIdOrderByNivelAsc(t.getId()).size();editor.encerrar(t.getId());assertEquals("ENCERRADO",t.getEstado());assertEquals(antes,premios.findByTemporadaIdOrderByNivelAsc(t.getId()).size());
+  var item=new BauItem();item.usuarioId=987L;item.origem="PASSE-TESTE-"+t.getId();item.titulo="Camisa já resgatada";bau.saveAndFlush(item);
+  t.setFimEm(LocalDate.now().minusDays(1));int antes=premios.findByTemporadaIdOrderByNivelAsc(t.getId()).size();editor.encerrar(t.getId());assertEquals("ENCERRADO",t.getEstado());assertEquals(antes,premios.findByTemporadaIdOrderByNivelAsc(t.getId()).size());assertTrue(bau.existsById(item.id));
  }
 }
