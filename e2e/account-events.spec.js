@@ -74,7 +74,8 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await expect(event.getByRole("button", { name: "Resgatar selo" })).toBeDisabled();
 
     const catalog = await (await page.request.get("/api/store/catalog")).json();
-    const product = catalog.produtos.find((item) => item.estoque && item.preco >= 50);
+    const product = catalog.produtos.find((item) => item.sku === "THERMAL-ELITE");
+    expect(product).toBeDefined();
     const productPath = "/produto/" + product.id;
     const reviewEndpoint = "/api/pass/missions/review/" + product.id;
     await page.goto(productPath);
@@ -258,7 +259,7 @@ test("registers, earns event XP from a local purchase and claims a badge", async
     await admin.goto("/admin/produtos?busca=" + encodeURIComponent(product.nome));
     await admin.getByRole("button", { name: "Desativar", exact: true }).click();
     await admin.goto("/admin/produtos?visibilidade=inativos&busca=" + encodeURIComponent(product.nome));
-    await expect(admin.getByRole("row").filter({ hasText: product.nome })).toContainText("Inativo");
+    await expect(admin.getByRole("row").filter({ hasText: product.nome })).toContainText("Desativado");
     await admin.getByRole("button", { name: "Ativar", exact: true }).click();
     await expect(admin.getByText("Produto ativado.", { exact: true })).toBeVisible();
   } finally {

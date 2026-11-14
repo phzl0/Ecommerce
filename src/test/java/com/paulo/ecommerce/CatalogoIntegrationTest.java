@@ -70,6 +70,15 @@ class CatalogoIntegrationTest {
   var id=reembolsos.solicitar(pedido.getId(),pedido.getTotal(),"Reembolso catálogo","catalogo-refund-key",impacto.token(),true,"admin");
   reembolsos.confirmarSimulado(pedido.getId(),id,impacto.token(),true,"admin");assertEquals(xp.get(0).getXpGanho(),xp.get(0).getXpEstornado());
  }
+ @Test void paginationAndCampaignWindowDoNotLeakExtraProductsOrExpiredBonus(){
+  for(int i=0;i<25;i++)produto("Página exclusiva "+String.format("%02d",i),null,null);
+  var first=loja.carregarCatalogo("Página exclusiva",null,null,null,"relevancia","","","FISICO",0);
+  var last=loja.carregarCatalogo("Página exclusiva",null,null,null,"relevancia","","","FISICO",1);
+  assertEquals(25,first.total());assertEquals(24,first.produtos().size());assertTrue(first.temProxima());assertEquals(1,last.produtos().size());assertFalse(last.temProxima());
+  assertFalse(first.produtos().stream().anyMatch(p->p.id().equals(last.produtos().get(0).id())));
+  var p=produto("Campanha vencida",null,null);p.setXpExtra(50);p.setXpExtraInicio(LocalDateTime.now().minusDays(2));p.setXpExtraFim(LocalDateTime.now().minusDays(1));
+  assertEquals(0,pedidos.cotar(null,null,List.of(new CheckoutItemRequest(p.getId(),1))).xpExtra());
+ }
  @Test void adminShowsNewSectionsAndDoesNotBindGalleryUrls()throws Exception{
   var p=produto("Editor","P",null);
   mvc.perform(get("/admin/produtos/"+p.getId()+"/editar").with(user("admin").roles("ADMIN"))).andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("Variações e estoque")));
