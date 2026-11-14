@@ -16,18 +16,13 @@ public class WebConfig implements WebMvcConfigurer {
         .addResourceHandler("/media/products/**")
         .addResourceLocations(
             java.nio.file.Paths.get(storage, "products").toAbsolutePath().toUri().toString() + "/");
-    // Stable legacy URLs must revalidate; admin URLs also carry a content fingerprint.
-    registry.addResourceHandler("/css/admin.css")
-        .addResourceLocations("classpath:/static/css/admin.css")
+    // Stable URLs must revalidate; admin URLs additionally carry a content fingerprint.
+    registry.addResourceHandler("/css/**")
+        .addResourceLocations("classpath:/static/css/")
         .setCacheControl(CacheControl.noCache());
-    registry.addResourceHandler("/js/admin.js")
-        .addResourceLocations("classpath:/static/js/admin.js")
+    registry.addResourceHandler("/js/**")
+        .addResourceLocations("classpath:/static/js/")
         .setCacheControl(CacheControl.noCache());
-    // Other CSS and JS retain their existing cache policy.
-    registry
-        .addResourceHandler("/css/**", "/js/**")
-        .addResourceLocations("classpath:/static/css/", "classpath:/static/js/")
-        .setCacheControl(CacheControl.maxAge(7, TimeUnit.DAYS).mustRevalidate());
 
     // Imagens — cache de 30 dias
     registry
