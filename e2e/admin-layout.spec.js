@@ -15,7 +15,7 @@ test('administrative screens keep controls usable on desktop and mobile', async 
   await page.goto('/admin/produtos');
   await expect(page.locator('link[rel="stylesheet"]')).toHaveAttribute('href', /admin\.css\?v=[a-f0-9]{32}$/);
   await expect(page.locator('.admin-sidebar')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
-  await expect(page.getByRole('heading', { name: 'Produtos', exact: true })).toHaveCSS('color', 'rgb(25, 29, 35)');
+  await expect(page.locator('main h1')).toHaveCSS('color', 'rgb(25, 29, 35)');
   await page.getByRole('button', { name: /Buscar seção/ }).click();
   const search = page.getByRole('dialog', { name: 'Ir para uma seção' });
   await search.getByLabel('Qual seção você procura?').fill('reservas');
