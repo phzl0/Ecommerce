@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Eventos | LEVEL COMMERCE</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+<script src="/js/admin.js" defer></script></head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='eventos')}"></div>
+    <main class="admin-main">
+        <header class="admin-header"><div><span class="admin-eyebrow">ENGAJAMENTO</span>
+            <h1>Eventos e passe</h1><p class="admin-subtitle">Acompanhe a temporada e publique campanhas semanais.</p></div>
+            <a href="/eventos" class="admin-button secondary">Ver eventos na loja</a>
+        </header>
+        <div th:if="${msg}" class="alert alert-sucesso" role="status" th:text="${msg}"></div>
+        <div th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></div>
+        <section class="form-card" th:if="${temporada != null}">
+            <div class="admin-section-heading"><h2>Temporada do passe</h2><a href="/passe" class="btn-link">Ver passe na loja</a></div>
+            <dl class="admin-data-grid">
+                <div><dt>Temporada</dt><dd th:text="${temporada.nome}"></dd></div>
+                <div><dt>Níveis</dt><dd th:text="${temporada.totalNiveis}"></dd></div>
+                <div><dt>Encerramento</dt><dd th:text="${#temporals.format(temporada.fimEm, 'dd/MM/yyyy')}"></dd></div>
+            </dl>
+        </section>
+        <section class="form-card" th:if="${previa != null}" aria-labelledby="event-preview">
+            <h2 id="event-preview">Prévia do evento</h2>
+            <h3 th:text="${previa.titulo}"></h3><p th:text="${previa.descricao}"></p>
+            <dl class="admin-data-grid">
+                <div><dt>Selo</dt><dd th:text="${previa.selo}"></dd></div>
+                <div><dt>Meta</dt><dd th:text="${previa.metaXp + ' XP'}"></dd></div>
+                <div><dt>Multiplicador</dt><dd th:text="${previa.multiplicador + '×'}"></dd></div>
+                <div><dt>Período</dt><dd th:text="${#temporals.format(previa.inicio, 'dd/MM/yyyy HH:mm') + ' a ' + #temporals.format(previa.fim, 'dd/MM/yyyy HH:mm')}"></dd></div>
+            </dl>
+            <p class="admin-subtitle">A campanha será exibida na loja após publicar.</p>
+        </section>
+        <div class="form-card">
+            <h2>Publicar evento</h2>
+            <p>Os horários seguem o fuso da loja. O evento pode durar até sete dias e as regras ficam fixas após a publicação.</p>
+            <form method="post" th:action="@{/admin/eventos}" class="lc-admin-event-form">
+                <label>Título<input name="titulo" required maxlength="100" th:value="${rascunho.titulo}"></label>
+                <label>Nome do selo<input name="selo" required maxlength="80" th:value="${rascunho.selo}"></label>
+                <label class="lc-admin-full">Descrição<textarea name="descricao" required maxlength="500" th:text="${rascunho.descricao}"></textarea></label>
+                <label>Início<input name="inicio" type="datetime-local" required th:value="${rascunho.inicio}"></label>
+                <label>Fim<input name="fim" type="datetime-local" required th:value="${rascunho.fim}"></label>
+                <label>Multiplicador<input name="multiplicador" type="number" min="1" max="5" required th:value="${rascunho.multiplicador}"></label>
+                <label>Valor mínimo em produtos (R$)<input name="minimo" type="number" min="0" max="999999.99" step="0.01" required th:value="${rascunho.minimo}"></label>
+                <label>Meta para resgate (XP)<input name="meta" type="number" min="1" max="100000" required th:value="${rascunho.meta}"></label>
+                <label>Limite por cliente (XP)<input name="limite" type="number" min="1" max="100000" required th:value="${rascunho.limite}"></label>
+                <div class="admin-actions lc-admin-full">
+                    <button type="submit" name="acao" value="prever" class="admin-button secondary">Prévia</button>
+                    <button type="submit" name="acao" value="publicar" class="admin-button">Publicar evento</button>
+                </div>
+            </form>
+        </div>
+        <div class="form-card">
+            <div class="admin-section-heading">
+                <h2 th:text="${ativos ? 'Eventos ativos' : 'Eventos publicados'}">Eventos publicados</h2>
+                <a th:href="@{/admin/eventos(ativos=${!ativos})}" class="btn-link"
+                   th:text="${ativos ? 'Ver todos' : 'Apenas ativos'}"></a>
+            </div>
+            <p th:if="${eventos.empty}">Nenhum evento publicado.</p>
+            <ul class="lc-admin-events">
+                <li th:each="evento : ${eventos}">
+                    <strong th:text="${evento.titulo}"></strong>
+                    <span th:text="${evento.estado}"></span>
+                    <small th:text="${#temporals.format(evento.inicio, 'dd/MM/yyyy HH:mm')} + ' até ' + ${#temporals.format(evento.fim, 'dd/MM/yyyy HH:mm')}"></small>
+                </li>
+            </ul>
+        </div>
+    </main>
+</div>
+</body>
+</html>

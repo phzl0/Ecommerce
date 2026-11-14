@@ -1,71 +1,94 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Produtos - Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
-</head>
+<script src="/js/admin.js" defer></script></head>
 <body class="admin-body">
 <div class="admin-layout">
-    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='produtos'"></div>
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='produtos')}"></div>
 
     <main class="admin-main">
         <div class="admin-header">
-            <h1>Produtos</h1>
-            <a th:href="@{/admin/produtos/novo}" class="btn btn-primary" style="width:auto;padding:9px 20px;">
+            <div><span class="admin-eyebrow">CATÁLOGO</span><h1>Produtos e estoque</h1>
+                <p class="admin-subtitle">Gerencie os produtos exibidos na loja e acompanhe o saldo.</p></div>
+            <a th:href="@{/admin/produtos/novo}" class="admin-button">
                 + Novo produto
             </a>
         </div>
 
         <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
 
+        <form th:action="@{/admin/produtos}" method="get" class="admin-filter admin-table-toolbar" aria-label="Filtrar produtos">
+            <label class="admin-toolbar-search">Buscar produtos<input name="busca" th:value="${busca}" placeholder="Nome ou SKU"></label>
+            <label>Visibilidade<select name="visibilidade">
+                <option value="ativos" th:selected="${visibilidade == 'ativos'}">Ativos</option>
+                <option value="inativos" th:selected="${visibilidade == 'inativos'}">Inativos</option>
+                <option value="todos" th:selected="${visibilidade == 'todos'}">Todos</option>
+            </select></label>
+            <label class="admin-filter-check"><input type="checkbox" name="estoqueBaixo" value="true" th:checked="${estoqueBaixo}">
+                <span>Estoque baixo (mínimo do produto)</span></label>
+            <label class="admin-filter-check"><input type="checkbox" name="semEstoque" value="true" th:checked="${semEstoque}"> Apenas sem estoque</label>
+            <button type="submit" class="admin-button">Filtrar</button>
+            <a th:href="@{/admin/produtos}" class="btn-link">Limpar</a>
+        </form>
+        <div class="admin-table-wrap" tabindex="0" role="region" aria-label="Tabela de dados">
         <table class="admin-table">
             <thead>
             <tr>
-                <th>Imagem</th>
-                <th>Produto</th>
-                <th>SKU</th>
-                <th>Categoria</th>
-                <th>Preco</th>
-                <th>Estoque</th>
-                <th>Status</th>
-                <th>Acoes</th>
+                <th scope="col">Produto</th>
+                <th scope="col">Categoria</th>
+                <th scope="col" class="admin-number">Preço</th>
+                <th scope="col" class="admin-number">Estoque</th>
+                <th scope="col">Visibilidade</th>
+                <th scope="col">Ações</th>
             </tr>
             </thead>
             <tbody>
+            <tr th:if="${produtos.isEmpty()}"><td colspan="6" class="admin-empty">Nenhum produto encontrado.</td></tr>
             <tr th:each="produto : ${produtos}">
-                <td>
-                    <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
-                         style="width:48px;height:48px;object-fit:cover;border-radius:6px;">
-                </td>
-                <td>
-                    <strong th:text="${produto.nome}"></strong>
-                    <div class="table-subtext" th:text="${produto.marca != null ? produto.marca : 'Sem marca'}"></div>
-                </td>
-                <td th:text="${produto.sku != null ? produto.sku : '-'}"></td>
+                <th scope="row" class="admin-row-label">
+                    <div class="admin-product-cell">
+                        <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
+                             width="32" height="32" loading="lazy" decoding="async" alt="" class="admin-product-image">
+                        <div>
+                            <a th:href="@{/admin/produtos/{id}/editar(id=${produto.id})}" th:text="${produto.nomeCompra()}"></a>
+                            <div class="table-subtext" th:text="${produto.sku != null ? produto.sku : 'Sem SKU'}"></div>
+                        </div>
+                    </div>
+                </th>
                 <td th:text="${produto.categoria != null ? produto.categoria.nome : '-'}"></td>
-                <td th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}"></td>
-                <td>
-                    <span th:text="${produto.estoque}"
-                          th:classappend="${produto.estoque == 0} ? 'text-danger' : ''"></span>
+                <td class="admin-number" th:text="'R$ ' + ${#numbers.formatDecimal(produto.preco, 1, 'POINT', 2, 'COMMA')}"></td>
+                <td class="admin-number">
+                    <strong th:text="${produto.estoque}" th:classappend="${produto.estoque == 0 ? 'text-danger' : ''}"></strong>
+                    <div class="table-subtext" th:if="${produto.estoque > 0 and produto.estoque <= produto.estoqueMinimo}">Estoque baixo</div>
                 </td>
                 <td>
-                    <span class="status-badge status-confirmado" th:if="${produto.destaque}">Destaque</span>
-                    <span class="status-badge status-pendente" th:if="${!produto.destaque}">Padrao</span>
+                    <span class="status-badge" th:classappend="${produto.ativo ? 'status-confirmado' : 'status-cancelado'}"
+                          th:text="${produto.ativo ? 'Ativo' : 'Inativo'}"></span>
+                    <div class="table-subtext" th:if="${produto.destaque}">Destaque na loja</div>
                 </td>
                 <td class="acoes">
-                    <a th:href="@{/admin/produtos/{id}/editar(id=${produto.id})}" class="btn-link">
-                        Editar
-                    </a>
-                    <form th:action="@{/admin/produtos/{id}/deletar(id=${produto.id})}" method="post"
-                          onsubmit="return confirm('Remover produto?')">
-                        <button type="submit" class="btn-link danger">Remover</button>
+                    <a th:href="@{/admin/produtos/{id}/editar(id=${produto.id})}" class="btn-link">Editar</a>
+                    <form th:if="${produto.ativo}" th:action="@{/admin/produtos/{id}/deletar(id=${produto.id})}" method="post">
+                        <button type="submit" class="btn-link danger">Desativar</button>
+                    </form>
+                    <form th:unless="${produto.ativo}" th:action="@{/admin/produtos/{id}/ativar(id=${produto.id})}" method="post">
+                        <button type="submit" class="btn-link">Ativar</button>
                     </form>
                 </td>
             </tr>
             </tbody>
         </table>
+        </div>
+        <nav class="admin-pagination" aria-label="Páginas dos produtos" th:if="${pagina.totalPages > 1 || pagina.hasPrevious()}">
+            <a th:if="${pagina.hasPrevious()}" th:href="@{/admin/produtos(busca=${busca},semEstoque=${semEstoque},estoqueBaixo=${estoqueBaixo},visibilidade=${visibilidade},pagina=${pagina.number - 1})}">‹ Anterior</a>
+            <span th:text="'Página ' + ${pagina.number + 1}"></span>
+            <a th:if="${pagina.hasNext()}" th:href="@{/admin/produtos(busca=${busca},semEstoque=${semEstoque},estoqueBaixo=${estoqueBaixo},visibilidade=${visibilidade},pagina=${pagina.number + 1})}">Próxima ›</a>
+        </nav>
     </main>
 </div>
 </body>

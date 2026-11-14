@@ -55,6 +55,11 @@ public class PasseMissaoTemplate extends BaseEntity {
     @Column(nullable = false)
     private Boolean ativa = Boolean.TRUE;
 
+    @Column(nullable = false)
+    private boolean premium;
+    public boolean isPremium() { return premium; }
+    public void setPremium(boolean value) { premium = value; }
+
     public Long getId() {
         return id;
     }

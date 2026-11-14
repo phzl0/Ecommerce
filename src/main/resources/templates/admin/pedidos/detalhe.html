@@ -1,39 +1,47 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Pedido — Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
-</head>
+<script src="/js/admin.js" defer></script></head>
 <body class="admin-body">
 <div class="admin-layout">
-    <div th:replace="~{admin/fragments/sidebar :: sidebar}" th:with="activePage='pedidos'"></div>
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='pedidos')}"></div>
 
     <main class="admin-main">
         <div class="admin-header">
-            <h1 th:text="'Pedido #' + ${pedido.id}">Pedido</h1>
+            <div><span class="admin-eyebrow">OPERAÇÃO</span>
+                <h1 th:text="'Pedido ' + ${pedido.numero}">Pedido</h1>
+                <p class="admin-subtitle" th:text="${pedido.pedidoOrigemId != null ? 'Remessa de troca · sem cobrança' : pedido.recompensa ? 'Recompensa do Baú · entrega gratuita' : (pedido.temporadaPasseId == null ? 'Pedido de produtos' : 'Passe digital')}"></p>
+            </div>
             <a th:href="@{/admin/pedidos}" class="btn-link">← Voltar</a>
         </div>
 
         <div th:if="${msg}" class="alert alert-sucesso" th:text="${msg}"></div>
+        <div th:if="${erro}" class="alert alert-erro" role="alert" th:text="${erro}"></div>
 
         <div class="pedido-admin-layout">
 
             <div>
                 <div class="form-card" style="margin-bottom:1rem;">
-                    <h3>Dados do pedido</h3>
-                    <div class="pedido-meta">
-                        <p><strong>Cliente:</strong> <span th:text="${pedido.usuario.nome}"></span></p>
-                        <p><strong>E-mail:</strong>  <span th:text="${pedido.usuario.email}"></span></p>
-                        <p><strong>Data:</strong>
-                            <span th:text="${#temporals.format(pedido.dataPedido, 'dd/MM/yyyy HH:mm')}"></span>
-                        </p>
-                        <p><strong>Endereço:</strong> <span th:text="${pedido.enderecoEntrega}"></span></p>
-                    </div>
+                    <h2>Cliente e entrega</h2>
+                    <dl class="admin-data-grid">
+                        <div><dt>Cliente</dt><dd th:text="${pedido.usuario.nome}"></dd></div>
+                        <div><dt>E-mail</dt><dd th:text="${pedido.usuario.email}"></dd></div>
+                        <div th:if="${pedido.nomeDestinatario != null}"><dt>Destinatário</dt><dd th:text="${pedido.nomeDestinatario}"></dd></div>
+                        <div th:if="${pedido.telefoneContato != null}"><dt>Telefone</dt><dd th:text="${pedido.telefoneContato}"></dd></div>
+                        <div><dt>Endereço</dt><dd th:text="${pedido.enderecoEntrega}"></dd></div>
+                        <div th:if="${pedido.cidadeEntrega != null}"><dt>Cidade e CEP</dt>
+                            <dd th:text="${pedido.cidadeEntrega + ' / ' + pedido.estadoEntrega + ' · ' + pedido.cepEntrega}"></dd></div>
+                    </dl>
                 </div>
 
-                <table class="admin-table">
+                <h2>Itens do pedido</h2>
+                <div class="admin-table-wrap" tabindex="0" role="region" aria-label="Tabela de dados">
+        <table class="admin-table">
                     <thead>
                     <tr>
                         <th>Produto</th>
@@ -44,13 +52,16 @@
                     </thead>
                     <tbody>
                     <tr th:each="item : ${pedido.itens}">
-                        <td th:text="${item.produto.nome}"></td>
+                        <td th:text="${item.nomeSnapshot}"></td>
                         <td th:text="${item.quantidade}"></td>
                         <td th:text="'R$ ' + ${#numbers.formatDecimal(item.precoUnitario, 1, 'POINT', 2, 'COMMA')}"></td>
                         <td th:text="'R$ ' + ${#numbers.formatDecimal(item.subtotal, 1, 'POINT', 2, 'COMMA')}"></td>
                     </tr>
                     </tbody>
                     <tfoot>
+                    <tr><td colspan="3">Frete</td><td th:text="'R$ ' + ${#numbers.formatDecimal(pedido.frete, 1, 'POINT', 2, 'COMMA')}"></td></tr>
+                    <tr th:if="${pedido.desconto.signum() > 0}"><td colspan="3">Desconto</td>
+                        <td th:text="'− R$ ' + ${#numbers.formatDecimal(pedido.desconto, 1, 'POINT', 2, 'COMMA')}"></td></tr>
                     <tr>
                         <td colspan="3"><strong>Total</strong></td>
                         <td>
@@ -59,27 +70,47 @@
                     </tr>
                     </tfoot>
                 </table>
+                </div>
+                <section class="form-card admin-order-history" aria-labelledby="order-history">
+                    <h2 id="order-history">Histórico do pedido</h2>
+                    <ol>
+                        <li th:each="movimento : ${historico}">
+                            <strong th:text="${movimento.descricao}"></strong>
+                            <time th:text="${#temporals.format(movimento.ocorridoEm, 'dd/MM/yyyy HH:mm')}"></time>
+                        </li>
+                        <li><strong>Pedido registrado</strong><time th:text="${#temporals.format(pedido.dataPedido, 'dd/MM/yyyy HH:mm')}"></time></li>
+                    </ol>
+                </section>
             </div>
 
             <aside class="form-card" style="height:fit-content;">
-                <h3>Atualizar status</h3>
-                <form th:action="@{/admin/pedidos/{id}/status(id=${pedido.id})}" method="post">
+                <h2>Pagamento e operação</h2>
+                <dl class="admin-data-grid">
+                    <div><dt>Pagamento</dt><dd th:text="${pedido.pedidoOrigemId != null ? 'Isento · troca' : pedido.recompensa ? 'Isento · recompensa' : (pedido.pagamento == null ? 'Sem pagamento' : pedido.pagamento.status)}"></dd></div>
+                    <div><dt>Pedido</dt><dd th:text="${pedido.status}"></dd></div>
+                    <div th:if="${pedido.pagamento != null and pedido.pagamento.pagoEm != null}">
+                        <dt>Aprovado em</dt><dd th:text="${#temporals.format(pedido.pagamento.pagoEm, 'dd/MM/yyyy HH:mm')}"></dd>
+                    </div>
+                </dl>
+                <form th:unless="${statusOpcoes.empty}" th:action="@{/admin/pedidos/{id}/status(id=${pedido.id})}" method="post">
                     <div class="form-group">
-                        <label>Status atual</label>
-                        <select name="status">
-                            <option th:each="s : ${statusOpcoes}"
-                                    th:value="${s}"
-                                    th:text="${s}"
-                                    th:selected="${pedido.status == s}">
-                            </option>
+                        <label for="order-action">Próxima ação</label>
+                        <select name="status" id="order-action">
+                            <option th:each="s : ${statusOpcoes}" th:value="${s}"
+                                th:text="${s.name() == 'ENVIADO' ? 'Marcar como enviado' : (s.name() == 'ENTREGUE' ? 'Marcar como entregue' : 'Cancelar pedido')}"></option>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;">
-                        Atualizar
-                    </button>
+                    <button type="submit" class="admin-button">Aplicar ação</button>
+                </form>
+                <p th:if="${statusOpcoes.empty}" class="admin-subtitle">Nenhuma ação manual disponível para este status.</p>
+                <form th:if="${simulacaoDisponivel and pedido.status.name() == 'PENDENTE'}"
+                      th:action="@{/admin/pedidos/{id}/simular(id=${pedido.id})}" method="post" class="lc-admin-simulation">
+                    <p>Teste local. Aprova o pedido para validar XP e recompensas.</p>
+                    <button type="submit" class="admin-button">Simular pagamento aprovado</button>
                 </form>
             </aside>
         </div>
+    <div th:replace="~{admin/fragments/operacao :: operacao}"></div>
     </main>
 </div>
 </body>

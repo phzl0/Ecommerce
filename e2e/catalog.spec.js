@@ -1,0 +1,23 @@
+import {test,expect} from '@playwright/test';
+test('catalog groups variants, selects SKU and previews extra XP before checkout',async({page})=>{
+ await page.goto('/login');await page.getByLabel('E-mail',{exact:true}).fill('admin@level.local');await page.getByLabel('Senha',{exact:true}).fill('AdminLocal123!');await page.getByRole('button',{name:'Entrar',exact:true}).click();await expect(page).not.toHaveURL(/\/login/);
+ await page.goto('/catalogo?busca=Camiseta%20LEVEL%20Essential');
+ await expect(page.locator('.lc-product-card')).toHaveCount(1);
+ await page.locator('.lc-product-card-link').click();
+ await expect(page.getByLabel('Escolha uma opção')).toBeVisible();
+ await expect(page.getByRole('button',{name:'Ver foto 2'})).toBeVisible();await page.getByRole('button',{name:'Ver foto 2'}).click();
+ await expect(page.getByRole('button',{name:'Ver foto 2'})).toHaveAttribute('aria-pressed','true');
+ await expect(page.getByText(/Ganhe \+50 XP extra/)).toBeVisible();
+ const rootId=new URL(page.url()).pathname.split('/').pop();
+ const variants=page.getByLabel('Escolha uma opção');const childId=await variants.locator('option').filter({hasText:'M · Verde'}).getAttribute('value');
+ await variants.selectOption(childId);await expect(page).toHaveURL(new RegExp('/produto/'+childId+'$'));await expect(page.locator('.lc-detail-price')).toContainText('59,90');
+ await page.getByRole('button',{name:'Adicionar à sacola',exact:true}).click();
+ await page.goto('/sacola');await expect(page.getByText('Camiseta LEVEL Essential · demo · M · Verde',{exact:true})).toBeVisible();
+ await page.goto('/produto/'+rootId);await page.screenshot({path:'test-results/catalog-product-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await page.screenshot({path:'test-results/catalog-product-mobile.png',fullPage:true});
+ await page.goto('/admin/produtos/'+rootId+'/editar');await expect(page.getByRole('heading',{name:'Variações e estoque'})).toBeVisible();await expect(page.getByRole('heading',{name:'Galeria do produto'})).toBeVisible();await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await page.screenshot({path:'test-results/catalog-editor-mobile.png',fullPage:true});
+ await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'test-results/catalog-editor-desktop.png',fullPage:true});
+ await page.getByRole('link',{name:'Adicionar variação',exact:true}).click();await expect(page.getByLabel('Publicação',{exact:true})).toHaveValue('RASCUNHO');
+ await page.getByLabel('Tamanho',{exact:true}).fill('G');await page.getByLabel('Cor',{exact:true}).fill('Preto');await page.getByLabel('SKU',{exact:true}).fill('CATALOG-E2E-G');await page.getByLabel('Estoque *',{exact:true}).fill('3');await page.getByRole('button',{name:'Salvar produto',exact:true}).click();await expect(page).toHaveURL(/\/admin\/produtos$/);
+ const res=await page.request.get('/api/store/products/'+rootId);const detail=await res.json();expect(detail.variacoes).toHaveLength(2);
+});

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Integrações | LEVEL COMMERCE</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+<script src="/js/admin.js" defer></script></head>
+<body class="admin-body">
+<div class="admin-layout">
+    <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='integracoes')}"></div>
+    <main class="admin-main">
+        <header class="admin-header">
+            <div><span class="admin-eyebrow">CONFIGURAÇÃO</span><h1>Integrações</h1>
+                <p class="admin-subtitle">Acompanhe a conexão da loja com sistemas de gestão.</p></div>
+        </header>
+        <section class="form-card" aria-labelledby="erp-title">
+            <div class="admin-section-heading">
+                <h2 id="erp-title">ERP</h2>
+                <span class="status-badge status-pendente">Aguardando provedor</span>
+            </div>
+            <dl class="admin-data-grid">
+                <div><dt>Provedor</dt><dd>Não configurado</dd></div>
+                <div><dt>Última sincronização</dt><dd>Nenhuma</dd></div>
+                <div><dt>Pedidos aprovados</dt><dd>Envio ao ERP previsto</dd></div>
+                <div><dt>Estoque</dt><dd>Recebimento do saldo do ERP previsto</dd></div>
+            </dl>
+            <p class="admin-subtitle">A conexão depende do provedor escolhido. A operação continua no painel da loja.</p>
+        </section>
+    </main>
+</div>
+</body>
+</html>

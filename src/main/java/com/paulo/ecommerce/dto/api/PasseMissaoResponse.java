@@ -3,6 +3,7 @@ package com.paulo.ecommerce.dto.api;
 public record PasseMissaoResponse(
         Long id,
         String periodicidade,
+        String acao,
         String titulo,
         String descricao,
         int progressoAtual,
@@ -11,6 +12,7 @@ public record PasseMissaoResponse(
         boolean concluida,
         String resetaEm,
         String ctaLabel,
-        String ctaHref
+        String ctaHref,
+        boolean premium
 ) {
 }
