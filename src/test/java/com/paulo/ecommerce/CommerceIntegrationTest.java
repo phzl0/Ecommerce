@@ -29,6 +29,20 @@ class CommerceIntegrationTest {
   @Autowired PasseService passes;
   @Autowired PasseProgressoUsuarioRepository progress;
 
+  @Test void adminAssetsAreVersionedAndRevalidated() throws Exception {
+    var assets = new com.paulo.ecommerce.config.AdminAssets();
+    mvc.perform(get("/admin").with(user("admin").roles("ADMIN")))
+      .andExpect(status().isOk())
+      .andExpect(content().string(org.hamcrest.Matchers.containsString("/css/admin.css?v=" + assets.getCss())))
+      .andExpect(content().string(org.hamcrest.Matchers.containsString("/js/admin.js?v=" + assets.getJs())));
+    mvc.perform(get("/css/admin.css").param("v",assets.getCss()))
+      .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-cache"))
+      .andExpect(content().contentTypeCompatibleWith("text/css"))
+      .andExpect(content().string(org.hamcrest.Matchers.containsString(".admin-topbar")));
+    mvc.perform(get("/js/admin.js").param("v",assets.getJs()))
+      .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-cache"));
+  }
+
   private Usuario account() {
     var u = new Usuario();
     u.setNome("Cliente teste");

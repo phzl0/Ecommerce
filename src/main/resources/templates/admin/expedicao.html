@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Separação e envios | LEVEL</title><link rel="stylesheet" href="/css/admin.css"><script src="/js/admin.js" defer></script></head>
+<!DOCTYPE html><html lang="pt-BR" xmlns:th="http://www.thymeleaf.org"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Separação e envios | LEVEL</title><link rel="stylesheet" th:href="@{/css/admin.css(v=${@adminAssets.css})}"><script th:src="@{/js/admin.js(v=${@adminAssets.js})}" defer></script></head>
 <body class="admin-body"><div class="admin-layout"><div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='expedicao')}"></div><main class="admin-main">
         <div th:replace="~{admin/fragments/sidebar :: topbar}"></div>
 <header class="admin-header"><div><span class="admin-eyebrow">OPERAÇÃO</span><h1>Separação e envios</h1><p class="admin-subtitle">Compras e prêmios físicos no mesmo fluxo. Pedidos mais antigos aparecem primeiro.</p></div></header>

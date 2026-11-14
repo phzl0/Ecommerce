@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Passe, VIP e Baú | LEVEL</title><link rel="stylesheet" href="/css/admin.css"><script src="/js/admin.js" defer></script></head>
+<title>Passe, VIP e Baú | LEVEL</title><link rel="stylesheet" th:href="@{/css/admin.css(v=${@adminAssets.css})}"><script th:src="@{/js/admin.js(v=${@adminAssets.js})}" defer></script></head>
 <body class="admin-body"><div class="admin-layout">
 <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='fidelidade')}"></div>
 <main class="admin-main">
