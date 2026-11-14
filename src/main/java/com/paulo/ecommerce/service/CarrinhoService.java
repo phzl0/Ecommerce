@@ -12,6 +12,7 @@ import java.util.List;
 
 @Service
 public class CarrinhoService {
+    @org.springframework.beans.factory.annotation.Autowired private ProdutoService catalogo;
 
     private static final String SESSION_KEY = "carrinho";
     private static final BigDecimal FRETE_GRATIS = new BigDecimal("299.00");
@@ -28,6 +29,7 @@ public class CarrinhoService {
     }
 
     public void adicionar(HttpSession session, Produto produto, int quantidade) {
+        if(!catalogo.disponivelNaLoja(produto))throw new IllegalArgumentException("Produto indisponível.");
         if (quantidade <= 0) {
             throw new IllegalArgumentException("Quantidade invalida.");
         }
@@ -48,7 +50,7 @@ public class CarrinhoService {
             existente.setQuantidade(novaQuantidade);
         } else {
             carrinho.add(new CarrinhoItem(
-                    produto.getId(), produto.getNome(),
+                    produto.getId(), produto.nomeCompra(),
                     produto.getImagemUrl(), produto.getPreco(), quantidade
             ));
         }

@@ -3,156 +3,289 @@ package com.paulo.ecommerce.controller;
 import com.paulo.ecommerce.model.*;
 import com.paulo.ecommerce.service.*;
 import jakarta.validation.Valid;
+import java.io.IOException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import java.io.IOException;
-import java.nio.file.*;
 
 @Controller
 @RequestMapping("/admin")
 public class AdminController {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.paulo.ecommerce.service.ProductImageStorage imageStorage;
 
-    private final AdminService    adminService;
-    private final ProdutoService  produtoService;
-    private final CategoriaService categoriaService;
-    private final PedidoService   pedidoService;
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.paulo.ecommerce.service.PagamentoService payments;
 
-    public AdminController(AdminService adminService,
-                           ProdutoService produtoService,
-                           CategoriaService categoriaService,
-                           PedidoService pedidoService) {
-        this.adminService     = adminService;
-        this.produtoService   = produtoService;
-        this.categoriaService = categoriaService;
-        this.pedidoService    = pedidoService;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoExpedicaoRepository expedicoes;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoAtendimentoRepository atendimentos;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoDevolucaoRepository devolucoes;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PedidoReembolsoRepository reembolsos;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.ProdutoRepository produtosTroca;
+  private final AdminService adminService;
+  private final ProdutoService produtoService;
+  private final CategoriaService categoriaService;
+  private final PedidoService pedidoService;
+
+  public AdminController(
+      AdminService adminService,
+      ProdutoService produtoService,
+      CategoriaService categoriaService,
+      PedidoService pedidoService) {
+    this.adminService = adminService;
+    this.produtoService = produtoService;
+    this.categoriaService = categoriaService;
+    this.pedidoService = pedidoService;
+  }
+
+  @InitBinder("produto")
+  void restringirCamposProduto(WebDataBinder binder) {
+    binder.setAllowedFields("id", "nome", "sku", "marca", "descricaoCurta", "descricao", "preco", "estoque", "destaque", "tipo", "produtoPrincipalId", "publicacao", "tamanho", "cor", "modelo", "pesoKg", "comprimentoCm", "larguraCm", "alturaCm", "xpExtra", "xpExtraInicio", "xpExtraFim");
+  }
+
+  @GetMapping("/integracoes")
+  public String integracoes() {
+    return "admin/integracoes";
+  }
+
+  // ── Dashboard ──────────────────────────────────────────
+  @GetMapping
+  public String dashboard(Model model) {
+    model.addAttribute("totalPedidos", adminService.totalPedidos());
+    model.addAttribute("totalProdutos", adminService.totalProdutos());
+    model.addAttribute("totalClientes", adminService.totalClientes());
+    model.addAttribute("receitaTotal", adminService.receitaTotal());
+    model.addAttribute("pedidosRecentes", adminService.pedidosRecentes());
+    model.addAttribute("produtosSemEstoque", adminService.produtosSemEstoque());
+    model.addAttribute("estoqueBaixo", adminService.produtosComEstoqueBaixo());
+    model.addAttribute("eventosAtivos", adminService.eventosAtivos());
+    model.addAttribute("pedidosPendentes", adminService.pedidosPendentes());
+    model.addAttribute("pedidosParaEnvio", adminService.pedidosParaEnvio());
+    model.addAttribute("ambienteDeTeste", payments.simulacaoDisponivel());
+    return "admin/dashboard";
+  }
+
+  // ── Produtos ───────────────────────────────────────────
+  @GetMapping("/produtos")
+  public String produtos(Model model, @RequestParam(defaultValue = "") String busca,
+      @RequestParam(defaultValue = "false") boolean semEstoque,
+      @RequestParam(defaultValue = "false") boolean estoqueBaixo,
+      @RequestParam(defaultValue = "ativos") String visibilidade,
+      @RequestParam(defaultValue = "0") int pagina) {
+    Boolean ativo = switch (visibilidade) {
+      case "todos" -> null;
+      case "inativos" -> false;
+      default -> true;
+    };
+    var resultados = adminService.produtos(busca.strip(), ativo, semEstoque, estoqueBaixo && !semEstoque, pagina);
+    model.addAttribute("produtos", resultados.getContent());
+    model.addAttribute("pagina", resultados);
+    model.addAttribute("busca", busca.strip());
+    model.addAttribute("semEstoque", semEstoque);
+    model.addAttribute("estoqueBaixo", estoqueBaixo && !semEstoque);
+    model.addAttribute("limiteEstoque", AdminService.LIMITE_ESTOQUE_BAIXO);
+    model.addAttribute("visibilidade", ativo == null ? "todos" : ativo ? "ativos" : "inativos");
+    return "admin/produtos/lista";
+  }
+
+  @GetMapping("/produtos/novo")
+  public String novoProdutoForm(@RequestParam(required=false) Long produtoPrincipalId, Model model) {
+    Produto novo = new Produto();
+    novo.setPublicacao(Produto.Publicacao.RASCUNHO);
+    if (produtoPrincipalId != null) {
+      Produto raiz = produtoService.buscarPorId(produtoPrincipalId);
+      if (raiz.getProdutoPrincipalId() != null) throw new IllegalArgumentException("Escolha o produto principal.");
+      novo.setProdutoPrincipalId(raiz.getId()); novo.setNome(raiz.getNome()); novo.setTipo(raiz.getTipo());
+      novo.setCategoria(raiz.getCategoria()); novo.setMarca(raiz.getMarca()); novo.setPreco(raiz.getPreco());
     }
+    model.addAttribute("produto", novo);
+    model.addAttribute("categorias", categoriaService.listarTodas());
+    return "admin/produtos/form";
+  }
 
-    // ── Dashboard ──────────────────────────────────────────
-    @GetMapping
-    public String dashboard(Model model) {
-        model.addAttribute("totalPedidos",  adminService.totalPedidos());
-        model.addAttribute("totalProdutos", adminService.totalProdutos());
-        model.addAttribute("totalClientes", adminService.totalClientes());
-        model.addAttribute("receitaTotal",  adminService.receitaTotal());
-        model.addAttribute("pedidosRecentes", adminService.pedidosRecentes());
-        model.addAttribute("produtosSemEstoque",
-                adminService.produtosSemEstoque());
-        model.addAttribute("pedidosPendentes",
-                adminService.pedidosPendentes());
-        return "admin/dashboard";
-    }
+  @GetMapping("/produtos/{id}/editar")
+  public String editarProdutoForm(@PathVariable Long id, Model model) {
+    Produto produto = produtoService.buscarPorId(id);
+    model.addAttribute("produto", produto);
+    model.addAttribute("estoqueOriginal", produto.getEstoque());
+    model.addAttribute("familia", produtoService.familia(produto));
+    model.addAttribute("categorias", categoriaService.listarTodas());
+    return "admin/produtos/form";
+  }
 
-    // ── Produtos ───────────────────────────────────────────
-    @GetMapping("/produtos")
-    public String produtos(Model model) {
-        model.addAttribute("produtos", produtoService.listarAtivos(0, 100).getContent());
-        return "admin/produtos/lista";
-    }
-
-    @GetMapping("/produtos/novo")
-    public String novoProdutoForm(Model model) {
-        model.addAttribute("produto", new Produto());
-        model.addAttribute("categorias", categoriaService.listarTodas());
-        return "admin/produtos/form";
-    }
-
-    @GetMapping("/produtos/{id}/editar")
-    public String editarProdutoForm(@PathVariable Long id, Model model) {
-        model.addAttribute("produto", produtoService.buscarPorId(id));
-        model.addAttribute("categorias", categoriaService.listarTodas());
-        return "admin/produtos/form";
-    }
-
-    @PostMapping("/produtos/salvar")
-    public String salvarProduto(@Valid @ModelAttribute("produto") Produto produto,
-                                BindingResult result,
-                                @RequestParam(required = false) MultipartFile imagem,
-                                @RequestParam(required = false) Long categoriaId,
-                                Model model,
-                                RedirectAttributes redirectAttributes) throws IOException {
-        if (result.hasErrors()) {
-            model.addAttribute("categorias", categoriaService.listarTodas());
-            return "admin/produtos/form";
-        }
-
-        if (categoriaId != null) {
-            produto.setCategoria(categoriaService.buscarPorId(categoriaId));
-        }
-
-        if (imagem != null && !imagem.isEmpty()) {
-            String nomeArquivo = System.currentTimeMillis() + "_" + imagem.getOriginalFilename();
-            Path destino = Paths.get("src/main/resources/static/images/produtos/" + nomeArquivo);
-            Files.createDirectories(destino.getParent());
-            Files.copy(imagem.getInputStream(), destino, StandardCopyOption.REPLACE_EXISTING);
-            produto.setImagemUrl("/images/produtos/" + nomeArquivo);
-        }
-
-        produtoService.salvar(produto);
+  @PostMapping("/produtos/salvar")
+  public String salvarProduto(
+      @Valid @ModelAttribute("produto") Produto produto,
+      BindingResult result,
+      @RequestParam(required = false) MultipartFile imagem,
+      @RequestParam(required = false) Long categoriaId,
+      @RequestParam(required = false) Integer estoqueOriginal,
+      Model model,
+      RedirectAttributes redirectAttributes) {
+    if (!result.hasErrors()) {
+      try {
+        if (categoriaId != null) produto.setCategoria(categoriaService.buscarPorId(categoriaId));
+        if (imagem != null && !imagem.isEmpty()) produto.setImagemUrl(imageStorage.save(imagem));
+        produtoService.salvarCadastro(produto, estoqueOriginal);
         redirectAttributes.addFlashAttribute("msg", "Produto salvo com sucesso!");
         return "redirect:/admin/produtos";
+      } catch (IllegalStateException | IllegalArgumentException error) {
+        model.addAttribute("erro", error.getMessage());
+      } catch (org.springframework.dao.DataIntegrityViolationException error) {
+        model.addAttribute("erro", "Não foi possível salvar. Confira se o SKU já está em uso.");
+      } catch (IOException error) {
+        model.addAttribute("erro", "Não foi possível salvar a imagem.");
+      }
     }
+    if (produto.getId() != null) {
+      Produto atual = produtoService.buscarPorId(produto.getId());
+      produto.setImagemUrl(atual.getImagemUrl());
+      produto.setAtivo(atual.isAtivo());
+      model.addAttribute("familia", produtoService.familia(atual));
+    }
+    model.addAttribute("categorias", categoriaService.listarTodas());
+    model.addAttribute("estoqueOriginal", estoqueOriginal);
+    return "admin/produtos/form";
+  }
 
-    @PostMapping("/produtos/{id}/deletar")
-    public String deletarProduto(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        produtoService.deletar(id);
-        redirectAttributes.addFlashAttribute("msg", "Produto removido.");
-        return "redirect:/admin/produtos";
+  @PostMapping("/produtos/{id}/galeria")
+  public String galeriaProduto(@PathVariable Long id,
+      @RequestParam(required=false) MultipartFile[] imagens,
+      @RequestParam(required=false) Integer indice,
+      @RequestParam(defaultValue="adicionar") String acao, RedirectAttributes flash) {
+    try {
+      var novas = new java.util.ArrayList<String>();
+      long quantidade = imagens == null ? 0 : java.util.Arrays.stream(imagens).filter(i -> !i.isEmpty()).count();
+      if (produtoService.buscarPorId(id).imagens().size() + quantidade > 8)
+        throw new IllegalArgumentException("A galeria aceita até 8 imagens.");
+      if (imagens != null) for (var imagem : imagens) if (!imagem.isEmpty()) novas.add(imageStorage.save(imagem));
+      produtoService.galeria(id, novas, indice, acao);
+      flash.addFlashAttribute("msg", "Galeria atualizada.");
+    } catch (IllegalArgumentException | IllegalStateException | IOException error) {
+      flash.addFlashAttribute("erro", error.getMessage());
     }
+    return "redirect:/admin/produtos/" + id + "/editar#galeria";
+  }
 
-    // ── Categorias ─────────────────────────────────────────
-    @GetMapping("/categorias")
-    public String categorias(Model model) {
-        model.addAttribute("categorias", categoriaService.listarTodas());
-        model.addAttribute("categoria", new Categoria());
-        return "admin/categorias";
-    }
+  @PostMapping("/produtos/{id}/deletar")
+  public String deletarProduto(@PathVariable Long id, RedirectAttributes flash) {
+    produtoService.definirVisibilidade(id, false);
+    flash.addFlashAttribute("msg", "Produto desativado.");
+    return "redirect:/admin/produtos";
+  }
 
-    @PostMapping("/categorias/salvar")
-    public String salvarCategoria(@Valid @ModelAttribute("categoria") Categoria categoria,
-                                  BindingResult result,
-                                  Model model,
-                                  RedirectAttributes redirectAttributes) {
-        if (result.hasErrors()) {
-            model.addAttribute("categorias", categoriaService.listarTodas());
-            return "admin/categorias";
-        }
-        categoriaService.salvar(categoria);
-        redirectAttributes.addFlashAttribute("msg", "Categoria salva!");
-        return "redirect:/admin/categorias";
-    }
+  @PostMapping("/produtos/{id}/ativar")
+  public String ativarProduto(@PathVariable Long id, RedirectAttributes flash) {
+    produtoService.definirVisibilidade(id, true);
+    flash.addFlashAttribute("msg", "Produto ativado.");
+    return "redirect:/admin/produtos?visibilidade=todos";
+  }
 
-    @PostMapping("/categorias/{id}/deletar")
-    public String deletarCategoria(@PathVariable Long id, RedirectAttributes redirectAttributes) {
-        categoriaService.deletar(id);
-        redirectAttributes.addFlashAttribute("msg", "Categoria removida.");
-        return "redirect:/admin/categorias";
-    }
+  // ── Categorias ─────────────────────────────────────────
+  @GetMapping("/categorias")
+  public String categorias(Model model) {
+    model.addAttribute("categorias", categoriaService.listarResumo());
+    model.addAttribute("categoria", new Categoria());
+    return "admin/categorias";
+  }
 
-    // ── Pedidos ────────────────────────────────────────────
-    @GetMapping("/pedidos")
-    public String pedidos(Model model) {
-        model.addAttribute("pedidos", pedidoService.listarTodos());
-        model.addAttribute("status", Pedido.Status.values());
-        return "admin/pedidos/lista";
+  @PostMapping("/categorias/salvar")
+  public String salvarCategoria(
+      @Valid @ModelAttribute("categoria") Categoria categoria,
+      BindingResult result,
+      Model model,
+      RedirectAttributes redirectAttributes) {
+    if (result.hasErrors()) {
+      model.addAttribute("categorias", categoriaService.listarResumo());
+      return "admin/categorias";
     }
+    categoriaService.salvar(categoria);
+    redirectAttributes.addFlashAttribute("msg", "Categoria salva!");
+    return "redirect:/admin/categorias";
+  }
 
-    @GetMapping("/pedidos/{id}")
-    public String detalharPedido(@PathVariable Long id, Model model) {
-        model.addAttribute("pedido", pedidoService.buscarPorId(id));
-        model.addAttribute("statusOpcoes", Pedido.Status.values());
-        return "admin/pedidos/detalhe";
-    }
+  @PostMapping("/categorias/{id}/deletar")
+  public String deletarCategoria(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+    categoriaService.deletar(id);
+    redirectAttributes.addFlashAttribute("msg", "Categoria removida.");
+    return "redirect:/admin/categorias";
+  }
 
-    @PostMapping("/pedidos/{id}/status")
-    public String atualizarStatus(@PathVariable Long id,
-                                  @RequestParam Pedido.Status status,
-                                  RedirectAttributes redirectAttributes) {
-        pedidoService.atualizarStatus(id, status);
-        redirectAttributes.addFlashAttribute("msg", "Status atualizado!");
-        return "redirect:/admin/pedidos/" + id;
+  // ── Pedidos ────────────────────────────────────────────
+  @GetMapping("/pedidos")
+  public String pedidos(Model model, @RequestParam(required = false) Pedido.Status status,
+      @RequestParam(required = false) Pagamento.StatusPagamento pagamento, @RequestParam(defaultValue = "") String busca, @RequestParam(defaultValue = "false") boolean envio,
+      @RequestParam(defaultValue = "0") int pagina) {
+    var resultados = adminService.pedidos(status, pagamento, busca.strip(), envio, pagina);
+    model.addAttribute("pedidos", resultados.getContent());
+    model.addAttribute("pagina", resultados);
+    model.addAttribute("busca", busca.strip());
+    model.addAttribute("filtroStatus", status);
+    model.addAttribute("filtroPagamento", pagamento);
+    model.addAttribute("pagamentoOpcoes", Pagamento.StatusPagamento.values());
+    model.addAttribute("envio", envio);
+    model.addAttribute("statusOpcoes", Pedido.Status.values());
+    return "admin/pedidos/lista";
+  }
+
+  @PostMapping("/pagamentos/conciliar")
+  public String reconcile(@RequestParam String paymentId, RedirectAttributes flash) {
+    if (!paymentId.matches("[0-9]{1,20}"))
+      throw new IllegalArgumentException("ID de pagamento inválido.");
+    try {
+      payments.processarWebhook(paymentId, "payment");
+      flash.addFlashAttribute("msg", "Pagamento consultado e conciliado com o provedor.");
+    } catch (RuntimeException error) {
+      flash.addFlashAttribute(
+          "erro",
+          "Não foi possível conciliar. Confira conta, valor, ambiente e configuração no provedor.");
     }
+    return "redirect:/admin/pedidos";
+  }
+
+  @GetMapping("/pedidos/{id}")
+  public String detalharPedido(@PathVariable Long id, Model model) {
+    Pedido pedido = pedidoService.buscarPorId(id);
+    model.addAttribute("pedido", pedido);
+    model.addAttribute("statusOpcoes", pedidoService.acoesOperacionais(pedido).stream().filter(s->s==Pedido.Status.CANCELADO).toList());
+    model.addAttribute("expedicao", expedicoes.findById(id).orElse(null));
+    model.addAttribute("itensFisicos", pedido.getItens().stream().filter(i->i.getTipo()==Produto.Tipo.FISICO && pedido.getTemporadaPasseId()==null).toList());
+    model.addAttribute("atendimentos", atendimentos.findTop100ByPedidoIdOrderByIdDesc(id));
+    model.addAttribute("devolucoes", devolucoes.findByPedidoIdOrderByIdDesc(id));
+    model.addAttribute("reembolsos", reembolsos.findByPedidoIdOrderByIdDesc(id));
+    model.addAttribute("produtosTroca", produtosTroca.findByTipoOrderByNomeAsc(Produto.Tipo.FISICO).stream().filter(Produto::isAtivo).toList());
+    model.addAttribute("notaChave", java.util.UUID.randomUUID().toString());
+    model.addAttribute("historico", pedidoService.historico(id));
+    model.addAttribute("simulacaoDisponivel", payments.simulacaoDisponivel());
+    return "admin/pedidos/detalhe";
+  }
+
+  @PostMapping("/pedidos/{id}/simular")
+  public String simularPagamento(@PathVariable Long id, RedirectAttributes flash) {
+    try {
+      payments.simularAprovacao(id);
+      flash.addFlashAttribute("msg", "Pagamento simulado. Nenhuma cobrança foi realizada.");
+    } catch (IllegalStateException error) {
+      flash.addFlashAttribute("erro", error.getMessage());
+    }
+    return "redirect:/admin/pedidos/" + id;
+  }
+
+  @PostMapping("/pedidos/{id}/status")
+  public String atualizarStatus(
+      @PathVariable Long id,
+      @RequestParam Pedido.Status status,
+      RedirectAttributes redirectAttributes) {
+    try {
+      pedidoService.atualizarStatusOperacional(id, status);
+      redirectAttributes.addFlashAttribute("msg", "Status atualizado!");
+    } catch (IllegalStateException error) {
+      redirectAttributes.addFlashAttribute("erro", error.getMessage());
+    }
+    return "redirect:/admin/pedidos/" + id;
+  }
 }

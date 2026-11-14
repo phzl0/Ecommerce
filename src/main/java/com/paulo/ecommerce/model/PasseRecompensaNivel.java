@@ -13,7 +13,7 @@ import jakarta.persistence.UniqueConstraint;
 
 @Entity
 @Table(name = "passe_recompensas_nivel",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"temporada_id", "nivel"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"temporada_id", "nivel", "premium"}))
 public class PasseRecompensaNivel extends BaseEntity {
 
     @Id
@@ -38,6 +38,11 @@ public class PasseRecompensaNivel extends BaseEntity {
 
     @Column(nullable = false, length = 160)
     private String codigo;
+
+    @Column(nullable = false)
+    private boolean premium;
+    public boolean isPremium() { return premium; }
+    public void setPremium(boolean value) { premium = value; }
 
     public Long getId() {
         return id;

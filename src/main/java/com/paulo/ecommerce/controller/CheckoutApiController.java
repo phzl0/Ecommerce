@@ -2,11 +2,16 @@ package com.paulo.ecommerce.controller;
 
 import com.paulo.ecommerce.dto.CheckoutForm;
 import com.paulo.ecommerce.dto.api.CheckoutRequest;
+import com.paulo.ecommerce.dto.api.CheckoutItemRequest;
 import com.paulo.ecommerce.dto.api.CheckoutResponse;
 import com.paulo.ecommerce.model.Pagamento;
 import com.paulo.ecommerce.service.PagamentoService;
 import com.paulo.ecommerce.service.PedidoService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.util.List;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,38 +23,57 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/checkout")
 public class CheckoutApiController {
 
-    private final PedidoService pedidoService;
-    private final PagamentoService pagamentoService;
+  private final PedidoService pedidoService;
+  private final PagamentoService pagamentoService;
 
-    public CheckoutApiController(PedidoService pedidoService,
-                                 PagamentoService pagamentoService) {
-        this.pedidoService = pedidoService;
-        this.pagamentoService = pagamentoService;
+  public CheckoutApiController(PedidoService pedidoService, PagamentoService pagamentoService) {
+    this.pedidoService = pedidoService;
+    this.pagamentoService = pagamentoService;
+  }
+
+  @org.springframework.web.bind.annotation.GetMapping("/config")
+  public java.util.Map<String, Boolean> config() {
+    return pagamentoService.configuracaoPublica();
+  }
+
+  public record CotacaoRequest(
+      @NotEmpty @Size(max = 100) List<@NotNull @Valid CheckoutItemRequest> itens,
+      @Size(max = 60) String cupom) {}
+
+  @PostMapping("/quote")
+  public PedidoService.Cotacao cotar(
+      @Valid @RequestBody CotacaoRequest request, @AuthenticationPrincipal UserDetails user) {
+    return pedidoService.cotar(user == null ? null : user.getUsername(), request.cupom(), request.itens());
+  }
+
+  @PostMapping("/orders")
+  public CheckoutResponse criarPedido(
+      @Valid @RequestBody CheckoutRequest request,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    CheckoutForm form = new CheckoutForm();
+    form.setCupom(request.getCupom());
+    form.setNomeDestinatario(request.getNome());
+    form.setTelefoneContato(request.getTelefone());
+    form.setCep(request.getCep());
+    form.setLogradouro(request.getEndereco());
+    form.setNumero(request.getNumero());
+    form.setComplemento(request.getComplemento());
+    form.setBairro(request.getBairro());
+    form.setCidade(request.getCidade());
+    form.setUf(request.getEstado());
+    form.setObservacoes("Pagamento selecionado: " + request.getPagamento());
+
+    var pedido =
+        pedidoService.finalizarPedidoApi(
+            userDetails.getUsername(), form, request.getItens(), request.getIdempotencyKey());
+
+    Pagamento.MetodoPagamento metodo = pagamentoService.mapearMetodo(request.getPagamento());
+    String redirectUrl;
+    try {
+      redirectUrl = pagamentoService.iniciarFluxoPagamento(pedido.getId(), metodo);
+    } catch (RuntimeException error) {
+      redirectUrl = "/pedidos/" + pedido.getId() + "?paymentError=true";
     }
-
-    @PostMapping("/orders")
-    public CheckoutResponse criarPedido(@Valid @RequestBody CheckoutRequest request,
-                                        @AuthenticationPrincipal UserDetails userDetails) {
-        CheckoutForm form = new CheckoutForm();
-        form.setNomeDestinatario(request.getNome());
-        form.setTelefoneContato(request.getTelefone());
-        form.setCep(request.getCep());
-        form.setLogradouro(request.getEndereco());
-        form.setNumero(request.getNumero());
-        form.setComplemento(request.getComplemento());
-        form.setBairro(request.getBairro());
-        form.setCidade(request.getCidade());
-        form.setUf(request.getEstado());
-        form.setObservacoes("Pagamento selecionado: " + request.getPagamento());
-
-        var pedido = pedidoService.finalizarPedidoApi(
-                userDetails.getUsername(),
-                form,
-                request.getItens()
-        );
-
-        Pagamento.MetodoPagamento metodo = pagamentoService.mapearMetodo(request.getPagamento());
-        String redirectUrl = pagamentoService.iniciarFluxoPagamento(pedido.getId(), metodo);
-        return new CheckoutResponse(pedido.getId(), pedido.getNumero(), redirectUrl);
-    }
+    return new CheckoutResponse(pedido.getId(), pedido.getNumero(), redirectUrl);
+  }
 }

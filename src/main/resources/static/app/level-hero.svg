@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 480" fill="none">
+  <defs>
+    <linearGradient id="edge" x1="795" y1="68" x2="1377" y2="421" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3c9746" stop-opacity=".3"/>
+      <stop offset=".55" stop-color="#80ff58"/>
+      <stop offset="1" stop-color="#5ceca8" stop-opacity=".15"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="0" cy="0" r="1" gradientTransform="translate(1114 229) rotate(90) scale(245 359)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#50e74f" stop-opacity=".23"/>
+      <stop offset="1" stop-color="#50e74f" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse">
+      <path d="M34 0H0v34" stroke="#87ff97" stroke-opacity=".12"/>
+    </pattern>
+  </defs>
+  <path fill="url(#halo)" d="M732 0h708v480H732z"/>
+  <path fill="url(#grid)" d="M893 36h547v407H774z" opacity=".58"/>
+  <g stroke="url(#edge)">
+    <path d="M824 66h172l22 22h238l28-28h156M817 409h116l34-34h261l33 33h179" opacity=".55"/>
+    <path d="M1122 36l178 103v206l-178 103-178-103V139z" stroke-dasharray="5 12" opacity=".75"/>
+    <path d="M1122 71l147 85v168l-147 85-147-85V156z" stroke-width="2" opacity=".85"/>
+    <path d="M1122 107l115 66v134l-115 66-115-66V173z" stroke-width="2"/>
+    <path d="M1122 132l94 54v108l-94 54-94-54V186z" stroke-opacity=".55" fill="#0b2113" fill-opacity=".78"/>
+    <path d="M1040 136l32-18m105 244l33-19M1290 122l52 30v53m-413 69v53l52 30" stroke-width="3"/>
+    <path d="M871 153h40m-20-20v40m434 140h36m-18-18v36M828 311h24m-12-12v24" opacity=".75"/>
+  </g>
+  <path d="M1115 281h40v10h-40zm-26 17h66v4h-66z" fill="#79ff57" opacity=".4"/>
+  <path d="m1090 198 24 24 43-43 13 13-56 56-37-37 13-13Z" fill="#79ff57"/>
+  <path d="M1074 259h96" stroke="#79ff57" stroke-opacity=".65"/>
+  <circle cx="824" cy="66" r="4" fill="#79ff57"/>
+  <circle cx="1261" cy="408" r="4" fill="#79ff57"/>
+  <circle cx="1380" cy="158" r="3" fill="#79ff57" fill-opacity=".8"/>
+</svg>
