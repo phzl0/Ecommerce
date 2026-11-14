@@ -841,9 +841,11 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
   const [submittingReview, setSubmittingReview] = useState(false);
   const reviewSection = useRef(null);
   const reviewSubmitted = useRef(false);
+  const productInteraction = useRef(false);
 
   useEffect(() => {
     let active = true;
+    productInteraction.current = false;
     setProduct(null); setGalleryIndex(0); reviewSubmitted.current = false; setReviewMissions([]); setReviewMessage("");
     getJson(`/api/store/products/${productId}`).then(data => { if (active) setProduct(data); })
       .catch(() => { if (active) setProduct(false); });
@@ -861,6 +863,13 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
     getJson(`/api/pass/missions/review/${productId}`).then(missions => {
       if (!active || reviewSubmitted.current) return;
       setReviewMissions(missions);
+      if (!reviewRequested && missions.length === 0) {
+        getJson(`/api/pass/missions/product/${productId}`).then(tasks => {
+          if(active && !productInteraction.current && tasks.length && takeReviewReminder(auth.id,tasks)) {
+            const first=tasks[0];notify("Missão disponível", `${first.titulo} · ${first.progressoAtual}/${first.metaValor} · +${first.xpRecompensa} XP`,false,"mission",first.ctaHref || "/passe/missoes");
+          }
+        }).catch(()=>{});
+      }
       if (!reviewRequested && takeReviewReminder(auth.id, missions)) {
         notify("Missão de avaliação", reviewMissionLabel(missions),
           false, "mission", `/produto/${productId}?avaliar=1`);
@@ -951,14 +960,14 @@ function ProductDetailPage({ productId, onAddToCart, onBuyNow, auth, notify, rev
             <button
               className="lc-btn lc-btn-primary"
               disabled=${product.estoque <= 0}
-              onClick=${() => onBuyNow({...product, nome: product.nome + (product.opcao ? ` · ${product.opcao}` : "")})}
+              onClick=${() => { productInteraction.current = true; onBuyNow({...product, nome: product.nome + (product.opcao ? ` · ${product.opcao}` : "")}); }}
             >
               Comprar agora
             </button>
             <button
               className="lc-btn lc-btn-ghost"
               disabled=${product.estoque <= 0}
-              onClick=${() => onAddToCart({...product, nome: product.nome + (product.opcao ? ` · ${product.opcao}` : "")})}
+              onClick=${() => { productInteraction.current = true; onAddToCart({...product, nome: product.nome + (product.opcao ? ` · ${product.opcao}` : "")}); }}
             >
               Adicionar à sacola
             </button>
@@ -2408,8 +2417,10 @@ function PassMissionsPage({ auth, demoProducts }) {
   }, []);
 
   const missionGroups = dashboard ? [dashboard.missoesDiarias, dashboard.missoesSemanais, dashboard.missoesMensais] : [];
-  const missions = selected === 4 ? missionGroups.flat().filter(m => m.premium)
-    : (missionGroups[selected] || []).filter(m => !m.premium);
+  const allMissions = missionGroups.flat();
+  const missions = selected === 4 ? allMissions.filter(m => m.premium)
+    : selected === 3 ? allMissions.filter(m => m.especial && !m.premium)
+    : (missionGroups[selected] || []).filter(m => !m.premium && !m.especial);
   return html`<main className="lc-missions-page">
     <header className="lc-rewards-banner lc-missions-banner">
       <div className="lc-page lc-rewards-banner-content">
@@ -2438,7 +2449,7 @@ function PassMissionsPage({ auth, demoProducts }) {
         }}>${label}</button>`)}
     </div>
     <section id="mission-panel" className="lc-mission-panel" role="tabpanel" aria-labelledby=${`mission-tab-${selected}`}>
-      ${selected === 3 ? html`
+      ${selected === 3 && missions.length === 0 ? html`
         <div className="lc-missions-grid">
           ${events.map(event => html`<article key=${event.id} className="lc-mission-row">
             <div><h2>${event.titulo}</h2><p>${event.descricao}</p></div>
@@ -2454,7 +2465,7 @@ function PassMissionsPage({ auth, demoProducts }) {
             <div><h2>${mission.titulo}${mission.premium ? " · Premium" : ""}</h2><p>${mission.descricao}</p>
               <progress aria-label=${`Progresso de ${mission.titulo}`} value=${mission.progressoAtual}
                 max=${mission.metaValor}></progress>
-              <small>Renova em ${mission.resetaEm}</small>
+              <small>${mission.especial ? "Termina" : "Renova"} em ${mission.resetaEm}</small>
             </div>
             <div className="lc-mission-meta">
               <strong>+${mission.xpRecompensa} XP</strong>

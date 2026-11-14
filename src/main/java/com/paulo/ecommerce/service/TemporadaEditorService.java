@@ -70,7 +70,9 @@ public class TemporadaEditorService {
    var previsto=custo.multiply(BigDecimal.valueOf(pessoas));total=total.add(previsto);linhas.add(new Linha(r,os,custo,previsto));
   }
   for(var e:demanda.entrySet()){var p=produtos.findLockedById(e.getKey()).orElseThrow();if(p.getEstoque()<e.getValue())erros.add("Estoque insuficiente: "+p.nomeCompra()+" · disponível "+p.getEstoque()+", cenário conservador "+e.getValue());}
-  var ms=missoes.findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(id);if(ms.stream().noneMatch(PasseMissaoTemplate::isPremium))erros.add("Inclua ao menos uma missão exclusiva Premium sem gasto.");
+  var ms=missoes.findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(id);
+  for(var m:ms)if(m.getInicioEm()!=null&&m.getInicioEm().isBefore(t.getInicioEm())||m.getFimEm()!=null&&m.getFimEm().isAfter(t.getFimEm()))erros.add("Datas da missão fora da temporada: "+m.getTitulo());
+  if(ms.stream().noneMatch(PasseMissaoTemplate::isPremium))erros.add("Inclua ao menos uma missão exclusiva Premium sem gasto.");
   if(t.getFimEm().isBefore(LocalDate.now()))erros.add("A temporada já terminou.");
   var receita=(t.getPreco()==null?BigDecimal.ZERO:t.getPreco()).multiply(BigDecimal.valueOf(t.getPrevisaoPremium()));
   return new Previa(linhas,erros,total,receita,receita.subtract(total));

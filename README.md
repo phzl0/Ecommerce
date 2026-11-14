@@ -323,3 +323,14 @@ Em **Admin → Passe, VIP e Baú → Temporadas e recompensas**, crie uma tempor
 7. Após o último dia, encerre a temporada. Não se apagam prêmios, histórico nem itens do Baú. Pedidos de recompensa continuam no fluxo normal de entrega gratuita.
 
 O preço novo é fixado por temporada; mudanças nas regras comerciais globais não alteram temporadas criadas no editor nem pedidos existentes. Não há cobrança recorrente. Um rascunho do mês não é publicado automaticamente, não recebe progresso e não permite a compra Premium. Compras comuns continuam funcionando quando não houver temporada publicada disponível.
+
+
+### Gestão de missões e simulação
+
+Abra **Temporadas e recompensas → temporada → Gerenciar missões e simular progresso**. Edite, duplique e altere a ordem das missões enquanto a temporada estiver em rascunho. Regras publicadas e seu progresso ficam protegidos; ajustes que reduzam XP ou alterem metas não são aplicados retroativamente.
+
+- Configure descrição, ação, XP, meta, periodicidade, ordem e datas dentro da temporada. Missões especiais usam período mensal e permitem uma única conclusão na janela, aparecendo na aba Especiais (ou Premium quando exclusivas).
+- Use produto específico **ou** categoria. Um evento vinculado limita a vigência da missão à interseção de datas e horários; não exige comprar nem resgatar o evento. As ações configuradas continuam sendo check-in, navegação, sacola ou avaliação de compra aprovada.
+- Premium aceita somente check-in, navegação e sacola, sem compras ou avaliações obrigatórias. Uma ação no mesmo produto só conta uma vez por dia; check-in também conta uma vez por dia. Há recibo por usuário/missão/período/referência para impedir repetição de ações.
+- O simulador parte de zero XP para um cliente Premium e soma as missões gratuitas e Premium simples. Pressupõe a execução diária de todas as ações possíveis com o catálogo atual, respeitando metas, semanas, janelas de eventos e data de entrada. Compras, avaliações, XP extra e ganhos próprios de eventos ficam fora do cálculo. O resultado é uma estimativa, não garantia de conclusão.
+- Clientes veem progresso, XP e destino específico da missão. Lembretes de avaliação e das ações de produto usam intervalos de 3/6/12 horas por missão e janela no navegador, sem interromper uma ação de compra já iniciada. O controle de progresso é no servidor; a frequência dos lembretes é local ao navegador.

@@ -46,6 +46,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PasseService {
+  @org.springframework.beans.factory.annotation.Autowired private MissaoGestaoService gestaoMissoes;
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.PasseMissaoAcaoRepository acoesMissoes;
   @org.springframework.beans.factory.annotation.Autowired private FidelidadeService fidelidade;
   @org.springframework.beans.factory.annotation.Autowired private BauService bau;
   @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.repository.RecompensaOpcaoRepository opcoes;
@@ -132,6 +134,7 @@ public class PasseService {
         missaoTemplateRepository
             .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(
                 temporada.getId());
+    templates = templates.stream().filter(gestaoMissoes::ativaHoje).toList();
     Map<Long, PasseMissaoProgresso> progressoMap =
         carregarProgressoMissao(usuario, temporada, templates);
 
@@ -217,7 +220,7 @@ public class PasseService {
   @Transactional
   public Map<String, Object> visualizarMissoes() {
     var temporada = obterPasseAtual();
-    var templates = missaoTemplateRepository.findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId());
+    var templates = missaoTemplateRepository.findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.getId()).stream().filter(gestaoMissoes::ativaHoje).toList();
     return Map.of("premiumAtivo", false,
         "missoesDiarias", buildMissaoResponses(templates, Map.of(), PassePeriodicidade.DIARIA, null),
         "missoesSemanais", buildMissaoResponses(templates, Map.of(), PassePeriodicidade.SEMANAL, null),
@@ -265,6 +268,7 @@ public class PasseService {
         .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.get().getId())
         .stream()
         .filter(template -> template.getAcaoTipo() == PasseAcaoTipo.REVIEW_SUBMITTED)
+        .filter(template -> gestaoMissoes.aceita(template,"review-"+produtoId))
         .map(template -> {
           var periodo = resolverPeriodo(template.getPeriodicidade());
           var progresso = missaoProgressoRepository.findByUsuarioIdAndTemplateIdAndPeriodoInicio(
@@ -273,6 +277,18 @@ public class PasseService {
         })
         .filter(missao -> !missao.concluida())
         .toList();
+  }
+
+  @Transactional(readOnly=true)
+  public List<PasseMissaoResponse> missoesDoProduto(String email,Long produtoId){
+    var usuario=usuarioRepository.findByEmail(email).orElseThrow();var mes=YearMonth.now();
+    var atual=temporadaRepository.findByAnoAndMes(mes.getYear(),mes.getMonthValue());if(atual.isEmpty()||!atual.get().disponivel())return List.of();
+    var t=atual.get();boolean premium=validadePremium(usuario,t,LocalDateTime.now())!=null;
+    return missaoTemplateRepository.findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(t.getId()).stream()
+      .filter(m->m.getAcaoTipo()==PasseAcaoTipo.VIEW_PRODUCT||m.getAcaoTipo()==PasseAcaoTipo.ADD_TO_CART)
+      .filter(m->!m.isPremium()||premium).filter(m->gestaoMissoes.aceita(m,"produto-"+produtoId))
+      .map(m->{var periodo=resolverPeriodo(m.getPeriodicidade());return toMissaoResponse(m,missaoProgressoRepository.findByUsuarioIdAndTemplateIdAndPeriodoInicio(usuario.getId(),m.getId(),periodo.inicio()).orElse(null),periodo,null);})
+      .filter(m->!m.concluida()).toList();
   }
 
   @Transactional
@@ -319,6 +335,7 @@ public class PasseService {
             .toList();
 
     for (PasseMissaoTemplate template : templates) {
+      if (!gestaoMissoes.aceita(template,referencia)) continue;
       if (template.isPremium() && validadePremium(usuario, temporada, LocalDateTime.now()) == null) continue;
       PeriodoPeriodo periodo = resolverPeriodo(template.getPeriodicidade());
       PasseMissaoProgresso progresso =
@@ -331,6 +348,11 @@ public class PasseService {
         continue;
       }
 
+      if(valor<=0) continue;
+      if(referencia==null||referencia.isBlank()||referencia.length()>120)throw new IllegalArgumentException("Referência de ação inválida.");
+      String refUnica=referencia+(acaoTipo==PasseAcaoTipo.CHECKIN||acaoTipo==PasseAcaoTipo.VIEW_PRODUCT||acaoTipo==PasseAcaoTipo.ADD_TO_CART?":"+LocalDate.now():"");
+      if(acoesMissoes.existsByUsuarioIdAndTemplateIdAndPeriodoInicioAndReferencia(usuario.getId(),template.getId(),periodo.inicio(),refUnica))continue;
+      var recibo=new com.paulo.ecommerce.model.PasseMissaoAcao();recibo.usuarioId=usuario.getId();recibo.templateId=template.getId();recibo.periodoInicio=periodo.inicio();recibo.referencia=refUnica;acoesMissoes.save(recibo);
       int incremento = Math.max(valor, 0);
       int novoProgresso =
           (int)
@@ -747,14 +769,18 @@ public class PasseService {
   private PasseMissaoResponse toMissaoResponse(PasseMissaoTemplate template,
       PasseMissaoProgresso progresso, PeriodoPeriodo periodo, Long produtoParaAvaliar) {
     CtaMissao cta = resolverCta(template.getAcaoTipo(), produtoParaAvaliar);
+    if(template.getProdutoId()!=null)cta=new CtaMissao(template.getAcaoTipo()==PasseAcaoTipo.REVIEW_SUBMITTED?"Avaliar":"Ver produto","/produto/"+template.getProdutoId()+(template.getAcaoTipo()==PasseAcaoTipo.REVIEW_SUBMITTED?"?avaliar=1":""));
+    else if(template.getCategoriaId()!=null)cta=new CtaMissao("Ver categoria","/catalogo?categoriaId="+template.getCategoriaId());
+    else if(template.getEventoId()!=null&&template.getAcaoTipo()==PasseAcaoTipo.CHECKIN)cta=new CtaMissao("Ver evento","/passe#eventos");
     var fimTemporada = template.getTemporada().getFimEm().plusDays(1).atStartOfDay();
     var fim = periodo.fim().isAfter(fimTemporada) ? fimTemporada : periodo.fim();
+    if(template.getFimEm()!=null&&fim.isAfter(template.getFimEm().plusDays(1).atStartOfDay()))fim=template.getFimEm().plusDays(1).atStartOfDay();
     return new PasseMissaoResponse(
         template.getId(), template.getPeriodicidade().name(), template.getAcaoTipo().name(),
         template.getTitulo(), template.getDescricao(),
         progresso == null ? 0 : progresso.getProgressoAtual(), template.getMetaValor(),
         template.getXpRecompensa(), progresso != null && Boolean.TRUE.equals(progresso.getConcluida()),
-        fim.format(DATE_TIME_FORMATTER), cta.label(), cta.href(), template.isPremium());
+        fim.format(DATE_TIME_FORMATTER), cta.label(), cta.href(), template.isPremium(),template.isEspecial());
   }
 
   private Map<Long, PasseMissaoProgresso> carregarProgressoMissao(

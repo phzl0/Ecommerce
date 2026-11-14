@@ -13,6 +13,6 @@ public record PasseMissaoResponse(
         String resetaEm,
         String ctaLabel,
         String ctaHref,
-        boolean premium
+        boolean premium, boolean especial
 ) {
 }

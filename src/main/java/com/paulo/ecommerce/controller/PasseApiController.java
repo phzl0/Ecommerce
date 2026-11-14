@@ -30,6 +30,9 @@ public class PasseApiController {
     this.passeService = passeService;
   }
 
+  @GetMapping("/missions/product/{produtoId}")
+  public java.util.List<com.paulo.ecommerce.dto.api.PasseMissaoResponse> missoesProduto(@PathVariable Long produtoId,@AuthenticationPrincipal UserDetails userDetails){return passeService.missoesDoProduto(userDetails.getUsername(),produtoId);}
+
   @GetMapping("/preview")
   public List<PasseNivelResponse> preview() {
     return passeService.visualizarTrilha();
