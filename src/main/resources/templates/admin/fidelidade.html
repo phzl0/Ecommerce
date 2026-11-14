@@ -4,7 +4,8 @@
 <title>Passe, VIP e Baú | LEVEL</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css"><script src="/js/admin.js" defer></script></head>
 <body class="admin-body"><div class="admin-layout">
 <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='fidelidade')}"></div>
-<main class="admin-main"><header class="admin-header"><div><h1>Passe, VIP e Baú</h1>
+<main class="admin-main">
+        <div th:replace="~{admin/fragments/sidebar :: topbar}"></div><header class="admin-header"><div><h1>Passe, VIP e Baú</h1>
 <p class="admin-subtitle">Configure pontos, recompensas e missões. Os valores iniciais são exemplos de desenvolvimento.</p></div></header><nav class="admin-section-nav" aria-label="Seções de fidelidade"><a href="#regras">Regras</a><a href="#niveis">VIP</a><a href="#premios">Prêmios</a><a href="#missoes">Missões</a><a href="#resgates">Baú</a></nav>
 <p th:if="${msg}" th:text="${msg}" role="status" class="alert alert-sucesso"></p><p th:if="${erro}" th:text="${erro}" role="alert" class="alert alert-erro"></p>
 <section id="regras" class="form-card"><h2>Regras comerciais</h2><p>O passe termina no último dia da temporada. O VIP expira após o período de inatividade configurado.</p>

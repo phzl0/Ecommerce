@@ -2,6 +2,7 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Produtos digitais | LEVEL</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css"><script src="/js/admin.js" defer></script></head>
 <body class="admin-body"><div class="admin-layout"><div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='digitais')}"></div><main class="admin-main">
+        <div th:replace="~{admin/fragments/sidebar :: topbar}"></div>
 <header class="admin-header"><div><span class="admin-eyebrow">OPERAÇÃO DA LOJA</span><h1>Produtos digitais</h1></div><a class="admin-button secondary" href="/admin/produtos">Produtos</a></header>
 <p th:if="${msg}" th:text="${msg}" class="alert alert-sucesso" role="status"></p><p th:if="${erro}" th:text="${erro}" class="alert alert-erro" role="alert"></p>
 

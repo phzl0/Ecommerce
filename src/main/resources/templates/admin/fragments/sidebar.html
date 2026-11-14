@@ -41,5 +41,9 @@
 
 </nav></details>
 </aside>
+<div th:fragment="topbar" class="admin-topbar">
+  <span>Painel da loja</span><div class="admin-topbar-actions"><button type="button" class="admin-button secondary" data-admin-search>Buscar seção <kbd>Ctrl K</kbd></button><span class="admin-store-label">LEVEL Commerce</span></div>
+  <dialog class="admin-search-dialog" aria-labelledby="admin-search-title"><header><h2 id="admin-search-title">Ir para uma seção</h2><button type="button" class="btn-link" data-admin-search-close aria-label="Fechar busca">×</button></header><label for="admin-section-search">Qual seção você procura?</label><input id="admin-section-search" type="search" placeholder="Pedidos, produtos, estoque…" autocomplete="off"><nav class="admin-search-results" aria-label="Resultados da busca de seções"></nav><p class="admin-search-empty" hidden>Nenhuma seção encontrada.</p></dialog>
+</div>
 </body>
 </html>

@@ -12,6 +12,7 @@
     <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='produtos')}"></div>
 
     <main class="admin-main">
+        <div th:replace="~{admin/fragments/sidebar :: topbar}"></div>
         <header class="admin-header">
             <div>
                 <a th:href="@{/admin/produtos}" class="btn-link">‹ Produtos e estoque</a>

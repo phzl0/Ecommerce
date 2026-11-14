@@ -12,6 +12,7 @@
     <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='pedidos')}"></div>
 
     <main class="admin-main">
+        <div th:replace="~{admin/fragments/sidebar :: topbar}"></div>
         <div class="admin-header">
             <div><span class="admin-eyebrow">OPERAÇÃO</span>
                 <h1 th:text="'Pedido ' + ${pedido.numero}">Pedido</h1>

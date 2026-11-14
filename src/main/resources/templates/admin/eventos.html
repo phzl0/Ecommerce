@@ -11,6 +11,7 @@
 <div class="admin-layout">
     <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='eventos')}"></div>
     <main class="admin-main">
+        <div th:replace="~{admin/fragments/sidebar :: topbar}"></div>
         <header class="admin-header"><div><span class="admin-eyebrow">ENGAJAMENTO</span>
             <h1>Eventos e passe</h1><p class="admin-subtitle">Acompanhe a temporada e publique campanhas semanais.</p></div>
             <a href="/eventos" class="admin-button secondary">Ver eventos na loja</a>
