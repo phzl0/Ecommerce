@@ -1,6 +1,7 @@
 package com.paulo.ecommerce.dto.api;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public record AccountOrderSummaryResponse(
         Long id,
@@ -11,6 +12,7 @@ public record AccountOrderSummaryResponse(
         BigDecimal frete,
         String dataPedido,
         int totalItens,
-        String pagamentoStatus
+        String pagamentoStatus,
+        List<AccountOrderItemResponse> itens
 ) {
 }

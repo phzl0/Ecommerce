@@ -22,6 +22,10 @@ public class CategoriaService {
         return categoriaRepository.findAll();
     }
 
+    public List<CategoriaRepository.Resumo> listarResumo() {
+        return categoriaRepository.listarResumo();
+    }
+
     public Categoria buscarPorId(Long id) {
         return categoriaRepository.findById(id)
                 .orElseThrow(() ->

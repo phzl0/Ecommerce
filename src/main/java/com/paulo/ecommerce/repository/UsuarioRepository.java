@@ -1,10 +1,24 @@
 package com.paulo.ecommerce.repository;
 
 import com.paulo.ecommerce.model.Usuario;
-import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
-    Optional<Usuario> findByEmail(String email);
-    boolean existsByEmail(String email);
+  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+  @org.springframework.data.jpa.repository.Query("select x from Usuario x where x.email = :value")
+  java.util.Optional<Usuario> findLockedByEmail(
+      @org.springframework.data.repository.query.Param("value") String value);
+
+  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+  @org.springframework.data.jpa.repository.Query("select x from Usuario x where x.id = :id")
+  Optional<Usuario> findLockedById(Long id);
+
+  Optional<Usuario> findByEmail(String email);
+  java.util.List<Usuario> findByEmailIgnoreCase(String email);
+  boolean existsByEmailIgnoreCase(String email);
+
+  boolean existsByEmail(String email);
+
+  long countByRole(Usuario.Role role);
 }

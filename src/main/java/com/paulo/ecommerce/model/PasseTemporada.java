@@ -44,6 +44,22 @@ public class PasseTemporada extends BaseEntity {
     @Column(nullable = false)
     private LocalDate fimEm;
 
+    @Column(nullable=false,length=20) private String estado = "PUBLICADO";
+    @Column(nullable=false) private boolean gerenciada;
+    @Column(precision=10,scale=2) private java.math.BigDecimal preco;
+    @Column(nullable=false) private int previsaoGratuitos = 0;
+    @Column(nullable=false) private int previsaoPremium = 0;
+    @Column(length=120) private String publicadoPor;
+    private java.time.LocalDateTime publicadoEm;
+    public String getEstado(){return estado;} public void setEstado(String v){estado=v;}
+    public boolean isGerenciada(){return gerenciada;} public void setGerenciada(boolean v){gerenciada=v;}
+    public java.math.BigDecimal getPreco(){return preco;} public void setPreco(java.math.BigDecimal v){preco=v;}
+    public int getPrevisaoGratuitos(){return previsaoGratuitos;} public void setPrevisaoGratuitos(int v){previsaoGratuitos=v;}
+    public int getPrevisaoPremium(){return previsaoPremium;} public void setPrevisaoPremium(int v){previsaoPremium=v;}
+    public String getPublicadoPor(){return publicadoPor;} public void setPublicadoPor(String v){publicadoPor=v;}
+    public java.time.LocalDateTime getPublicadoEm(){return publicadoEm;} public void setPublicadoEm(java.time.LocalDateTime v){publicadoEm=v;}
+    public boolean disponivel(){var hoje=java.time.LocalDate.now();return Boolean.TRUE.equals(ativa)&&"PUBLICADO".equals(estado)&&!hoje.isBefore(inicioEm)&&!hoje.isAfter(fimEm);}
+
     public Long getId() {
         return id;
     }

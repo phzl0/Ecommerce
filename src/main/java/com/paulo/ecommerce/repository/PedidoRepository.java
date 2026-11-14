@@ -1,48 +1,114 @@
 package com.paulo.ecommerce.repository;
 
 import com.paulo.ecommerce.model.Pedido;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.Param;
+import com.paulo.ecommerce.model.Pagamento;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
 
 public interface PedidoRepository extends JpaRepository<Pedido, Long> {
+  java.util.List<Pedido> findByPedidoOrigemId(Long pedidoOrigemId);
 
-    @EntityGraph(attributePaths = {"usuario", "itens", "itens.produto"})
-    List<Pedido> findByUsuarioIdOrderByDataPedidoDesc(Long usuarioId);
+  @EntityGraph(attributePaths={"usuario","pagamento"})
+  @Query("""
+    select p from Pedido p left join PedidoExpedicao e on e.pedidoId=p.id left join p.pagamento pg
+    where p.status in ('CONFIRMADO','ENVIADO','ENTREGUE') and p.temporadaPasseId is null
+    and (p.recompensa=true or p.pedidoOrigemId is not null or pg.status='APROVADO')
+    and exists(select i.id from ItemPedido i where i.pedido=p and i.tipo='FISICO')
+    and (:etapa='' or coalesce(e.etapa,'NA_FILA')=:etapa)
+    """)
+  Page<Pedido> filaExpedicao(String etapa,Pageable pagina);
 
-    @EntityGraph(attributePaths = {"usuario", "itens", "itens.produto"})
-    List<Pedido> findAll(Sort sort);
+  java.util.Optional<Pedido> findByUsuarioIdAndCheckoutKey(Long usuarioId, String checkoutKey);
 
-    @Query("""
+  java.util.Optional<Pedido> findFirstByUsuarioIdAndPasseMensalTrueAndStatusAndDataPedidoAfterOrderByIdDesc(
+      Long usuarioId, Pedido.Status status, LocalDateTime limite);
+
+  @Query("""
+      select p from Pedido p join fetch p.pagamento pg
+      where p.usuario.id = :usuarioId and p.temporadaPasseId is not null
+        and p.status <> 'CANCELADO' and pg.status = 'APROVADO'
+        and p.temporadaPasseId = :temporadaId and pg.pagoEm >= :limite
+      """)
+  List<Pedido> pagamentosPasse(Long usuarioId, Long temporadaId, LocalDateTime limite);
+
+  List<Pedido> findTop100ByStatusAndDataPedidoBeforeOrderByIdAsc(
+      Pedido.Status status, LocalDateTime limite);
+
+  @Query("""
+      select p.subtotal - p.desconto from Pedido p join p.pagamento pg
+      where p.usuario.id = :usuario and p.temporadaPasseId is null
+        and p.status <> 'CANCELADO' and pg.status = 'APROVADO'
+        and pg.pagoEm >= :inicio and pg.pagoEm < :fim
+        and p.subtotal - p.desconto >= :minimo
+      """)
+  List<BigDecimal> comprasEvento(Long usuario, LocalDateTime inicio, LocalDateTime fim, BigDecimal minimo);
+
+  @Query("select p.usuario.email from Pedido p where p.id = :id")
+  java.util.Optional<String> findOwnerEmail(@Param("id") Long id);
+
+  @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+  @org.springframework.data.jpa.repository.Query("select x from Pedido x where x.id = :value")
+  java.util.Optional<Pedido> findLockedById(
+      @org.springframework.data.repository.query.Param("value") Long value);
+
+  @EntityGraph(attributePaths = {"usuario", "itens", "itens.produto"})
+  List<Pedido> findByUsuarioIdOrderByDataPedidoDesc(Long usuarioId);
+
+  @EntityGraph(attributePaths = {"usuario", "itens", "itens.produto"})
+  List<Pedido> findAll(Sort sort);
+
+  @Query(
+      """
         SELECT COALESCE(SUM(p.total), 0)
         FROM Pedido p
-        WHERE p.status != 'CANCELADO'
+        WHERE p.status != 'CANCELADO' AND p.pagamento.status = 'APROVADO'
         AND p.dataPedido >= :inicio
         """)
-    BigDecimal receitaDesde(@Param("inicio") LocalDateTime inicio);
+  BigDecimal receitaDesde(@Param("inicio") LocalDateTime inicio);
 
-    @Query("""
+  @Query(
+      """
         SELECT p FROM Pedido p
         LEFT JOIN FETCH p.usuario
+        LEFT JOIN FETCH p.pagamento
         LEFT JOIN FETCH p.itens i
         LEFT JOIN FETCH i.produto
         WHERE p.id = :id
         """)
-    java.util.Optional<Pedido> findByIdComDetalhes(@Param("id") Long id);
+  java.util.Optional<Pedido> findByIdComDetalhes(@Param("id") Long id);
 
-    @Query("SELECT COUNT(p) FROM Pedido p WHERE p.status = :status")
-    long countByStatus(
-            @Param("status") Pedido.Status status);
+  @Query("SELECT COUNT(p) FROM Pedido p WHERE p.status = :status")
+  long countByStatus(@Param("status") Pedido.Status status);
 
-    @Query("""
+  @Query("select count(p) from Pedido p where p.status=:status and p.temporadaPasseId is null and exists (select i.id from ItemPedido i where i.pedido=p and i.tipo='FISICO')")
+  long countByStatusAndTemporadaPasseIdIsNull(Pedido.Status status);
+
+  @EntityGraph(attributePaths = {"usuario", "pagamento"})
+  @Query("""
+      select p from Pedido p left join p.pagamento pg
+      where (:status is null or p.status = :status)
+        and (:pagamento is null or pg.status = :pagamento)
+        and (:envio = false or (p.temporadaPasseId is null and exists (select i.id from ItemPedido i where i.pedido=p and i.tipo='FISICO')))
+        and (:busca = '' or locate(lower(:busca), lower(coalesce(p.numero, ''))) > 0
+          or locate(lower(:busca), lower(p.usuario.nome)) > 0
+          or locate(lower(:busca), lower(p.usuario.email)) > 0
+          or str(p.id) = :busca)
+      """)
+  Page<Pedido> buscarPedidosAdmin(Pedido.Status status, Pagamento.StatusPagamento pagamento,
+      String busca, boolean envio, Pageable pagina);
+
+  @Query(
+      """
         SELECT p FROM Pedido p
         LEFT JOIN FETCH p.usuario
         WHERE p.dataPedido >= :inicio
-        ORDER BY p.dataPedido DESC
+        ORDER BY p.dataPedido DESC, p.id DESC
         """)
-    List<Pedido> findPedidosRecentes(
-            @Param("inicio") LocalDateTime inicio);
+  List<Pedido> findPedidosRecentes(@Param("inicio") LocalDateTime inicio, Pageable pagina);
 }

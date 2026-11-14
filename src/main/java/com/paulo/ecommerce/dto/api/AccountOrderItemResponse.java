@@ -8,6 +8,9 @@ public record AccountOrderItemResponse(
         String imagemUrl,
         Integer quantidade,
         BigDecimal precoUnitario,
-        BigDecimal subtotal
+        BigDecimal subtotal,
+        String descricaoCurta,
+        boolean produtoDisponivel,
+        String tipo
 ) {
 }

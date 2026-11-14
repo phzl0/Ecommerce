@@ -55,6 +55,25 @@ public class PasseMissaoTemplate extends BaseEntity {
     @Column(nullable = false)
     private Boolean ativa = Boolean.TRUE;
 
+    @Column(nullable = false)
+    private boolean premium;
+    public boolean isPremium() { return premium; }
+    public void setPremium(boolean value) { premium = value; }
+
+    private Long produtoId;
+    private Long categoriaId;
+    private Long eventoId;
+    private java.time.LocalDate inicioEm;
+    private java.time.LocalDate fimEm;
+    @Column(nullable=false) private boolean especial;
+    public Long getProdutoId(){return produtoId;} public void setProdutoId(Long v){produtoId=v;}
+    public Long getCategoriaId(){return categoriaId;} public void setCategoriaId(Long v){categoriaId=v;}
+    public Long getEventoId(){return eventoId;} public void setEventoId(Long v){eventoId=v;}
+    public java.time.LocalDate getInicioEm(){return inicioEm;} public void setInicioEm(java.time.LocalDate v){inicioEm=v;}
+    public java.time.LocalDate getFimEm(){return fimEm;} public void setFimEm(java.time.LocalDate v){fimEm=v;}
+    public boolean isEspecial(){return especial;} public void setEspecial(boolean v){especial=v;}
+    public boolean disponivelEm(java.time.LocalDate dia){return Boolean.TRUE.equals(ativa)&&(inicioEm==null||!dia.isBefore(inicioEm))&&(fimEm==null||!dia.isAfter(fimEm));}
+
     public Long getId() {
         return id;
     }

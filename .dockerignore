@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+storage
+node_modules
+target
+test-results
+playwright-report
+*.log
+*.key
+*.pem
+__pycache__
