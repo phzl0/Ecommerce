@@ -53,6 +53,7 @@ public class FidelidadeDemoService {
     }
     var mes = YearMonth.now();
     var temporada = temporadas.findByAnoAndMes(mes.getYear(), mes.getMonthValue()).orElseThrow();
+    if (temporada.isGerenciada()) return;
     recompensas.findByTemporadaIdOrderByNivelAsc(temporada.getId()).stream()
         .filter(r -> r.isPremium() && r.getNivel().equals(temporada.getTotalNiveis()))
         .filter(r -> opcoes.findByRecompensaIdOrderByIdAsc(r.getId()).isEmpty())

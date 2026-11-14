@@ -6,7 +6,7 @@
 <div th:replace="~{admin/fragments/sidebar :: sidebar(activePage='fidelidade')}"></div>
 <main class="admin-main">
         <div th:replace="~{admin/fragments/sidebar :: topbar}"></div><header class="admin-header"><div><h1>Passe, VIP e Baú</h1>
-<p class="admin-subtitle">Configure pontos, recompensas e missões. Os valores iniciais são exemplos de desenvolvimento.</p></div></header><nav class="admin-section-nav" aria-label="Seções de fidelidade"><a href="#regras">Regras</a><a href="#niveis">VIP</a><a href="#premios">Prêmios</a><a href="#missoes">Missões</a><a href="#resgates">Baú</a></nav>
+<p class="admin-subtitle">Configure pontos, recompensas e missões. Os valores iniciais são exemplos de desenvolvimento.</p></div></header><div class="admin-actions"><a class="admin-button" href="/admin/temporadas">Temporadas e recompensas</a></div><nav class="admin-section-nav" aria-label="Seções de fidelidade"><a href="#regras">Regras</a><a href="#niveis">VIP</a><a href="#premios">Prêmios</a><a href="#missoes">Missões</a><a href="#resgates">Baú</a></nav>
 <p th:if="${msg}" th:text="${msg}" role="status" class="alert alert-sucesso"></p><p th:if="${erro}" th:text="${erro}" role="alert" class="alert alert-erro"></p>
 <section id="regras" class="form-card"><h2>Regras comerciais</h2><p>O passe termina no último dia da temporada. O VIP expira após o período de inatividade configurado.</p>
 <form method="post" th:action="@{/admin/fidelidade/config}" class="lc-admin-event-form">

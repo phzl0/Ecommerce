@@ -308,3 +308,18 @@ docker compose up -d --build
 ```
 
 Não remova os volumes para atualizar: eles mantêm os dados locais.
+
+
+### Editor de temporadas do passe
+
+Em **Admin → Passe, VIP e Baú → Temporadas e recompensas**, crie uma temporada mensal em rascunho. O editor fixa 30 níveis, preço por temporada e XP compartilhado. Um mês aceita uma temporada; períodos devem ficar dentro do mês. A temporada atual anterior ao editor continua funcionando.
+
+1. Configure nome, datas, preço e previsões de concluintes gratuitos/compradores Premium.
+2. Cadastre os 30 prêmios Premium e o prêmio final gratuito. O botão de exemplos preenche níveis vazios com selos demonstrativos; revise-os antes de publicar.
+3. Prêmios físicos aceitam um SKU fixo ou duas opções para escolha. Informe custo de aquisição e custo de entrega de cada opção. Repetir a opção atualiza seus custos; opções podem ser removidas no rascunho.
+4. Cadastre missões: as exclusivas Premium aceitam check-in, visualização e sacola sem obrigação de compra. Elas concedem XP ao progresso compartilhado.
+5. Confira a prévia e o orçamento. Compradores Premium recebem as duas trilhas; a estimativa usa a opção mais cara por prêmio. O estoque considera todas as pessoas escolhendo cada opção e soma a demanda de SKUs repetidos. O cálculo não inclui impostos, taxas, custos digitais ou outros custos operacionais e não representa lucro.
+6. Publique após confirmar a revisão. O servidor valida novamente estoque e período, impede sobreposição e protege as regras publicadas contra edição. Futuras temporadas publicadas só ficam acessíveis durante suas datas. A conferência não reserva estoque: reservas continuam ocorrendo no resgate, portanto mantenha planejamento de reposição.
+7. Após o último dia, encerre a temporada. Não se apagam prêmios, histórico nem itens do Baú. Pedidos de recompensa continuam no fluxo normal de entrega gratuita.
+
+O preço novo é fixado por temporada; mudanças nas regras comerciais globais não alteram temporadas criadas no editor nem pedidos existentes. Não há cobrança recorrente. Um rascunho do mês não é publicado automaticamente, não recebe progresso e não permite a compra Premium. Compras comuns continuam funcionando quando não houver temporada publicada disponível.

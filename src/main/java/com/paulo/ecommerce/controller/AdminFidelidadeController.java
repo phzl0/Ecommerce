@@ -99,6 +99,7 @@ public class AdminFidelidadeController {
   @Transactional
   public String opcao(@RequestParam Long recompensaId, @RequestParam Long produtoId, RedirectAttributes flash) {
     var recompensa = recompensas.findById(recompensaId).orElseThrow();
+    if (recompensa.getTemporada().isGerenciada()) throw new IllegalArgumentException("Use o editor de temporadas para gerenciar este prêmio.");
     var produto = produtos.findById(produtoId).orElseThrow();
     var existentes = opcoes.findByRecompensaIdOrderByIdAsc(recompensaId);
     if (produto.getTipo() != Produto.Tipo.FISICO || existentes.size() >= 2
@@ -125,7 +126,9 @@ public class AdminFidelidadeController {
     }
     var mes = YearMonth.now();
     var m = new PasseMissaoTemplate();
-    m.setTemporada(temporadas.findByAnoAndMes(mes.getYear(), mes.getMonthValue()).orElseThrow());
+    var temporada = temporadas.findByAnoAndMes(mes.getYear(), mes.getMonthValue()).orElseThrow();
+    if(temporada.isGerenciada()) throw new IllegalStateException("Use o editor de temporadas para gerenciar as missões.");
+    m.setTemporada(temporada);
     m.setCodigo("admin-" + java.util.UUID.randomUUID());
     m.setTitulo(titulo); m.setDescricao(titulo); m.setAcaoTipo(acao); m.setPeriodicidade(periodicidade);
     m.setMetaValor(meta); m.setXpRecompensa(xp); m.setPremium(premium); m.setOrdemExibicao(100);

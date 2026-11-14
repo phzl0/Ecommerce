@@ -115,6 +115,7 @@ public class PasseService {
             .findByAnoAndMes(yearMonth.getYear(), yearMonth.getMonthValue())
             .orElseGet(() -> criarTemporada(yearMonth));
 
+    if (temporada.isGerenciada()) return;
     criarRecompensas(temporada);
     criarMissoes(temporada);
     criarMissoesPremium(temporada);
@@ -193,7 +194,7 @@ public class PasseService {
 
     return new PasseDashboardResponse(
         premiumAtivoAgora,
-        fidelidade.config().precoPasse,
+        precoTemporada(temporada),
         premiumValidoAte,
         temporada.getNome(),
         temporada.getInicioEm().format(DateTimeFormatter.ofPattern("dd/MM"))
@@ -259,7 +260,7 @@ public class PasseService {
 
     YearMonth mes = YearMonth.now();
     var temporada = temporadaRepository.findByAnoAndMes(mes.getYear(), mes.getMonthValue());
-    if (temporada.isEmpty()) return List.of();
+    if (temporada.isEmpty() || !temporada.get().disponivel()) return List.of();
     return missaoTemplateRepository
         .findByTemporadaIdAndAtivaTrueOrderByPeriodicidadeAscOrdemExibicaoAsc(temporada.get().getId())
         .stream()
@@ -357,7 +358,11 @@ public class PasseService {
   }
   @Transactional
   public void registrarXpCompraAprovada(String emailUsuario,Long pedidoId,BigDecimal totalPedido,int xpExtra) {
-    PasseTemporada temporada = obterPasseAtual();
+    garantirPasseAtual();
+    var mes = YearMonth.now();
+    var vigente = temporadaRepository.findByAnoAndMes(mes.getYear(),mes.getMonthValue());
+    if(vigente.isEmpty() || !vigente.get().disponivel()) return;
+    PasseTemporada temporada = vigente.get();
     Usuario usuario = buscarUsuario(emailUsuario);
     String referencia = "PURCHASE-" + pedidoId;
     if (!xpHistoricoRepository
@@ -681,7 +686,7 @@ public class PasseService {
 
   public void validarTemporadaCompra(Long id) {
     var temporada = temporadaRepository.findById(id).orElseThrow();
-    if (LocalDate.now().isBefore(temporada.getInicioEm()) || LocalDate.now().isAfter(temporada.getFimEm()))
+    if (!temporada.disponivel())
       throw new IllegalStateException("A temporada deste pedido encerrou. O pagamento exige conciliação.");
   }
 
@@ -703,7 +708,7 @@ public class PasseService {
                   virtual.setNome("Passe Premium · " + temporada.getNome());
                   virtual.setTipo(Produto.Tipo.DIGITAL);
                   virtual.setSku("PASSE-MENSAL-" + temporada.getSlug());
-                  virtual.setPreco(fidelidade.config().precoPasse);
+                  virtual.setPreco(precoTemporada(temporada));
                   virtual.setAtivo(false);
                   virtual.setEstoque(0);
                   return produtoRepository.save(virtual);
@@ -714,15 +719,15 @@ public class PasseService {
     pedido.setPasseMensal(true);
     pedido.setNumero(
         "PP-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 24));
-    pedido.setSubtotal(fidelidade.config().precoPasse);
+    pedido.setSubtotal(precoTemporada(temporada));
     pedido.setFrete(BigDecimal.ZERO);
-    pedido.setTotal(fidelidade.config().precoPasse);
+    pedido.setTotal(precoTemporada(temporada));
     pedido.setEnderecoEntrega("Entrega digital na conta");
     var item = new com.paulo.ecommerce.model.ItemPedido();
     item.setPedido(pedido);
     item.setProduto(produto);
     item.setQuantidade(1);
-    item.setPrecoUnitario(fidelidade.config().precoPasse);
+    item.setPrecoUnitario(precoTemporada(temporada));
     pedido.setItens(List.of(item));
     return pedidoRepository.save(pedido).getId();
   }
@@ -770,12 +775,15 @@ public class PasseService {
             Collectors.toMap(progresso -> progresso.getTemplate().getId(), progresso -> progresso));
   }
 
+  private BigDecimal precoTemporada(PasseTemporada t){return t.getPreco()==null?fidelidade.config().precoPasse:t.getPreco();}
+
   private PasseTemporada obterPasseAtual() {
     garantirPasseAtual();
     YearMonth yearMonth = YearMonth.now();
-    return temporadaRepository
-        .findByAnoAndMes(yearMonth.getYear(), yearMonth.getMonthValue())
+    var atual = temporadaRepository.findByAnoAndMes(yearMonth.getYear(), yearMonth.getMonthValue())
         .orElseThrow(() -> new IllegalStateException("Passe mensal atual nao encontrado."));
+    if (!atual.disponivel()) throw new IllegalStateException("O passe desta temporada ainda não está disponível.");
+    return atual;
   }
 
   private Usuario buscarUsuario(String emailUsuario) {

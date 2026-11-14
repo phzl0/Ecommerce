@@ -1,0 +1,10 @@
+import {test,expect} from '@playwright/test';
+test('operator prepares a draft, reviews costs and publishes a future season',async({page})=>{
+ await page.goto('/login');await page.getByLabel('E-mail',{exact:true}).fill('admin@level.local');await page.getByLabel('Senha',{exact:true}).fill('AdminLocal123!');await page.getByRole('button',{name:'Entrar',exact:true}).click();await expect(page).not.toHaveURL(/\/login/);
+ await page.goto('/admin/temporadas');await page.getByLabel('Nome da temporada',{exact:true}).fill('Operação Neon e2e');await page.getByRole('button',{name:'Criar rascunho'}).click();await expect(page.getByRole('heading',{name:'Operação Neon e2e',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Publicar temporada'})).toBeDisabled();await page.getByRole('button',{name:'Preencher níveis vazios com exemplos'}).click();
+ await page.getByLabel('Título da missão',{exact:true}).fill('Entre e ganhe XP');await page.getByRole('button',{name:'Criar missão',exact:true}).click();await expect(page.getByRole('status')).toContainText('Missão criada');
+ await expect(page.getByRole('button',{name:'Publicar temporada'})).toBeEnabled();await page.screenshot({path:'test-results/season-draft-desktop.png',fullPage:true});
+ await page.setViewportSize({width:390,height:844});await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);await page.screenshot({path:'test-results/season-draft-mobile.png',fullPage:true});
+ await page.getByRole('checkbox',{name:/Revisei as regras/}).check();await page.getByRole('button',{name:'Publicar temporada'}).click();await expect(page.getByRole('status')).toContainText('Temporada publicada');await expect(page.getByRole('button',{name:'Salvar rascunho'})).toHaveCount(0);await page.screenshot({path:'test-results/season-published.png',fullPage:true});
+});
