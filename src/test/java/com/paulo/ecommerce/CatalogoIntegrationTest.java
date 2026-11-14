@@ -63,7 +63,7 @@ class CatalogoIntegrationTest {
   var pedido=pedidos.finalizarPedidoApi(u.getEmail(),f,List.of(new CheckoutItemRequest(p.getId(),2)),"catalogo-key-001");
   String sku=p.getSku();p.setNome("Novo nome");p.setTamanho("G");p.setXpExtra(999);produtos.flush();
   assertEquals("Nome comprado · M · Preto",pedido.getItens().get(0).getNomeSnapshot());assertEquals(sku,pedido.getItens().get(0).getSkuSnapshot());
-  pagamentos.simularAprovacao(pedido.getId());pagamentos.simularAprovacao(pedido.getId());
+  pagamentos.simularAprovacao(pedido.getId());assertThrows(IllegalStateException.class,()->pagamentos.simularAprovacao(pedido.getId()));
   var xp=historico.findByUsuarioIdAndOrigemTipoAndReferencia(u.getId(),PasseOrigemXpTipo.PURCHASE,"PURCHASE-"+pedido.getId());assertEquals(1,xp.size());assertTrue(xp.get(0).getXpGanho()>=160);
   assertTrue(xp.get(0).getXpGanho()<999);
   var impacto=impactos.prever(pedido,pedido.getTotal());

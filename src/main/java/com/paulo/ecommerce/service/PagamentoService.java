@@ -98,7 +98,7 @@ public class PagamentoService {
             .map(
                 item ->
                     PreferenceItemRequest.builder()
-                        .title(item.getProduto().getNome())
+                        .title(item.getNomeSnapshot())
                         .quantity(item.getQuantidade())
                         .unitPrice(item.getPrecoUnitario())
                         .currencyId("BRL")

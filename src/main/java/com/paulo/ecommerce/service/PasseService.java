@@ -245,7 +245,7 @@ public class PasseService {
         resgatado ? recompensa.getCodigo() : null, desbloqueado, resgatado,
         desbloqueado && !resgatado && (!premium || premiumAtivo), percentual,
         opcoes.findByRecompensaIdOrderByIdAsc(recompensa.getId()).stream()
-            .map(o -> new PasseNivelResponse.Opcao(o.produto.getId(), o.produto.getNome(), o.produto.getEstoque() > 0))
+            .map(o -> new PasseNivelResponse.Opcao(o.produto.getId(), o.produto.nomeCompra(), o.produto.getEstoque() > 0))
             .toList());
   }
 
@@ -290,7 +290,7 @@ public class PasseService {
           produtoRepository
               .findById(id)
               .orElseThrow(() -> new IllegalArgumentException("Produto não encontrado."));
-      if (!produto.isAtivo()) throw new IllegalArgumentException("Produto indisponível.");
+      if (!produto.publicado() || produto.getProdutoPrincipalId()!=null && !produtoRepository.findById(produto.getProdutoPrincipalId()).map(Produto::publicado).orElse(false)) throw new IllegalArgumentException("Produto indisponível.");
       ref = "produto-" + id;
     }
     LocalDate dia = LocalDate.now();
@@ -534,7 +534,7 @@ public class PasseService {
       var escolha = escolhas.stream().filter(o -> o.produto.getId().equals(produtoId))
           .findFirst().orElseThrow(() -> new IllegalArgumentException("Escolha o produto da recompensa."));
       itemBauId = bau.conceder(usuario.getId(), "PASSE-" + recompensaId,
-          escolha.produto.getNome(), escolha.produto).id;
+          escolha.produto.nomeCompra(), escolha.produto).id;
     }
     recompensaResgateRepository.save(resgate);
     if (primeiroResgate)

@@ -68,7 +68,7 @@ public class EmailService {
                 </tr>
                 """
                         .formatted(
-                            item.getProduto().getNome(),
+                            org.springframework.web.util.HtmlUtils.htmlEscape(item.getNomeSnapshot()),
                             item.getQuantidade(),
                             item.getSubtotal())));
 

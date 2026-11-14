@@ -72,13 +72,13 @@ public class DigitalService {
     if(pedido.getTemporadaPasseId()!=null || pedido.isRecompensa()) return;
     for(var item:pedido.getItens().stream().sorted(Comparator.comparing(i->i.getProduto().getId())).toList()) {
       if(item.getTipo()!=Produto.Tipo.DIGITAL || entregas.existsByItemId(item.getId())) continue;
-      var cfg=configs.findById(item.getProduto().getId()).orElseThrow(()->new IllegalStateException("Conteúdo digital ainda não configurado: "+item.getProduto().getNome()));
+      var cfg=configs.findById(item.getProduto().getId()).orElseThrow(()->new IllegalStateException("Conteúdo digital ainda não configurado: "+item.getNomeSnapshot()));
       var livres="CODIGO".equals(cfg.modo)?codigos.findByProdutoIdAndEstadoOrderByIdAsc(cfg.produtoId,"DISPONIVEL",org.springframework.data.domain.PageRequest.of(0,item.getQuantidade())):List.<DigitalCodigo>of();
       if("CODIGO".equals(cfg.modo) && livres.size()!=item.getQuantidade()) throw new IllegalStateException("Códigos insuficientes para este pedido.");
       if("ARQUIVO".equals(cfg.modo) && cfg.arquivoId==null) throw new IllegalStateException("Arquivo indisponível.");
       for(int n=0;n<item.getQuantidade();n++) {
         var e=new DigitalEntrega();e.usuarioId=pedido.getUsuario().getId();e.pedidoId=pedido.getId();e.produtoId=cfg.produtoId;
-        e.itemId=item.getId();e.unidade=n+1;e.titulo=item.getProduto().getNome();e.modo=cfg.modo;e.arquivoId=cfg.arquivoId;
+        e.itemId=item.getId();e.unidade=n+1;e.titulo=item.getNomeSnapshot();e.modo=cfg.modo;e.arquivoId=cfg.arquivoId;
         if(!livres.isEmpty()) {var c=livres.get(n);c.estado="RESERVADO";e.codigoId=c.id;}
         entregas.save(e);
       }

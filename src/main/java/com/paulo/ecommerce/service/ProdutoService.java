@@ -121,6 +121,11 @@ public class ProdutoService {
     produto.setDescricao(cadastro.getDescricao());
     produto.setDestaque(cadastro.isDestaque());
     if (cadastro.getImagemUrl() != null) produto.setImagemUrl(cadastro.getImagemUrl());
+    if (produto.getProdutoPrincipalId() == null) {
+      for (var variacao : produtoRepository.findByProdutoPrincipalIdOrderByIdAsc(produto.getId())) {
+        variacao.setNome(produto.getNome()); variacao.setCategoria(produto.getCategoria());
+      }
+    }
     return salvar(produto);
   }
 
@@ -145,7 +150,7 @@ public class ProdutoService {
       if(raiz.getProdutoPrincipalId()!=null||java.util.Objects.equals(raiz.getId(),p.getId())||raiz.getTipo()!=p.getTipo())throw new IllegalArgumentException("Escolha um produto principal do mesmo tipo; não é permitido encadear variações.");
       validarSkuComercial(raiz);
       if(p.opcao().isBlank())throw new IllegalArgumentException("Informe tamanho, cor ou modelo para identificar a variação.");
-      p.setCategoria(raiz.getCategoria());
+      p.setNome(raiz.getNome());p.setCategoria(raiz.getCategoria());
       if(produtoRepository.familia(raiz.getId()).stream().anyMatch(v->!java.util.Objects.equals(v.getId(),p.getId())&&v.opcao().equalsIgnoreCase(p.opcao())))throw new IllegalArgumentException("Já existe uma variação com essa combinação.");
     }else if(p.getId()!=null && !p.opcao().isBlank() && produtoRepository.findByProdutoPrincipalIdOrderByIdAsc(p.getId()).stream().anyMatch(v->v.opcao().equalsIgnoreCase(p.opcao())))throw new IllegalArgumentException("Combinação já usada por uma variação.");
     if(p.getXpExtra()<0||p.getXpExtra()>10000||p.getXpExtra()>0&&(p.getXpExtraInicio()==null||p.getXpExtraFim()==null||!p.getXpExtraFim().isAfter(p.getXpExtraInicio())))throw new IllegalArgumentException("XP extra exige um período válido e valor de 1 a 10.000 por unidade.");

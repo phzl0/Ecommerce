@@ -55,7 +55,7 @@
                         <img th:src="${produto.imagemUrl != null ? produto.imagemUrl : '/images/sem-foto.png'}"
                              width="32" height="32" loading="lazy" decoding="async" alt="" class="admin-product-image">
                         <div>
-                            <a th:href="@{/admin/produtos/{id}/editar(id=${produto.id})}" th:text="${produto.nome}"></a>
+                            <a th:href="@{/admin/produtos/{id}/editar(id=${produto.id})}" th:text="${produto.nomeCompra()}"></a>
                             <div class="table-subtext" th:text="${produto.sku != null ? produto.sku : 'Sem SKU'}"></div>
                         </div>
                     </div>

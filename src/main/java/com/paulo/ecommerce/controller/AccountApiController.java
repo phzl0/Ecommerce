@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/account")
 public class AccountApiController {
+  @org.springframework.beans.factory.annotation.Autowired private com.paulo.ecommerce.service.ProdutoService catalogo;
 
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -158,7 +159,7 @@ public class AccountApiController {
       return new AccountOrderItemResponse(produto.getId(), item.getNomeSnapshot(), item.getImagemSnapshot(),
           item.getQuantidade(), item.getPrecoUnitario(),
           item.getPrecoUnitario().multiply(BigDecimal.valueOf(item.getQuantidade())),
-          produto.getDescricaoCurta(), produto.isAtivo() && pedido.getTemporadaPasseId() == null,
+          produto.getDescricaoCurta(), catalogo.disponivelNaLoja(produto) && pedido.getTemporadaPasseId() == null,
           pedido.getTemporadaPasseId() == null ? item.getTipo().name() : "PASSE");
     }).toList();
   }
