@@ -65,7 +65,7 @@ public class TemporadaEditorService {
   for(var r:rs){var os=opcoes.findByRecompensaIdOrderByIdAsc(r.getId());BigDecimal custo=BigDecimal.ZERO;long pessoas=r.isPremium()?t.getPrevisaoPremium():(long)t.getPrevisaoPremium()+t.getPrevisaoGratuitos();
    if("Fisico".equals(r.getTipoDigital())){
     if(os.isEmpty())erros.add("Prêmio físico sem opção: "+r.getTitulo());
-    for(var o:os){custo=custo.max(o.custo.add(o.frete));demanda.merge(o.produto.getId(),pessoas,Long::sum);if(o.custo.signum()==0)erros.add("Informe o custo do produto: "+o.produto.nomeCompra());}
+    for(var o:os){custo=custo.max(o.custo.add(o.frete));demanda.merge(o.produto.getId(),pessoas,Long::sum);}
    }
    var previsto=custo.multiply(BigDecimal.valueOf(pessoas));total=total.add(previsto);linhas.add(new Linha(r,os,custo,previsto));
   }

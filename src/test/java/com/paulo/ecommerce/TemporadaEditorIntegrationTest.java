@@ -60,7 +60,7 @@ class TemporadaEditorIntegrationTest {
  }
  @Test void rewardOptionsCannotCrossSeasonsOrExceedTwo(){
   var t=draft();preparar(t);editor.premio(t.getId(),30,true,"Final","Escolha um produto","Fisico");var r=premios.findByTemporadaIdOrderByNivelAsc(t.getId()).stream().filter(x->x.getNivel()==30&&x.isPremium()).findFirst().orElseThrow();
-  var a=produto("A");editor.opcao(t.getId(),r.getId(),a.getId(),BigDecimal.ONE,BigDecimal.ZERO);editor.opcao(t.getId(),r.getId(),a.getId(),BigDecimal.TEN,BigDecimal.ZERO);assertEquals(1,opcoes.findByRecompensaIdOrderByIdAsc(r.getId()).size());
+  var a=produto("A");editor.opcao(t.getId(),r.getId(),a.getId(),BigDecimal.ZERO,BigDecimal.ZERO);assertTrue(editor.previa(t.getId()).pendencias().isEmpty());editor.opcao(t.getId(),r.getId(),a.getId(),BigDecimal.TEN,BigDecimal.ZERO);assertEquals(1,opcoes.findByRecompensaIdOrderByIdAsc(r.getId()).size());
   editor.opcao(t.getId(),r.getId(),produto("B").getId(),BigDecimal.ONE,BigDecimal.ZERO);assertThrows(IllegalArgumentException.class,()->editor.opcao(t.getId(),r.getId(),produto("C").getId(),BigDecimal.ONE,BigDecimal.ZERO));
   var o=opcoes.findByRecompensaIdOrderByIdAsc(r.getId()).get(0);editor.removerOpcao(t.getId(),o.id);assertEquals(1,opcoes.findByRecompensaIdOrderByIdAsc(r.getId()).size());
  }
